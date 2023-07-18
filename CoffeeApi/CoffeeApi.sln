@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.33906.173
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoffeeApi", "CoffeeApi.csproj", "{EEB21B2C-AD1E-4AFA-8090-1DA3A961F422}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EEB21B2C-AD1E-4AFA-8090-1DA3A961F422}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EEB21B2C-AD1E-4AFA-8090-1DA3A961F422}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EEB21B2C-AD1E-4AFA-8090-1DA3A961F422}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EEB21B2C-AD1E-4AFA-8090-1DA3A961F422}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D00A6CDF-18F5-4EEE-B061-9ED1BADCCAF4}
+	EndGlobalSection
+EndGlobal
