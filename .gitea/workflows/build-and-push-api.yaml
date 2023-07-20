@@ -7,11 +7,10 @@ on:
       - 'releases/**'
 
 jobs:
-  build-image:
-      runs-on: ubuntu-latest
-      container: catthehacker/ubuntu:act-latest
   build-and-push:
-   steps:
+    runs-on: ubuntu-latest
+    container: catthehacker/ubuntu:act-latest
+    steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
