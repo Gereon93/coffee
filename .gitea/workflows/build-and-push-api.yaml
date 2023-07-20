@@ -7,6 +7,9 @@ on:
       - 'releases/**'
 
 jobs:
+  build-image:
+      runs-on: ubuntu-latest
+      container: catthehacker/ubuntu:act-latest
   build-and-push:
    steps:
       - name: Checkout code
