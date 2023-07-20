@@ -7,7 +7,8 @@ on:
       - 'releases/**'
 
 jobs:
- steps:
+  build-and-push:
+   steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
