@@ -1,4 +1,4 @@
-namespace CoffeeApi
+namespace CoffeeApi.Data
 {
     public class WeatherForecast
     {
