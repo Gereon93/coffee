@@ -1,7 +1,7 @@
 ﻿using CoffeeApi.Data;
 using CoffeeApi.Models;
 using Microsoft.AspNetCore.Mvc;
-
+using MongoDB.Driver;
 
 namespace CoffeeApi.Controllers
 {
@@ -10,9 +10,15 @@ namespace CoffeeApi.Controllers
     public class CoffeePackagesController : ControllerBase
     {
         private readonly ILogger<CoffeePackagesController> _logger;
-        public CoffeePackagesController(ILogger<CoffeePackagesController> logger)
+        private readonly IMongoCollection<CoffeePackages> _coffeePackagesCollection;
+
+        public CoffeePackagesController(IMongoClient mongoClient, ILogger<CoffeePackagesController> logger)
         {
             _logger = logger;
+            var database = mongoClient.GetDatabase("coffee");
+            _coffeePackagesCollection = database.GetCollection<CoffeePackages>("CoffeePackages");
+
+
         }
 
         [HttpPost("RefillNivona")]
@@ -27,9 +33,9 @@ namespace CoffeeApi.Controllers
             if (ModelState.IsValid)
             {
                 // Save the received packages to the database
-                /* _dbContext.CoffeePackages.Add(packages);
-                 await _dbContext.SaveChangesAsync();
-                */
+
+                await _coffeePackagesCollection.InsertOneAsync(packages);
+                
                 // Return a 201 Created response with the saved data
                 return CreatedAtAction(nameof(PostNewPackages), packages);
             }
