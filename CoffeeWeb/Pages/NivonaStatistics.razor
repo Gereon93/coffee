@@ -1,6 +1,98 @@
 ﻿@page "/nivonaStatistics"
+@using Blazorise
+@using Blazorise.Charts
+@using Blazorise.Icons.FontAwesome
+
+@using CoffeeWeb.Services
+@inject NivonaStatisticsService nivonaStatsService
 
 <PageTitle>Nivona-Statistik</PageTitle>
 
 <h1>Nivona Statistic</h1>
+<Button Color="Color.Primary" Clicked="() => HandleRedrawDefault()">Kaffee</Button>
+<Button Color="Color.Secondary" Clicked="() => HandleRedrawEspresso()">Espresso</Button>
+<Button Color="Color.Success" Clicked="() => HandleRedrawLatte()">Latte Macciato</Button>
+<Button Color="Color.Danger" Clicked="() => HandleRedrawCappucino()">Cappucino</Button>
+<Button Color="Color.Info" Clicked="() => HandleRedrawMilk()">Milch</Button>
+<Button Color="Color.Warning" Clicked="() => HandleRedrawTotal()">Gesamt</Button>
 
+<LineChart @ref="lineChart" TItem="double" />
+
+@code {
+    LineChart<double> lineChart;
+    private List<NivonaStatisticsModel>? nivonaStats;
+    private string selectedColor = ChartColor.FromRgba(0, 0, 0, 0); // Default color (transparent)
+
+    Dictionary<string, string> backgroundColors = new()
+        {
+            ["primary"] = ChartColor.FromRgba(0, 123, 255, 0.2f),
+            ["secondary"] = ChartColor.FromRgba(108, 117, 125, 0.2f),
+            ["success"] = ChartColor.FromRgba(40, 167, 69, 0.2f),
+            ["danger"] = ChartColor.FromRgba(220, 53, 69, 0.2f),
+            ["info"] = ChartColor.FromRgba(23, 162, 184, 0.2f),
+            ["warning"] = ChartColor.FromRgba(255, 193, 7, 0.2f)
+        };
+
+    Dictionary<string, string> borderColors = new()
+        {
+            ["primary"] = ChartColor.FromRgba(0, 123, 255, 1f),
+            ["secondary"] = ChartColor.FromRgba(108, 117, 125, 1f),
+            ["success"] = ChartColor.FromRgba(40, 167, 69, 1f),
+            ["danger"] = ChartColor.FromRgba(220, 53, 69, 1f),
+            ["info"] = ChartColor.FromRgba(23, 162, 184, 1f),
+            ["warning"] = ChartColor.FromRgba(255, 193, 7, 1f)
+        };
+
+    protected override async Task OnInitializedAsync()
+    {
+        nivonaStats = await nivonaStatsService.GetStatisticsAsync();
+        nivonaStats = nivonaStats.OrderBy(x => x.Timestamp).ToList();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            nivonaStats = await nivonaStatsService.GetStatisticsAsync();
+            await HandleRedrawDefault();
+        }
+    }
+
+    async Task HandleRedrawDefault() => await HandleRedraw("coffee", "primary");
+    async Task HandleRedrawEspresso() => await HandleRedraw("espresso", "secondary");
+    async Task HandleRedrawLatte() => await HandleRedraw("latte", "success");
+    async Task HandleRedrawCappucino() => await HandleRedraw("cappucino", "danger");
+    async Task HandleRedrawMilk() => await HandleRedraw("milk", "info");
+    async Task HandleRedrawTotal() => await HandleRedraw("total", "warning");
+
+    async Task HandleRedraw(string type, string color)
+    {
+        selectedColor = color;
+        await lineChart.Clear();
+        List<double> data = type switch
+        {
+            "espresso" => nivonaStats.Select(x => (double)x.EspressoCount).ToList(),
+            "latte" => nivonaStats.Select(x => (double)x.LatteMacchiatoCount).ToList(),
+            "cappucino" => nivonaStats.Select(x => (double)x.CappuccinoCount).ToList(),
+            "milk" => nivonaStats.Select(x => (double)x.MilkCount).ToList(),
+            "total" => nivonaStats.Select(x => (double)x.CoffeeCount).ToList(),
+            _ => nivonaStats.Select(x => (double)x.CoffeeCount).ToList(),
+        };
+
+        await lineChart.AddLabelsDatasetsAndUpdate(
+            nivonaStats.Select(x => x.Timestamp.ToString("dd-MM-yyyy")).ToList(),
+            GetLineChartDataset(data)
+        );
+    }
+
+    LineChartDataset<double> GetLineChartDataset(List<double> dataCount) => new LineChartDataset<double>
+        {
+            Label = "Anzahl der Tassen",
+            Data = dataCount,
+            BackgroundColor = backgroundColors[selectedColor],
+            BorderColor = borderColors[selectedColor],
+            Fill = true,
+            PointRadius = 3,
+            CubicInterpolationMode = "monotone",
+        };
+}
