@@ -1,9 +1,13 @@
 
+using CoffeeWeb.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
+builder.Services.AddSingleton<NivonaStatisticsService>();
+builder.Services.AddSingleton<CoffeeService>();
 
 var app = builder.Build();
 

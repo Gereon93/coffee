@@ -32,7 +32,7 @@ namespace CoffeeApi.Controllers
             if (ModelState.IsValid)
             {
                 await _coffeePackagesCollection.InsertOneAsync(packages);
-                return CreatedAtAction(nameof(PostNewPackages), packages);
+                return Ok("success");
             }
             else
             {
