@@ -24,8 +24,6 @@ namespace CoffeeApi.Controllers
             {
                 await _nivonaStatsCollection.InsertOneAsync(stats);
 
-                // Return a 201 Created response with the URL of the newly created resource
-                // Pass the name of the action ("GetStatisticsById") and route values (the "id" of the newly created resource)
                 return CreatedAtAction(nameof(GetStatisticsById), new { id = stats.Id }, stats);
             }
             else
@@ -36,7 +34,7 @@ namespace CoffeeApi.Controllers
         }
 
         [HttpGet("GetStatisticsById/{id}")]
-        public IActionResult GetStatisticsById(string id)
+        public ActionResult<NivonaStatisticsModel> GetStatisticsById(string id)
         {
             // Assuming _nivonaStatsCollection is your MongoDB collection
 
@@ -57,14 +55,10 @@ namespace CoffeeApi.Controllers
         }
 
         [HttpGet("GetStatistics")]
-        public IActionResult GetStatistics()
+        public ActionResult<IEnumerable<NivonaStatisticsModel>> GetStatistics()
         {
-            // Assuming _nivonaStatsCollection is your MongoDB collection
-
-            // Perform the database query to get all the NivonaStatisticsModel records
             var allStats = _nivonaStatsCollection.Find(Builders<NivonaStatisticsModel>.Filter.Empty).ToList();
 
-            // Return a 200 OK response with the list of NivonaStatisticsModel records
             return Ok(allStats);
         }
 
