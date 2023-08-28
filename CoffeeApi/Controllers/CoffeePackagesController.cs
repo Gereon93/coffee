@@ -1,5 +1,4 @@
-﻿using CoffeeApi.Data;
-using CoffeeApi.Models;
+﻿using CoffeeApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 
