@@ -9,6 +9,8 @@ namespace CoffeeApi.Models
         public int EspressoCount { get; set; }
         public int CoffeeCount { get; set; }
         public int LungoCount { get; set; }
+        public int CappuccinoCount { get; set; }
+        public int LatteMacchiatoCount  { get; set; }
         public int CoffeeAmericanoCount { get; set; }
         public int MilkCount { get; set; }
         public int HotWaterCount { get; set; }
