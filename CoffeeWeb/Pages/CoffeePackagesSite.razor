@@ -12,34 +12,38 @@
 }
 else
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Kaffeename</th>
-                <th>Anzahl</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var package in coffeePackages)
-            {
+    <div class="table-container">
+        <table class="table">
+            <thead>
                 <tr>
-                    <td>@package.DateTimeStamp.ToString("dd.MM.yyyy HH:mm")</td>
-                    <td>@package.CoffeeName</td>
-                    <td>@package.Count</td>
+                    <th>Date</th>
+                    <th>Kaffeename</th>
+                    <th>Anzahl</th>
                 </tr>
-            }
-        </tbody>
-    </table>
-    <div>
+            </thead>
+            <tbody>
+                @foreach (var package in coffeePackages)
+                {
+                    <tr>
+                        <td>@package.DateTimeStamp.ToString("dd.MM.yyyy HH:mm")</td>
+                        <td>@package.CoffeeName</td>
+                        <td>@package.Count</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="add-package-section">
         <h3>Hinzufügen einer neuen Kaffeepackung</h3>
         <form>
-            <label for="coffeeName">Kaffeename:</label>
-            <input type="text" id="coffeeName" name="coffeeName" @bind="@CoffeeNameToAdd" required>
-
-            <label for="count">Anzahl:</label>
-            <input type="number" id="count" name="count" @bind="@CountToAdd" required>
-
+            <div class="form-group">
+                <label for="coffeeName">Kaffeename:</label>
+                <input type="text" id="coffeeName" name="coffeeName" @bind="@CoffeeNameToAdd" required>
+            </div>
+            <div class="form-group">
+                <label for="count">Anzahl:</label>
+                <input type="number" id="count" name="count" @bind="@CountToAdd" required>
+            </div>
             <button class="btn btn-primary" @onclick="AddNewPackage">Eintragen</button>
         </form>
     </div>
@@ -54,13 +58,13 @@ else
     {
         coffeePackages = await coffeeService.GetStatisticsAsync();
         coffeePackages = coffeePackages.OrderBy(x => x.DateTimeStamp).ToList();
-
     }
 
     private async void AddNewPackage()
     {
-        var newPackage = new CoffeePackages{
-            DateTimeStamp = DateTimeOffset.UtcNow,
+        var newPackage = new CoffeePackages
+            {
+                DateTimeStamp = DateTimeOffset.UtcNow,
                 CoffeeName = CoffeeNameToAdd,
                 Count = CountToAdd
             };
