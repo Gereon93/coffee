@@ -9,14 +9,12 @@
             _client = new Client("http://192.168.2.143:8889/", new HttpClient());
         }
 
-        public async Task<ICollection<NivonaStatisticsModel>> GetStatisticsAsync()
+        public async Task<List<NivonaStatisticsModel>> GetStatisticsAsync()
         {
-            return await _client.GetStatistics2Async();
+            var nivonaStats =  await _client.GetStatistics2Async();
+            return nivonaStats.ToList();
         }
-        public async Task AddCoffeePackageAsync(NivonaStatisticsModel newStatistics)
-        {
-            await _client.AddStatisticsAsync(newStatistics);
-        }
+
 
     }
 }
