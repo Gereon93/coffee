@@ -8,5 +8,6 @@ Ziele 2024:
 
 was sonst noch so passiert ist
 Infrastruktur von Gitea auf Gitlab umgezogen
+=> CI/CD aufbauen
 => Gitlab muss auch wieder an Sonar angebunden werden usw
 => Docker Registry aufbauen welche dann auch automatisch wieder auf der NAS die Container updated... 
