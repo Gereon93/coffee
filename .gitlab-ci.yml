@@ -10,7 +10,7 @@ stages:
 
 
 variables:
-  coffee_solution: "Coffee.sln" # Pfad zur Lösungsdatei deines Projekts
+  coffee_solution: "Coffee.sln" # Pfad zur Lsungsdatei deines Projekts
   test_project: "CoffeeTest/CoffeeTest.csproj" # Pfad zum Testprojekt
 
 before_script:
@@ -40,7 +40,7 @@ test:
 
 sonarqube-check:
   stage: sonarqube-check
-  image: mcr.microsoft.com/dotnet/sdk:8.0
+  image: mcr.microsoft.com/dotnet/nightly/sdk:9.0-preview
   variables:
     SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
     GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
