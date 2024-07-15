@@ -398,3 +398,5 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 
+/CaptainDocker.Entities.DockerConnection.json
+/CaptainDocker.Entities.DockerRegistry.json
