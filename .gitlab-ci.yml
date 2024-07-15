@@ -1,85 +1,76 @@
-# This file is a template, and might need editing before it works on your project.
-# This is a sample GitLab CI/CD configuration file that should run without any modifications.
-# It demonstrates a basic 3 stage CI/CD pipeline. Instead of real tests or scripts,
-# it uses echo commands to simulate the pipeline execution.
-#
-# A pipeline is composed of independent jobs that run scripts, grouped into stages.
-# Stages run in sequential order, but jobs within stages run in parallel.
-#
-# For more information, see: https://docs.gitlab.com/ee/ci/yaml/index.html#stages
-#
-# You can copy and paste this template into a new `.gitlab-ci.yml` file.
-# You should not add this template to an existing `.gitlab-ci.yml` file by using the `include:` keyword.
-#
-# To contribute improvements to CI/CD templates, please follow the Development guide at:
-# https://docs.gitlab.com/ee/development/cicd/templates.html
-# This specific template is located at:
-# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Getting-Started.gitlab-ci.yml
-image: mcr.microsoft.com/dotnet/nightly/sdk:9.0-preview
-
-stages:          # List of stages for jobs, and their order of execution
+stages:
   - build
   - test
   - sonarqube-check
-  - deploy
+  - sonarqube-vulnerability-report
 
-build-web:       # This job runs in the build stage, which runs first.
+variables:
+  coffee_solution: "Coffee.sln" # Pfad zur Lösungsdatei deines Projekts
+  test_project: "CoffeeTest/CoffeeTest.csproj" # Pfad zum Testprojekt
+
+before_script:
+  - 'dotnet restore $coffee_solution'
+
+build:
   stage: build
   script:
-      - cd CoffeeWeb
-      - dotnet restore
-      - dotnet build --configuration Release
-  artifacts:
+    - 'dotnet build $coffee_solution'
+  allow_failure: false
+  only:
+    - merge_requests
+    - master
+    - main
+    - develop
+
+test:
+  stage: test
+  script:
+    - 'dotnet test $test_project'
+  allow_failure: true
+  only:
+    - merge_requests
+    - master
+    - main
+    - develop
+
+sonarqube-check:
+  stage: sonarqube-check
+  image: mcr.microsoft.com/dotnet/sdk:8.0
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
+    GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
+  cache:
+    key: "${CI_JOB_NAME}"
     paths:
-      - CoffeeWeb/bin/Release/net9.0/publish/
+      - .sonar/cache
+  script: 
+      - "apt-get update"
+      - "apt-get install --yes --no-install-recommends openjdk-21-jre"
+      - "dotnet tool install --global dotnet-sonarscanner"
+      - "export PATH=\"$PATH:$HOME/.dotnet/tools\""
+      - "dotnet sonarscanner begin /k:\"gereon_coffee_ba5c47bb-a0a1-4e5a-b9d6-2187da863b11\" /d:sonar.token=\"$SONAR_TOKEN\" /d:\"sonar.host.url=$SONAR_HOST_URL\" "
+      - "dotnet build"
+      - "dotnet sonarscanner end /d:sonar.token=\"$SONAR_TOKEN\""
+  allow_failure: true
+  only:
+    - merge_requests
+    - master
+    - main
+    - develop
 
-build-api:       # This job runs in the build stage, which runs first.
-  stage: build
+sonarqube-vulnerability-report:
+  stage: sonarqube-vulnerability-report
   script:
-      - cd CoffeeApi
-      - dotnet restore
-      - dotnet build --configuration Release
+    - 'curl -u "${SONAR_TOKEN}:" "${SONAR_HOST_URL}/api/issues/gitlab_sast_export?projectKey=gereon_coffee_ba5c47bb-a0a1-4e5a-b9d6-2187da863b11&branch=${CI_COMMIT_BRANCH}&pullRequest=${CI_MERGE_REQUEST_IID}" -o gl-sast-sonar-report.json'
+  allow_failure: true
+  only:
+    - merge_requests
+    - master
+    - main
+    - develop
   artifacts:
-    paths:
-      - CoffeeApi/bin/Release/net9.0/publish/
-
-unit-test-job:   # This job runs in the test stage.
-  stage: test    # It only starts when the job in the build stage completes successfully.
-  script:
-    - echo "Running unit tests... This will take about 60 seconds."
-    - echo "Code coverage is 90%"
-
-#sonarqube-check:
-# stage: sonarqube-check
-#  dependencies:
- #   - build
-  #cache:
-   # policy: pull
-    #key: "${CI_COMMIT_SHORT_SHA}"
-    #paths:
-    #  - sonar-scanner/
- # script: 
-  #      - "apt-get update"
-   #     - "apt-get install --yes --no-install-recommends openjdk-17-jre"
-    #    - "dotnet tool install --global dotnet-sonarscanner"
-     #   - "export PATH=\"$PATH:$HOME/.dotnet/tools\""
-      #  - "dotnet sonarscanner begin /k:\"gereon_coffee_ba5c47bb-a0a1-4e5a-b9d6-2187da863b11\" /d:sonar.token=\"$SONAR_TOKEN\" /d:\"sonar.host.url=$SONAR_HOST_URL\" "
-       # - "dotnet build"
-       # - "dotnet sonarscanner end /d:sonar.token=\"$SONAR_TOKEN\""
-#  rules:
-  #    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
- #     - if: $CI_COMMIT_BRANCH == 'master'
-    #  - if: $CI_COMMIT_BRANCH == 'main'
-   #   - if: $CI_COMMIT_BRANCH == 'develop'
-
-deploy-web:      # This job runs in the deploy stage.
-  stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
-  script:
-    - cd CoffeeWeb
-    - docker build -t my-coffee-web .
-
-deploy-api:      # This job runs in the deploy stage.
-  stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
-  script:
-    - echo "Deploying application..."
-    - echo "Application successfully deployed."
+    expire_in: 1 day
+    reports:
+      sast: gl-sast-sonar-report.json
+  dependencies:
+    - sonarqube-check
