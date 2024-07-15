@@ -5,6 +5,9 @@ stages:
   - test
   - sonarqube-check
   - sonarqube-vulnerability-report
+  - deploy-api
+  - deploy-web
+
 
 variables:
   coffee_solution: "Coffee.sln" # Pfad zur Lösungsdatei deines Projekts
@@ -76,3 +79,27 @@ sonarqube-vulnerability-report:
       sast: gl-sast-sonar-report.json
   dependencies:
     - sonarqube-check
+
+deploy-api:
+  stage: deploy-api
+  only:
+    - merge_requests
+    - master
+    - main
+  script:
+    - cd CoffeeApi
+    - docker build -t my-coffee-web .
+
+  dependencies:
+    - build
+deploy-web:
+  stage: deploy-web
+  only:
+    - merge_requests
+    - master
+    - main  
+  script:
+    - cd CoffeeWeb
+    - docker build -t my-coffee-api .
+  dependencies:
+    - build
