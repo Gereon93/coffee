@@ -45,3 +45,6 @@ https://github.com/quay/clair
 Checkmarx/fortify
 https://checkmarx.com/
 https://fortifyapp.com/
+
+
+Benutzer testuser und das Passwort testpassword bereitstellen
