@@ -10,13 +10,11 @@ namespace CoffeeApi.Controllers
     [Route("api/[controller]")]
     public class NivonaStatsController : ControllerBase
     {
-        private readonly ILogger<NivonaStatsController> _logger;
         private readonly IMongoCollection<NivonaStatisticsModel> _nivonaStatsCollection;
         private readonly TextAnalyticsClient _textAnalyticsClient;
 
-        public NivonaStatsController(IMongoClient mongoClient, ILogger<NivonaStatsController> logger, TextAnalyticsClient textAnalyticsClient)
+        public NivonaStatsController(IMongoClient mongoClient, TextAnalyticsClient textAnalyticsClient)
         {
-            _logger = logger;
             var database = mongoClient.GetDatabase("nivona");
             _nivonaStatsCollection = database.GetCollection<NivonaStatisticsModel>("NivonaStatistics");
             _textAnalyticsClient = textAnalyticsClient;
@@ -66,9 +64,10 @@ namespace CoffeeApi.Controllers
             var historicalData = await _nivonaStatsCollection.Find(Builders<NivonaStatisticsModel>.Filter.Empty).ToListAsync();
             var inputText = string.Join(" ", historicalData);
             var sentimentResult = await _textAnalyticsClient.AnalyzeSentimentAsync(inputText);
-            double averageSentimentScore = 0;
+            /*
+             * double averageSentimentScore = 0;
 
-            /*  foreach (var document in sentimentResult.Value)
+              foreach (var document in sentimentResult.Value)
               {
                   averageSentimentScore += document.ConfidenceScores.Positive;
               }
@@ -96,30 +95,30 @@ namespace CoffeeApi.Controllers
 
             return Ok();
         }
-
-        public async Task<string> ExtractTextFromImage(string imagePath)
-        {
-            /*var formRecognizerClient = new FormRecognizerClient(new Uri("<YOUR_FORM_RECOGNIZER_ENDPOINT>"), new AzureKeyCredential("<YOUR_FORM_RECOGNIZER_API_KEY>"));
-
-            using (var stream = new FileStream(imagePath, FileMode.Open))
-            {
-                var recognizeOptions = new RecognizeContentOptions() { ContentType = "image/jpeg" };
-                var recognizeResult = await formRecognizerClient.StartRecognizeContentAsync(stream, recognizeOptions).WaitForCompletionAsync();
-                string extractedText = "";
-
-                foreach (var page in recognizeResult.Value)
+        /*
+                public string ExtractTextFromImage(string imagePath)
                 {
-                    foreach (var line in page.Lines)
+                    var formRecognizerClient = new FormRecognizerClient(new Uri("<YOUR_FORM_RECOGNIZER_ENDPOINT>"), new AzureKeyCredential("<YOUR_FORM_RECOGNIZER_API_KEY>"));
+
+                    using (var stream = new FileStream(imagePath, FileMode.Open))
                     {
-                        foreach (var word in line.Words)
+                        var recognizeOptions = new RecognizeContentOptions() { ContentType = "image/jpeg" };
+                        var recognizeResult = await formRecognizerClient.StartRecognizeContentAsync(stream, recognizeOptions).WaitForCompletionAsync();
+                        string extractedText = "";
+
+                        foreach (var page in recognizeResult.Value)
                         {
-                            extractedText += word.Text + " ";
+                            foreach (var line in page.Lines)
+                            {
+                                foreach (var word in line.Words)
+                                {
+                                    extractedText += word.Text + " ";
+                                }
+                            }
                         }
-                    }
-                }
-                return extractedText.Trim();*/
-            return "Hello World";
-        }
+                        return extractedText.Trim();
+                    return "Hello World";
+                }*/
     }
 
 }
