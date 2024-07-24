@@ -12,6 +12,8 @@ stages:
 variables:
   coffee_solution: "Coffee.sln" # Pfad zur Lsungsdatei deines Projekts
   test_project: "CoffeeTest/CoffeeTest.csproj" # Pfad zum Testprojekt
+  MONGO_USER: $MONGO_USER
+  MONGO_PASSWORD: $MONGO_PASSWORD
 
 before_script:
   - 'dotnet restore $coffee_solution'
