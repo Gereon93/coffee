@@ -25,7 +25,7 @@ build:
     - merge_requests
     - master
     - main
-    - develop
+    - dev
 
 test:
   stage: test
@@ -36,7 +36,7 @@ test:
     - merge_requests
     - master
     - main
-    - develop
+    - dev
 
 sonarqube-check:
   stage: sonarqube-check
@@ -61,7 +61,7 @@ sonarqube-check:
     - merge_requests
     - master
     - main
-    - develop
+    - dev
 
 sonarqube-vulnerability-report:
   stage: sonarqube-vulnerability-report
@@ -72,7 +72,7 @@ sonarqube-vulnerability-report:
     - merge_requests
     - master
     - main
-    - develop
+    - dev
   artifacts:
     expire_in: 1 day
     reports:
@@ -83,7 +83,6 @@ sonarqube-vulnerability-report:
 deploy-api:
   stage: deploy-api
   only:
-    - merge_requests
     - master
     - main
   script:
@@ -95,7 +94,6 @@ deploy-api:
 deploy-web:
   stage: deploy-web
   only:
-    - merge_requests
     - master
     - main  
   script:
