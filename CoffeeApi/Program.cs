@@ -13,8 +13,12 @@ namespace CoffeeApi
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
-            string user = Environment.GetEnvironmentVariable("MONGO_USER");
-            string password = Environment.GetEnvironmentVariable("MONGO_PASSWORD");
+            string? user = Environment.GetEnvironmentVariable("MONGO_USER");
+            string? password = Environment.GetEnvironmentVariable("MONGO_PASSWORD");
+            if (user == null || password == null)
+            {
+                throw new Exception("MONGO_USER and MONGO_PASSWORD environment variables must be set");
+            }
             string mongoConnectionString = $"mongodb://{user}:{password}@192.168.2.143:27017/";
 
             // Register MongoClient with DI
