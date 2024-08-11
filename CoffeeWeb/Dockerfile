@@ -2,7 +2,7 @@
 
 FROM mcr.microsoft.com/dotnet/nightly/sdk:9.0-preview AS base
 WORKDIR /app
-EXPOSE 80
+EXPOSE 8080
 
 FROM mcr.microsoft.com/dotnet/nightly/sdk:9.0-preview AS build
 WORKDIR /src
