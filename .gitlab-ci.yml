@@ -12,7 +12,12 @@ stages:
 variables:
   coffee_solution: "Coffee.sln" # Pfad zur Lsungsdatei deines Projekts
   test_project: "CoffeeTest/CoffeeTest.csproj" # Pfad zum Testprojekt
-
+  MONGO_USER: $MONGO_USER
+  MONGO_PASSWORD: $MONGO_PASSWORD
+  OPEN_AI_KEY: $OPEN_AI_KEY
+  DOCKER_REG_USER: $DOCKER_REG_USER
+  DOCKER_REG_PASSWORD: $DOCKER_REG_PASSWORD
+  DOCKER_REG_URL: $DOCKER_REG_URL
 before_script:
   - 'dotnet restore $coffee_solution'
 
@@ -25,7 +30,7 @@ build:
     - merge_requests
     - master
     - main
-    - develop
+    - dev
 
 test:
   stage: test
@@ -36,7 +41,7 @@ test:
     - merge_requests
     - master
     - main
-    - develop
+    - dev
 
 sonarqube-check:
   stage: sonarqube-check
@@ -61,7 +66,7 @@ sonarqube-check:
     - merge_requests
     - master
     - main
-    - develop
+    - dev
 
 sonarqube-vulnerability-report:
   stage: sonarqube-vulnerability-report
@@ -72,7 +77,7 @@ sonarqube-vulnerability-report:
     - merge_requests
     - master
     - main
-    - develop
+    - dev
   artifacts:
     expire_in: 1 day
     reports:
@@ -83,23 +88,25 @@ sonarqube-vulnerability-report:
 deploy-api:
   stage: deploy-api
   only:
-    - merge_requests
     - master
     - main
   script:
     - cd CoffeeApi
-    - docker build -t my-coffee-web .
+    - echo $DOCKER_REG_PASSWORD | docker login $DOCKER_REG_URL -u $DOCKER_REG_USER --password-stdin
+    - docker build -t coffee-api .
+    - docker push $DOCKER_REG_URL/coffee-api:latest
 
   dependencies:
     - build
 deploy-web:
   stage: deploy-web
   only:
-    - merge_requests
     - master
     - main  
   script:
     - cd CoffeeWeb
-    - docker build -t my-coffee-api .
+    - echo $DOCKER_REG_PASSWORD | docker login $DOCKER_REG_URL -u $DOCKER_REG_USER --password-stdin
+    - docker build -t coffee-web .
+    - docker push $DOCKER_REG_URL/coffee-web:latest
   dependencies:
     - build
