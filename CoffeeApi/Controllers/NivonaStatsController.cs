@@ -176,15 +176,13 @@ namespace CoffeeApi.Controllers
             if (description != null)
             {
                 var statistics = ExtractStatisticsFromDescription(description);
-                CheckNullFieldsAndUseLastStats(statistics);
-                // await _nivonaStatsCollection.InsertOneAsync(statistics);
+                await CheckNullFieldsAndUseLastStats(statistics);
+                await _nivonaStatsCollection.InsertOneAsync(statistics);
             }
             else
             {
                 Console.WriteLine("No description could be generated.");
             }
-
-
 
             return Ok();
         }
@@ -197,7 +195,7 @@ namespace CoffeeApi.Controllers
                           .Replace("\r", string.Empty)
                           .Replace("\t", string.Empty)
                           .Trim();
-            var model = JsonConvert.DeserializeObject<NivonaStatisticsModel>(jsonString);
+            var model = JsonConvert.DeserializeObject<NivonaStatisticsModel>(jsonString) ?? throw new InvalidOperationException("Could not parse the json string");
             model.Timestamp = DateTime.UtcNow;
             return model;
         }
