@@ -14,7 +14,10 @@ variables:
   test_project: "CoffeeTest/CoffeeTest.csproj" # Pfad zum Testprojekt
   MONGO_USER: $MONGO_USER
   MONGO_PASSWORD: $MONGO_PASSWORD
-
+  OPEN_AI_KEY: $OPEN_AI_KEY
+  DOCKER_REG_USER: $DOCKER_REG_USER
+  DOCKER_REG_PASSWORD: $DOCKER_REG_PASSWORD
+  DOCKER_REG_URL: $DOCKER_REG_URL
 before_script:
   - 'dotnet restore $coffee_solution'
 
@@ -89,7 +92,9 @@ deploy-api:
     - main
   script:
     - cd CoffeeApi
-    - docker build -t my-coffee-web .
+    - echo $DOCKER_REG_PASSWORD | docker login $DOCKER_REG_URL -u $DOCKER_REG_USER --password-stdin
+    - docker build -t coffee-api .
+    - docker push $DOCKER_REG_URL/coffee-api:latest
 
   dependencies:
     - build
@@ -100,6 +105,8 @@ deploy-web:
     - main  
   script:
     - cd CoffeeWeb
-    - docker build -t my-coffee-api .
+    - echo $DOCKER_REG_PASSWORD | docker login $DOCKER_REG_URL -u $DOCKER_REG_USER --password-stdin
+    - docker build -t coffee-web .
+    - docker push $DOCKER_REG_URL/coffee-web:latest
   dependencies:
     - build
