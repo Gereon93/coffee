@@ -91,8 +91,9 @@ deploy-api:
     - main
   script:
     - cd CoffeeApi
-    - echo $DOCKER_REG_PASSWORD | docker login $DOCKER_REG_URL -u $DOCKER_REG_USER --password-stdin
+   
     - docker build -t coffee-api .
+    - echo $DOCKER_REG_PASSWORD | docker login $DOCKER_REG_URL -u $DOCKER_REG_USER --password-stdin
     - docker push $DOCKER_REG_URL/coffee-api:latest
 
   dependencies:
@@ -104,8 +105,8 @@ deploy-web:
     - main  
   script:
     - cd CoffeeWeb
-    - echo $DOCKER_REG_PASSWORD | docker login $DOCKER_REG_URL -u $DOCKER_REG_USER --password-stdin
     - docker build -t coffee-web .
+    - echo $DOCKER_REG_PASSWORD | docker login $DOCKER_REG_URL -u $DOCKER_REG_USER --password-stdin
     - docker push $DOCKER_REG_URL/coffee-web:latest
   dependencies:
     - build
