@@ -1,0 +1,35 @@
+﻿@page "/coffeeAi"
+@using Blazorise
+@using Blazorise.Charts
+@using Blazorise.Icons.FontAwesome
+@using CoffeeWeb.Services
+@using System.Globalization
+
+@inject NivonaStatisticsService nivonaStatsService
+
+<PageTitle>Coffee-AI-Services</PageTitle>
+<h1>Coffee-AI-Statistic Services </h1>
+
+<h2>Coffee-AI-Statistic Forecast </h2>
+<Label>Enter date for Forecast (yyyy-mm-dd)</Label>
+<InputText @bind-Value="dateForForecast"  />
+<Button Color="Color.Primary" @onclick="HandleButtonClickAsync">Predict</Button>
+
+
+
+<h2>Coffee-AI-Statistic Image Parser </h2>
+<InputText @bind-Value="dateForForecast" Placeholder="Enter date yyyy-MM-dd" />
+<Button Color="Color.Primary">Upload image</Button>
+
+<Button Color="Color.Primary" Disabled="true" >insert data</Button>
+
+@code {
+    private string dateForForecast = DateTime.Now.ToString("yyyy-MM-dd");
+
+    private async void HandleButtonClickAsync()
+    {
+        DateTime now = DateTime.UtcNow;
+        var result = await nivonaStatsService.GetForecastAsync(now);
+        Console.WriteLine(result);
+    }
+}
