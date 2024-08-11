@@ -11,25 +11,33 @@
 <h1>Coffee-AI-Statistic Services </h1>
 
 <h2>Coffee-AI-Statistic Forecast </h2>
-<Label>Enter date for Forecast (yyyy-mm-dd)</Label>
-<InputText @bind-Value="dateForForecast"  />
+<Label>Enter date for Forecast (yyyy-MM-dd)</Label>
+<InputText @bind-Value="dateForForecast" />
 <Button Color="Color.Primary" @onclick="HandleButtonClickAsync">Predict</Button>
 
-
+<p>@outputPrediction</p>
 
 <h2>Coffee-AI-Statistic Image Parser </h2>
-<InputText @bind-Value="dateForForecast" Placeholder="Enter date yyyy-MM-dd" />
-<Button Color="Color.Primary">Upload image</Button>
+<Label>Insert image of statisic page in Nivona App here</Label>
 
-<Button Color="Color.Primary" Disabled="true" >insert data</Button>
+<InputFile OnChange="HandleFileUpload" />
 
 @code {
     private string dateForForecast = DateTime.Now.ToString("yyyy-MM-dd");
-
+    private string outputPrediction = string.Empty;
     private async void HandleButtonClickAsync()
     {
+        outputPrediction = string.Empty;
         DateTime now = DateTime.UtcNow;
         var result = await nivonaStatsService.GetForecastAsync(now);
-        Console.WriteLine(result);
+        outputPrediction = result;
     }
+
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        var stream = file.OpenReadStream();
+        var fileParameter = new FileParameter(stream, file.Name, file.ContentType);
+        await nivonaStatsService.UploadImageForStatsAsync(fileParameter);
+        }
 }
