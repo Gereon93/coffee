@@ -1,4 +1,4 @@
-image: mcr.microsoft.com/dotnet/nightly/sdk:9.0-preview
+image: 192.168.2.143:3033/dotnet-9-special:latest
 
 stages:
   - build
@@ -8,17 +8,24 @@ stages:
   - deploy-api
   - deploy-web
 
-
 variables:
-  coffee_solution: "Coffee.sln" # Pfad zur Lsungsdatei deines Projekts
-  test_project: "CoffeeTest/CoffeeTest.csproj" # Pfad zum Testprojekt
+  coffee_solution: "Coffee.sln"
+  test_project: "CoffeeTest/CoffeeTest.csproj"
   MONGO_USER: $MONGO_USER
   MONGO_PASSWORD: $MONGO_PASSWORD
   OPEN_AI_KEY: $OPEN_AI_KEY
   DOCKER_REG_USER: $DOCKER_REG_USER
   DOCKER_REG_PASSWORD: $DOCKER_REG_PASSWORD
   DOCKER_REG_URL: $DOCKER_REG_URL
+
+cache:
+  key: nuget
+  paths:
+    - ~/.nuget/packages/
+  policy: pull-push
+
 before_script:
+  - service docker start
   - 'dotnet restore $coffee_solution'
 
 build:
@@ -45,17 +52,15 @@ test:
 
 sonarqube-check:
   stage: sonarqube-check
-  image: mcr.microsoft.com/dotnet/nightly/sdk:9.0-preview
+  image: 192.168.2.143:3033/dotnet-9-special:latest
   variables:
-    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
-    GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+    GIT_DEPTH: "0"
   cache:
     key: "${CI_JOB_NAME}"
     paths:
       - .sonar/cache
   script: 
-      - "apt-get update"
-      - "apt-get install --yes --no-install-recommends openjdk-17-jre"
       - "dotnet tool install --global dotnet-sonarscanner"
       - "export PATH=\"$PATH:$HOME/.dotnet/tools\""
       - "dotnet sonarscanner begin /k:\"gereon_coffee_ba5c47bb-a0a1-4e5a-b9d6-2187da863b11\" /d:sonar.token=\"$SONAR_TOKEN\" /d:\"sonar.host.url=$SONAR_HOST_URL\" "
@@ -64,8 +69,6 @@ sonarqube-check:
   allow_failure: true
   only:
     - merge_requests
-    - master
-    - main
     - dev
 
 sonarqube-vulnerability-report:
@@ -75,8 +78,6 @@ sonarqube-vulnerability-report:
   allow_failure: true
   only:
     - merge_requests
-    - master
-    - main
     - dev
   artifacts:
     expire_in: 1 day
@@ -92,12 +93,13 @@ deploy-api:
     - main
   script:
     - cd CoffeeApi
+    - docker build -t $DOCKER_REG_URL/coffee-api:latest .
     - echo $DOCKER_REG_PASSWORD | docker login $DOCKER_REG_URL -u $DOCKER_REG_USER --password-stdin
-    - docker build -t coffee-api .
     - docker push $DOCKER_REG_URL/coffee-api:latest
-
   dependencies:
     - build
+
+
 deploy-web:
   stage: deploy-web
   only:
@@ -105,8 +107,8 @@ deploy-web:
     - main  
   script:
     - cd CoffeeWeb
+    - docker build -t $DOCKER_REG_URL/coffee-web:latest .
     - echo $DOCKER_REG_PASSWORD | docker login $DOCKER_REG_URL -u $DOCKER_REG_USER --password-stdin
-    - docker build -t coffee-web .
     - docker push $DOCKER_REG_URL/coffee-web:latest
   dependencies:
     - build
