@@ -8,6 +8,9 @@ stages:
   - deploy-api
   - deploy-web
 
+services:
+  - docker:dind
+
 variables:
   coffee_solution: "Coffee.sln"
   test_project: "CoffeeTest/CoffeeTest.csproj"
@@ -17,6 +20,8 @@ variables:
   DOCKER_REG_USER: $DOCKER_REG_USER
   DOCKER_REG_PASSWORD: $DOCKER_REG_PASSWORD
   DOCKER_REG_URL: $DOCKER_REG_URL
+  DOCKER_HOST: tcp://docker:2375/
+  DOCKER_TLS_CERTDIR: ""
 
 cache:
   key: nuget
@@ -25,7 +30,6 @@ cache:
   policy: pull-push
 
 before_script:
-  - service docker start
   - 'dotnet restore $coffee_solution'
 
 build:
