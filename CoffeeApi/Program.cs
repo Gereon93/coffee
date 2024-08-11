@@ -17,7 +17,7 @@ namespace CoffeeApi
             string? password = Environment.GetEnvironmentVariable("MONGO_PASSWORD");
             if (user == null || password == null)
             {
-                throw new Exception("MONGO_USER and MONGO_PASSWORD environment variables must be set");
+                throw new InvalidOperationException("MONGO_USER and MONGO_PASSWORD environment variables must be set");
             }
             string mongoConnectionString = $"mongodb://{user}:{password}@192.168.2.143:27017/";
 
