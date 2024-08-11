@@ -5,11 +5,7 @@ stages:
   - test
   - sonarqube-check
   - sonarqube-vulnerability-report
-  - deploy-api
-  - deploy-web
 
-services:
-  - docker:dind
 
 variables:
   coffee_solution: "Coffee.sln"
@@ -17,11 +13,6 @@ variables:
   MONGO_USER: $MONGO_USER
   MONGO_PASSWORD: $MONGO_PASSWORD
   OPEN_AI_KEY: $OPEN_AI_KEY
-  DOCKER_REG_USER: $DOCKER_REG_USER
-  DOCKER_REG_PASSWORD: $DOCKER_REG_PASSWORD
-  DOCKER_REG_URL: $DOCKER_REG_URL
-  DOCKER_HOST: tcp://docker:2375/
-  DOCKER_TLS_CERTDIR: ""
 
 cache:
   key: nuget
@@ -73,6 +64,8 @@ sonarqube-check:
   allow_failure: true
   only:
     - merge_requests
+    - master
+    - main
     - dev
 
 sonarqube-vulnerability-report:
@@ -82,6 +75,8 @@ sonarqube-vulnerability-report:
   allow_failure: true
   only:
     - merge_requests
+    - master
+    - main
     - dev
   artifacts:
     expire_in: 1 day
@@ -89,30 +84,3 @@ sonarqube-vulnerability-report:
       sast: gl-sast-sonar-report.json
   dependencies:
     - sonarqube-check
-
-deploy-api:
-  stage: deploy-api
-  only:
-    - master
-    - main
-  script:
-    - cd CoffeeApi
-    - docker build -t $DOCKER_REG_URL/coffee-api:latest .
-    - echo $DOCKER_REG_PASSWORD | docker login $DOCKER_REG_URL -u $DOCKER_REG_USER --password-stdin
-    - docker push $DOCKER_REG_URL/coffee-api:latest
-  dependencies:
-    - build
-
-
-deploy-web:
-  stage: deploy-web
-  only:
-    - master
-    - main  
-  script:
-    - cd CoffeeWeb
-    - docker build -t $DOCKER_REG_URL/coffee-web:latest .
-    - echo $DOCKER_REG_PASSWORD | docker login $DOCKER_REG_URL -u $DOCKER_REG_USER --password-stdin
-    - docker push $DOCKER_REG_URL/coffee-web:latest
-  dependencies:
-    - build

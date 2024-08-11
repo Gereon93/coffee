@@ -11,5 +11,3 @@ was sonst noch so passiert ist
 Infrastruktur von Gitea auf Gitlab umgezogen
 => CI/CD aufbauen ✔️
 => Gitlab muss auch wieder an Sonar angebunden werden usw ✔️
-=> Docker Registry aufbauen welche dann auch automatisch wieder auf der NAS die Container updated... 🗙 
-   Das muss aktuell händisch gemacht werden, irgendwo klemmt es wegen localer infrastucture
