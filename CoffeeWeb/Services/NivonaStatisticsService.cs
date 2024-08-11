@@ -20,8 +20,15 @@
         }
         public async Task<string> GetForecastAsync(DateTime date)
         {
-            var forefast = await _client.ForecastCoffeeStatisticsAsync(date);
-            return forefast;
+            var forecast = await _client.ForecastCoffeeStatisticsAsync(date);
+            return forecast.Text;
+        }
+
+
+        public async Task UploadImageForStatsAsync(FileParameter file)
+        {
+            await _client.UploadImageAsync(file);
+            return;
         }
     }
 }

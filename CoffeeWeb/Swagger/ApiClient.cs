@@ -540,7 +540,7 @@ namespace CoffeeWeb
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<string> ForecastCoffeeStatisticsAsync(System.DateTimeOffset? futureDate)
+        public virtual System.Threading.Tasks.Task<PredictedStats> ForecastCoffeeStatisticsAsync(System.DateTimeOffset? futureDate)
         {
             return ForecastCoffeeStatisticsAsync(futureDate, System.Threading.CancellationToken.None);
         }
@@ -548,7 +548,7 @@ namespace CoffeeWeb
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<string> ForecastCoffeeStatisticsAsync(System.DateTimeOffset? futureDate, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<PredictedStats> ForecastCoffeeStatisticsAsync(System.DateTimeOffset? futureDate, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -595,7 +595,7 @@ namespace CoffeeWeb
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<string>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<PredictedStats>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -896,6 +896,47 @@ namespace CoffeeWeb
 
         [Newtonsoft.Json.JsonProperty("creationTime", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public System.DateTimeOffset CreationTime { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PredictedStats
+    {
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public ObjectId Id { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("timestamp", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.DateTimeOffset Timestamp { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("espressoCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public int EspressoCount { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("coffeeCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public int CoffeeCount { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("lungoCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public int LungoCount { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("cappuccinoCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public int CappuccinoCount { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("latteMacchiatoCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public int LatteMacchiatoCount { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("coffeeAmericanoCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public int CoffeeAmericanoCount { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("milkCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public int MilkCount { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("hotWaterCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public int HotWaterCount { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("myCoffeeCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public int MyCoffeeCount { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("text", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Text { get; set; }
 
     }
 

@@ -130,23 +130,31 @@ namespace CoffeeApi.Controllers
         }
 
         [HttpGet("ForecastCoffeeStatistics")]
-        public async Task<string> ForecastCoffeeStatisticsAsync(DateTime futureDate)
+        public async Task<ActionResult<PredictedStats>> ForecastCoffeeStatisticsAsync(DateTime futureDate)
         {
             var historicalData = await _nivonaStatsCollection.Find(Builders<NivonaStatisticsModel>.Filter.Empty).ToListAsync();
-            var orderdHistoricalData = historicalData.OrderBy(x => x.Timestamp).ToList();
+            var orderedHistoricalData = historicalData.OrderBy(x => x.Timestamp).ToList();
 
-            var jsonData = Newtonsoft.Json.JsonConvert.SerializeObject(orderdHistoricalData);
+            var jsonData = JsonConvert.SerializeObject(orderedHistoricalData);
             var prompt = $"Given the following coffee machine statistics data, predict the coffee statistics for the future date {futureDate.ToString("yyyy-MM-dd")} in the format provided:\n\n" +
                 $"Historical Data:\n{jsonData}\n\n" +
                 $"Predict the coffee statistics for the date {futureDate.ToString("yyyy-MM-dd")} and provide the response in the following format:\n" +
                 "{ \"Timestamp\": \"futureDate\", \"EspressoCount\": 0, \"CoffeeCount\": 0, \"LungoCount\": 0, \"CappuccinoCount\": 0, \"LatteMacchiatoCount\": 0, \"CoffeeAmericanoCount\": 0, \"MilkCount\": 0, \"HotWaterCount\": 0, \"MyCoffeeCount\": 0 }";
 
-
-
             ChatCompletion completion = await _client.CompleteChatAsync(prompt);
 
-            return completion.Content[0].ToString();
+            // Assuming the response is a string
+
+            var predicted = new PredictedStats
+            {
+                Text = completion.Content[0].Text,
+                Timestamp = DateTime.Now
+            };
+            // If needed, you can deserialize it or return directly
+            return Ok(predicted);
         }
+
+
 
         [HttpPost("UploadImage")]
         public async Task<IActionResult> UploadImage(IFormFile file)
