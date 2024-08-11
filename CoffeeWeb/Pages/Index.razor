@@ -2,15 +2,49 @@
 
 <PageTitle>Index</PageTitle>
 
-<h1>Nivona Kaffee Statistik</h1>
+<div class="container mt-5">
+    <h1 class="text-center">Ziele 2024 - Dotnet Teil</h1>
 
-<h2>Nivona Kaffeemaschine Statistik</h2>
-<p>TBD - Hier entsteht meine erste Statistik-Anwendung.</p>
-<p>Gewünscht im ersten Draft: Einfach stupide die Gesamtzahl der getrunkenen Tassen anzeigen -> Daten von der API mit .NET 8.</p>
-<p>Zweiter Draft aufgeschlüsselt nach einzelnen Sorten: Kaffee, Americano...</p>
+    <div class="mt-4">
+        <h2>Ziele 2024:</h2>
+        <ul class="list-group">
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                Upgrade der Bestandsanwendung von .NET 6 und .NET 8 auf .NET 9 mithilfe des Upgrade-Tools
+                <span class="badge bg-success">✔️</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                Einbau von KI/ChatGPT
+                <span class="badge bg-success">✔️</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                Überarbeitung der Seite mithilfe von GitHub Copilot
+                <span class="badge bg-success">✔️</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                DevSecOps-Konzepte anwenden
+                <span class="badge bg-success">✔️</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                Aufbau einer CI/CD mit GitLab, die auch Docker einsetzt
+                <span class="badge bg-success">✔️</span>
+            </li>
+        </ul>
+    </div>
 
-<h2>Kaffepackung-Statistik</h2>
-<p>Auf dieser Seite wird die Kaffeevorrat-Statistik erfasst.</p>
-<p>Kaffeepackung angebrochen am: [Datum]</p>
-<p>Refill am: [Datum]</p>
-<p>Kaffeepackung auf Vorrat: [Anzahl der Packungen]</p>
+    <div class="mt-4">
+        <h2>Was sonst noch passiert ist:</h2>
+        <ul class="list-group">
+            <li class="list-group-item">
+                Infrastruktur von Gitea auf GitLab umgezogen
+                <ul>
+                    <li>CI/CD aufbauen <span class="badge bg-success">✔️</span></li>
+                    <li>GitLab muss auch wieder an Sonar angebunden werden usw <span class="badge bg-success">✔️</span></li>
+                    <li>
+                        Docker Registry aufbauen, welche dann auch automatisch wieder auf der NAS die Container updated...
+                        <span class="badge bg-danger">🗙</span> Das muss aktuell händisch gemacht werden, irgendwo klemmt es wegen lokaler Infrastruktur
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+</div>
