@@ -20,13 +20,8 @@ namespace CoffeeApi.Controllers
 
         }
 
-       /* [HttpPost("RefillNivona")]
-        public Task PostRefillNivona()
-        {
-            return Task.CompletedTask;
-        }*/
 
-        [HttpPost( "NewPackages")]
+        [HttpPost("NewPackages")]
         public async Task<IActionResult> PostNewPackages(CoffeePackages packages)
         {
             if (ModelState.IsValid)
@@ -40,11 +35,6 @@ namespace CoffeeApi.Controllers
             }
         }
 
-        /*    [HttpPut("TakeOnePackage")]
-            public Task TakeOnePackage()
-            {
-                return Task.CompletedTask;
-            }*/
 
 
         [HttpGet("GetStatistics")]
