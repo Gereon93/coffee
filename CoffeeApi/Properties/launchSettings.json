@@ -7,7 +7,8 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "MONGO_USER": "root",
-        "MONGO_PASSWORD": "example"
+        "MONGO_PASSWORD": "example",
+        "OPEN_AI_KEY": "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"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:5174"

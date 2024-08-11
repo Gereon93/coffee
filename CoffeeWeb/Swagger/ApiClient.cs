@@ -462,15 +462,15 @@ namespace CoffeeWeb
 
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<double> ForecastCoffeeConsumptionAsync(System.DateTimeOffset? futureDate)
+        public virtual System.Threading.Tasks.Task<double> ForecastCoffeeStatisticsAsync(System.DateTimeOffset? futureDate)
         {
-            return ForecastCoffeeConsumptionAsync(futureDate, System.Threading.CancellationToken.None);
+            return ForecastCoffeeStatisticsAsync(futureDate, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<double> ForecastCoffeeConsumptionAsync(System.DateTimeOffset? futureDate, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<double> ForecastCoffeeStatisticsAsync(System.DateTimeOffset? futureDate, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -483,8 +483,8 @@ namespace CoffeeWeb
 
                     var urlBuilder_ = new System.Text.StringBuilder();
                     if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
-                    // Operation Path: "api/NivonaStats/ForecastCoffeeConsumption"
-                    urlBuilder_.Append("api/NivonaStats/ForecastCoffeeConsumption");
+                    // Operation Path: "api/NivonaStats/ForecastCoffeeStatistics"
+                    urlBuilder_.Append("api/NivonaStats/ForecastCoffeeStatistics");
                     urlBuilder_.Append('?');
                     if (futureDate != null)
                     {
