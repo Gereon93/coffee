@@ -61,7 +61,7 @@ namespace CoffeeApi.Controllers
         }
 
         [HttpGet("ForecastCoffeeStatistics")]
-        public async Task<ActionResult<double>> ForecastCoffeeStatisticsAsync(DateTime futureDate)
+        public async Task<string> ForecastCoffeeStatisticsAsync(DateTime futureDate)
         {
             var historicalData = await _nivonaStatsCollection.Find(Builders<NivonaStatisticsModel>.Filter.Empty).ToListAsync();
             var orderdHistoricalData = historicalData.OrderBy(x => x.Timestamp).ToList();
@@ -76,7 +76,7 @@ namespace CoffeeApi.Controllers
 
             ChatCompletion completion = await _client.CompleteChatAsync(prompt);
 
-            return Ok(completion);
+            return completion.Content.First().ToString();
         }
 
         [HttpPost("UploadImage")]
