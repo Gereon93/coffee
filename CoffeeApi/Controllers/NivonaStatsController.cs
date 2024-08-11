@@ -1,7 +1,8 @@
-﻿using Azure.AI.TextAnalytics;
-using CoffeeApi.Models;
+﻿using CoffeeApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
+using OpenAI;
+using OpenAI.Chat;
 
 
 namespace CoffeeApi.Controllers
@@ -11,13 +12,14 @@ namespace CoffeeApi.Controllers
     public class NivonaStatsController : ControllerBase
     {
         private readonly IMongoCollection<NivonaStatisticsModel> _nivonaStatsCollection;
-        private readonly TextAnalyticsClient _textAnalyticsClient;
-
-        public NivonaStatsController(IMongoClient mongoClient, TextAnalyticsClient textAnalyticsClient)
+        private readonly ChatClient _client;
+        public NivonaStatsController(IMongoClient mongoClient)
         {
             var database = mongoClient.GetDatabase("nivona");
             _nivonaStatsCollection = database.GetCollection<NivonaStatisticsModel>("NivonaStatistics");
-            _textAnalyticsClient = textAnalyticsClient;
+            var key = Environment.GetEnvironmentVariable("OPEN_AI_KEY") ?? throw new InvalidOperationException("No OpenAI Key");
+            OpenAIClient client = new(key);
+            _client = client.GetChatClient("gpt-4o");
         }
 
 
@@ -58,24 +60,23 @@ namespace CoffeeApi.Controllers
             return Ok(allStats);
         }
 
-        [HttpGet("ForecastCoffeeConsumption")]
-        public async Task<ActionResult<double>> ForecastCoffeeConsumption(DateTime futureDate)
+        [HttpGet("ForecastCoffeeStatistics")]
+        public async Task<ActionResult<double>> ForecastCoffeeStatisticsAsync(DateTime futureDate)
         {
             var historicalData = await _nivonaStatsCollection.Find(Builders<NivonaStatisticsModel>.Filter.Empty).ToListAsync();
-            var inputText = string.Join(" ", historicalData);
-            var sentimentResult = await _textAnalyticsClient.AnalyzeSentimentAsync(inputText);
-            /*
-             * double averageSentimentScore = 0;
+            var orderdHistoricalData = historicalData.OrderBy(x => x.Timestamp).ToList();
 
-              foreach (var document in sentimentResult.Value)
-              {
-                  averageSentimentScore += document.ConfidenceScores.Positive;
-              }
+            var jsonData = Newtonsoft.Json.JsonConvert.SerializeObject(orderdHistoricalData);
+            var prompt = $"Given the following coffee machine statistics data, predict the coffee statistics for the future date {futureDate.ToString("yyyy-MM-dd")} in the format provided:\n\n" +
+                $"Historical Data:\n{jsonData}\n\n" +
+                $"Predict the coffee statistics for the date {futureDate.ToString("yyyy-MM-dd")} and provide the response in the following format:\n" +
+                "{ \"Timestamp\": \"futureDate\", \"EspressoCount\": 0, \"CoffeeCount\": 0, \"LungoCount\": 0, \"CappuccinoCount\": 0, \"LatteMacchiatoCount\": 0, \"CoffeeAmericanoCount\": 0, \"MilkCount\": 0, \"HotWaterCount\": 0, \"MyCoffeeCount\": 0 }";
 
-              averageSentimentScore /= sentimentResult.Value.Count;
-              double forecastedCoffeeConsumption = averageSentimentScore * 10;
-            */
-            return Ok(3);
+
+
+            ChatCompletion completion = await _client.CompleteChatAsync(prompt);
+
+            return Ok(completion);
         }
 
         [HttpPost("UploadImage")]
