@@ -2,7 +2,7 @@ using MongoDB.Driver;
 
 namespace CoffeeApi
 {
-    public class Program
+    public static class Program
     {
         private static void Main(string[] args)
         {
