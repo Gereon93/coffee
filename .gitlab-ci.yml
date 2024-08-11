@@ -19,6 +19,8 @@ variables:
   DOCKER_REG_PASSWORD: $DOCKER_REG_PASSWORD
   DOCKER_REG_URL: $DOCKER_REG_URL
 before_script:
+  - apk add --no-cache docker
+  - service docker start
   - 'dotnet restore $coffee_solution'
 
 build:
@@ -64,8 +66,6 @@ sonarqube-check:
   allow_failure: true
   only:
     - merge_requests
-    - master
-    - main
     - dev
 
 sonarqube-vulnerability-report:
@@ -75,8 +75,6 @@ sonarqube-vulnerability-report:
   allow_failure: true
   only:
     - merge_requests
-    - master
-    - main
     - dev
   artifacts:
     expire_in: 1 day
