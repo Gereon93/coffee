@@ -35,7 +35,7 @@ namespace CoffeeApi
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Coffee API V1");
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Coffee API V2024");
             });
 
             app.UseHttpsRedirection();
