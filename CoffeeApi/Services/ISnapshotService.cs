@@ -1,0 +1,46 @@
+using CoffeeApi.Domain;
+using CoffeeApi.DTOs;
+
+namespace CoffeeApi.Services;
+
+/// <summary>
+/// Service interface for snapshot operations
+/// </summary>
+public interface ISnapshotService
+{
+    /// <summary>
+    /// Process incoming ingest payload with idempotency check
+    /// </summary>
+    /// <returns>Tuple of (Created: true if new snapshot, Snapshot: the snapshot entity)</returns>
+    Task<(bool Created, MachineSnapshot Snapshot)> ProcessIngestAsync(IngestPayloadDto payload);
+
+    /// <summary>
+    /// Get the latest snapshot for a machine
+    /// </summary>
+    Task<MachineSnapshot?> GetLatestAsync(string machineId = "EQ900-DEFAULT");
+
+    /// <summary>
+    /// Get all snapshots with pagination
+    /// </summary>
+    Task<(List<MachineSnapshot> Items, int TotalCount)> GetAllAsync(int page = 1, int pageSize = 50);
+
+    /// <summary>
+    /// Get snapshots for a specific date
+    /// </summary>
+    Task<List<MachineSnapshot>> GetByDateAsync(DateOnly date);
+
+    /// <summary>
+    /// Get snapshots within a date range
+    /// </summary>
+    Task<List<MachineSnapshot>> GetByDateRangeAsync(DateOnly from, DateOnly to);
+
+    /// <summary>
+    /// Get daily statistics summary
+    /// </summary>
+    Task<DailySummaryDto> GetDailySummaryAsync(DateOnly date);
+
+    /// <summary>
+    /// Get aggregated data for heatmap
+    /// </summary>
+    Task<List<HeatmapDataPointDto>> GetHeatmapDataAsync(int weeks = 4);
+}
