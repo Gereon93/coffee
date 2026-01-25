@@ -19,8 +19,8 @@
 <LineChart @ref="lineChart" TItem="double" />
 
 @code {
-    LineChart<double> lineChart;
-    private List<NivonaStatisticsModel>? nivonaStats;
+    private LineChart<double>? lineChart;
+    private List<NivonaStatisticsModel> nivonaStats = new();
     private string selectedColor = ChartColor.FromRgba(0, 0, 0, 0); // Default color (transparent)
 
     Dictionary<string, string> backgroundColors = new()
@@ -67,6 +67,11 @@
 
     async Task HandleRedraw(string type, string color)
     {
+        if (lineChart == null)
+        {
+            return;
+        }
+
         selectedColor = color;
         await lineChart.Clear();
         List<double> data = type switch
