@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  coffee-api:
+    image: 192.168.2.143:5050/gereon/nivona-pi/coffee-api:latest
+    container_name: coffee-api
+    restart: unless-stopped
+    ports:
+      - "8089:8080"
+    volumes:
+      # Persist SQLite database
+      - coffee-data:/app/data
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__Default=Data Source=/app/data/coffee.db
+      # API Key for n8n authentication (set in Portainer or .env)
+      - ApiKey=${COFFEE_API_KEY}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+volumes:
+  coffee-data:
+    driver: local

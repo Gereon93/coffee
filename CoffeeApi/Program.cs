@@ -1,4 +1,8 @@
-using MongoDB.Driver;
+using CoffeeApi.Infrastructure;
+using CoffeeApi.Middleware;
+using CoffeeApi.Services;
+using Microsoft.EntityFrameworkCore;
+using Scalar.AspNetCore;
 
 namespace CoffeeApi
 {
@@ -8,35 +12,45 @@ namespace CoffeeApi
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
+            // Add services to the container
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddOpenApi();
 
-            string? user = Environment.GetEnvironmentVariable("MONGO_USER");
-            string? password = Environment.GetEnvironmentVariable("MONGO_PASSWORD");
-            if (user == null || password == null)
-            {
-                throw new InvalidOperationException("MONGO_USER and MONGO_PASSWORD environment variables must be set");
-            }
-            string mongoConnectionString = $"mongodb://{user}:{password}@192.168.2.143:27017/";
+            // ===== EQ900 Services (SQLite) =====
+            var connectionString = builder.Configuration.GetConnectionString("Default")
+                ?? "Data Source=coffee.db";
 
-            // Register MongoClient with DI
-            builder.Services.AddSingleton<IMongoClient>(new MongoClient(mongoConnectionString));
+            builder.Services.AddDbContext<AppDbContext>(options =>
+                options.UseSqlite(connectionString));
+
+            builder.Services.AddScoped<ISnapshotService, SnapshotService>();
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
+            // Ensure database is created
+            using (var scope = app.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                db.Database.EnsureCreated();
+            }
+
+            // Configure the HTTP request pipeline
             if (app.Environment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseSwagger();
-            app.UseSwaggerUI(c =>
+            // Scalar API Documentation (replaces Swagger)
+            app.MapOpenApi();
+            app.MapScalarApiReference(options =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Coffee API V2024");
+                options.Title = "Coffee Analytics Hub API";
+                options.Theme = ScalarTheme.BluePlanet;
             });
+
+            // API Key Authentication for protected endpoints
+            app.UseApiKeyAuthentication();
 
             app.UseHttpsRedirection();
             app.UseAuthorization();
