@@ -89,32 +89,40 @@ public class StatsController : ControllerBase
 
         var snapshots = await _snapshotService.GetByDateRangeAsync(fromDate, toDate);
 
-        // Aggregate by date
-        var dailyData = snapshots
+        // Get the last snapshot before the range for cross-day deltas
+        var rangeStart = fromDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var previousSnapshot = await _context.MachineSnapshots
+            .Where(s => s.Timestamp < rangeStart)
+            .OrderByDescending(s => s.Timestamp)
+            .FirstOrDefaultAsync();
+
+        // Aggregate by date with cross-day delta support
+        var groups = snapshots
             .GroupBy(s => DateOnly.FromDateTime(s.Timestamp))
-            .Select(g =>
-            {
-                var daySnapshots = g.OrderBy(s => s.Timestamp).ToList();
-                if (daySnapshots.Count < 2)
-                {
-                    return new DailyAggregateDto { Date = g.Key.ToString("yyyy-MM-dd") };
-                }
-
-                var first = daySnapshots.First();
-                var last = daySnapshots.Last();
-
-                return new DailyAggregateDto
-                {
-                    Date = g.Key.ToString("yyyy-MM-dd"),
-                    CoffeeCount = Math.Max(0, last.BeverageCounterCoffee - first.BeverageCounterCoffee),
-                    MilkCount = Math.Max(0,
-                        (last.BeverageCounterCoffeeAndMilk - first.BeverageCounterCoffeeAndMilk) +
-                        (last.BeverageCounterMilk - first.BeverageCounterMilk)),
-                    Total = Math.Max(0, last.TotalBeverages - first.TotalBeverages)
-                };
-            })
-            .OrderBy(d => d.Date)
+            .OrderBy(g => g.Key)
             .ToList();
+
+        Domain.MachineSnapshot? lastPrevious = previousSnapshot;
+        var dailyData = new List<DailyAggregateDto>();
+
+        foreach (var g in groups)
+        {
+            var daySnapshots = g.OrderBy(s => s.Timestamp).ToList();
+            var baseline = lastPrevious ?? daySnapshots.First();
+            var last = daySnapshots.Last();
+
+            dailyData.Add(new DailyAggregateDto
+            {
+                Date = g.Key.ToString("yyyy-MM-dd"),
+                CoffeeCount = Math.Max(0, last.BeverageCounterCoffee - baseline.BeverageCounterCoffee),
+                MilkCount = Math.Max(0,
+                    (last.BeverageCounterCoffeeAndMilk - baseline.BeverageCounterCoffeeAndMilk) +
+                    (last.BeverageCounterMilk - baseline.BeverageCounterMilk)),
+                Total = Math.Max(0, last.TotalBeverages - baseline.TotalBeverages)
+            });
+
+            lastPrevious = last;
+        }
 
         var response = new RangeStatsResponseDto
         {
