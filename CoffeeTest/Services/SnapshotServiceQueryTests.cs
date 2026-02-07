@@ -97,6 +97,32 @@ public class SnapshotServiceQueryTests
     }
 
     [Fact]
+    public async Task GetByDate_WithTimezoneOffset_ShiftsBoundary()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+
+        db.MachineSnapshots.AddRange(
+            // 22:30 UTC = 23:30 CET on Feb 6 → in Feb 6 CET
+            new SnapshotBuilder().At(new DateTime(2026, 2, 6, 22, 30, 0, DateTimeKind.Utc)).WithCoffee(10).Build(),
+            // 23:30 UTC = 00:30 CET on Feb 7 → in Feb 7 CET but Feb 6 UTC
+            new SnapshotBuilder().At(new DateTime(2026, 2, 6, 23, 30, 0, DateTimeKind.Utc)).WithCoffee(11).Build(),
+            // 08:00 UTC = 09:00 CET on Feb 7 → in Feb 7 both ways
+            new SnapshotBuilder().At(new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(12).Build(),
+            // 23:30 UTC = 00:30 CET on Feb 8 → NOT in Feb 7 CET
+            new SnapshotBuilder().At(new DateTime(2026, 2, 7, 23, 30, 0, DateTimeKind.Utc)).WithCoffee(13).Build()
+        );
+        await db.SaveChangesAsync();
+
+        // CET (UTC+1): Feb 7 local = Feb 6 23:00 UTC to Feb 7 23:00 UTC
+        var result = await service.GetByDateAsync(new DateOnly(2026, 2, 7), tzOffsetMinutes: 60);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal(11, result[0].BeverageCounterCoffee); // 23:30 UTC (00:30 CET Feb 7)
+        Assert.Equal(12, result[1].BeverageCounterCoffee); // 08:00 UTC (09:00 CET Feb 7)
+    }
+
+    [Fact]
     public async Task GetByDateRange_ReturnsCorrectRange()
     {
         using var db = TestDbContextFactory.Create();

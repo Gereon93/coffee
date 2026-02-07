@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Grid3x3 } from 'lucide-react';
+import { LayoutDashboard, Grid3x3, ScrollText } from 'lucide-react';
 
 const links = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/heatmap', label: 'Heatmap', icon: Grid3x3 },
+  { to: '/log', label: 'Log', icon: ScrollText },
 ] as const;
 
 export function NavBar() {
