@@ -3,16 +3,12 @@ image: 192.168.2.143:3033/dotnet-9-special:latest
 stages:
   - build
   - test
-  - docker
   - sonarqube-check
   - sonarqube-vulnerability-report
 
 variables:
   coffee_solution: "Coffee.sln"
   test_project: "CoffeeTest/CoffeeTest.csproj"
-  # Docker Registry
-  DOCKER_REGISTRY: 192.168.2.143:5050
-  DOCKER_IMAGE: $DOCKER_REGISTRY/gereon/coffee/coffee-api
 
 cache:
   key: nuget
@@ -44,28 +40,6 @@ test:
     - master
     - main
     - dev
-
-# Docker Build and Push
-docker-build:
-  stage: docker
-  image: docker:24-dind
-  services:
-    - docker:24-dind
-  variables:
-    DOCKER_TLS_CERTDIR: ""
-    DOCKER_HOST: tcp://docker:2375
-  before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $DOCKER_REGISTRY
-  script:
-    - cd CoffeeApi
-    - docker build -t $DOCKER_IMAGE:$CI_COMMIT_SHA -t $DOCKER_IMAGE:latest .
-    - docker push $DOCKER_IMAGE:$CI_COMMIT_SHA
-    - docker push $DOCKER_IMAGE:latest
-  only:
-    - main
-    - master
-  tags:
-    - docker
 
 sonarqube-check:
   stage: sonarqube-check

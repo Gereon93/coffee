@@ -26,6 +26,16 @@ namespace CoffeeApi
 
             builder.Services.AddScoped<ISnapshotService, SnapshotService>();
 
+            builder.Services.AddCors(options =>
+            {
+                options.AddDefaultPolicy(policy =>
+                {
+                    policy.AllowAnyOrigin()
+                          .AllowAnyHeader()
+                          .AllowAnyMethod();
+                });
+            });
+
             var app = builder.Build();
 
             // Ensure database is created
@@ -48,6 +58,8 @@ namespace CoffeeApi
                 options.Title = "Coffee Analytics Hub API";
                 options.Theme = ScalarTheme.BluePlanet;
             });
+
+            app.UseCors();
 
             // API Key Authentication for protected endpoints
             app.UseApiKeyAuthentication();

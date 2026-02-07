@@ -106,27 +106,39 @@ public class SnapshotService : ISnapshotService
     {
         var snapshots = await GetByDateAsync(date);
 
-        if (snapshots.Count < 2)
+        if (snapshots.Count == 0)
         {
             return new DailySummaryDto();
         }
 
-        var first = snapshots.First();
+        // Get the last snapshot before this day for cross-day delta
+        var startOfDay = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var previousSnapshot = await _context.MachineSnapshots
+            .Where(s => s.Timestamp < startOfDay)
+            .OrderByDescending(s => s.Timestamp)
+            .FirstOrDefaultAsync();
+
+        var baseline = previousSnapshot ?? snapshots.First();
         var last = snapshots.Last();
 
-        // Calculate today's consumption (delta between first and last)
-        var coffeeToday = last.BeverageCounterCoffee - first.BeverageCounterCoffee;
-        var milkDrinksToday = (last.BeverageCounterCoffeeAndMilk - first.BeverageCounterCoffeeAndMilk) +
-                             (last.BeverageCounterMilk - first.BeverageCounterMilk);
+        // Calculate today's consumption (delta from baseline to last)
+        var coffeeToday = last.BeverageCounterCoffee - baseline.BeverageCounterCoffee;
+        var milkDrinksToday = (last.BeverageCounterCoffeeAndMilk - baseline.BeverageCounterCoffeeAndMilk) +
+                             (last.BeverageCounterMilk - baseline.BeverageCounterMilk);
 
         // Find peak hour (hour with most beverages)
         int? peakHour = null;
         var maxDelta = 0;
 
-        for (int i = 1; i < snapshots.Count; i++)
+        // Build sequence including previous day's last snapshot for first delta
+        var sequence = previousSnapshot != null
+            ? new[] { previousSnapshot }.Concat(snapshots).ToList()
+            : snapshots;
+
+        for (int i = 1; i < sequence.Count; i++)
         {
-            var prev = snapshots[i - 1];
-            var curr = snapshots[i];
+            var prev = sequence[i - 1];
+            var curr = sequence[i];
             var delta = curr.TotalBeverages - prev.TotalBeverages;
 
             if (delta > maxDelta)
