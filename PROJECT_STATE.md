@@ -2,8 +2,8 @@
 
 ## Aktueller Fokus
 
-**Phase:** Production - API + Dashboard live
-**Status:** MVP komplett, beide Container laufen
+**Phase:** Abgeschlossen
+**Status:** Projekt komplett - API, Dashboard, Tests, Deployment alles live
 
 ---
 
@@ -22,8 +22,9 @@
 | 9. React Frontend | Done | Dashboard + Heatmap live |
 | 10. CoffeeWeb Cleanup | Done | Blazor-Projekt entfernt |
 | 11. Build Script | Done | build.sh ersetzt CI Docker Stage |
-| 12. CI/CD Pipeline | Teilweise | Build+Test in GitLab, Docker lokal via build.sh |
-| 13. Testing | Offen | Alte Nivona-Tests obsolet, neue EQ900-Tests fehlen |
+| 12. CI/CD Pipeline | Done | Build+Test in GitLab, Docker lokal via build.sh |
+| 13. Testing | Done | 33 EQ900-Tests (Unit + Integration) |
+| 14. Legacy Cleanup | Done | Altlasten bereinigt, Projekt abgeschlossen |
 
 ---
 
@@ -60,21 +61,14 @@
 
 ---
 
-## Naechste Schritte (Priorisiert)
+## Moegliche Erweiterungen (Backlog)
 
-1. **Unit Tests (EQ900)**
-   - SnapshotService: Idempotenz, Cross-Day Delta
-   - StatsController: Range Aggregation, Daily Summary
-   - Alte Nivona/MongoDB Tests ersetzen
+Keine offenen Aufgaben. Optionale Ideen fuer die Zukunft:
 
-2. **CI/CD vervollstaendigen**
-   - GitLab Runner braucht .NET 10 SDK Image
-   - Dann laufen Build + Test automatisch
-
-3. **Dashboard Verbesserungen (optional)**
-   - Date Picker fuer historische Tage
-   - Dark Mode Toggle
-   - Loading Skeletons statt Spinner
+- Date Picker fuer historische Tage im Dashboard
+- Dark Mode Toggle (aktuell System Preference)
+- Loading Skeletons statt Spinner
+- GitLab Runner mit .NET 10 SDK Image fuer vollautomatische CI/CD
 
 ---
 
@@ -188,3 +182,4 @@ Test-DB: EF Core InMemory. Run: `dotnet test CoffeeTest/`
 | 2026-02-07 | CoffeeWeb (Blazor) entfernt, Solution bereinigt |
 | 2026-02-07 | 33 EQ900-Tests (Idempotenz, Cross-Day, Controller) |
 | 2026-02-07 | Altlasten bereinigt (IST/SOLL_STAND, Agents, start.sh, CaptainDocker) |
+| 2026-02-07 | Projekt abgeschlossen - alle Phasen Done |
