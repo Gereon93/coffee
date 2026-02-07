@@ -25,22 +25,24 @@ public interface ISnapshotService
     Task<(List<MachineSnapshot> Items, int TotalCount)> GetAllAsync(int page = 1, int pageSize = 50);
 
     /// <summary>
-    /// Get snapshots for a specific date
+    /// Get snapshots for a specific date (timezone-aware)
     /// </summary>
-    Task<List<MachineSnapshot>> GetByDateAsync(DateOnly date);
+    /// <param name="date">The local date</param>
+    /// <param name="tzOffsetMinutes">UTC offset in minutes (e.g. 60 for CET)</param>
+    Task<List<MachineSnapshot>> GetByDateAsync(DateOnly date, int tzOffsetMinutes = 0);
 
     /// <summary>
-    /// Get snapshots within a date range
+    /// Get snapshots within a date range (timezone-aware)
     /// </summary>
-    Task<List<MachineSnapshot>> GetByDateRangeAsync(DateOnly from, DateOnly to);
+    Task<List<MachineSnapshot>> GetByDateRangeAsync(DateOnly from, DateOnly to, int tzOffsetMinutes = 0);
 
     /// <summary>
-    /// Get daily statistics summary
+    /// Get daily statistics summary (timezone-aware)
     /// </summary>
-    Task<DailySummaryDto> GetDailySummaryAsync(DateOnly date);
+    Task<DailySummaryDto> GetDailySummaryAsync(DateOnly date, int tzOffsetMinutes = 0);
 
     /// <summary>
-    /// Get aggregated data for heatmap
+    /// Get aggregated data for heatmap (timezone-aware)
     /// </summary>
-    Task<List<HeatmapDataPointDto>> GetHeatmapDataAsync(int weeks = 4);
+    Task<List<HeatmapDataPointDto>> GetHeatmapDataAsync(int weeks = 4, int tzOffsetMinutes = 0);
 }
