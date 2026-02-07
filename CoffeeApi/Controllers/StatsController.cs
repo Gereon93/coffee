@@ -66,10 +66,27 @@ public class StatsController : ControllerBase
         var snapshots = await _snapshotService.GetByDateAsync(parsedDate, tz);
         var summary = await _snapshotService.GetDailySummaryAsync(parsedDate, tz);
 
+        // Prepend previous day's last snapshot as baseline so the frontend
+        // can calculate the first hourly delta correctly
+        var snapshotDtos = new List<SnapshotResponseDto>();
+        if (snapshots.Count > 0)
+        {
+            var (startOfDay, _) = GetLocalDayBoundsUtc(parsedDate, tz);
+            var baseline = await _context.MachineSnapshots
+                .Where(s => s.Timestamp < startOfDay)
+                .OrderByDescending(s => s.Timestamp)
+                .FirstOrDefaultAsync();
+            if (baseline != null)
+            {
+                snapshotDtos.Add(MapToDto(baseline));
+            }
+        }
+        snapshotDtos.AddRange(snapshots.Select(MapToDto));
+
         var response = new DailyStatsResponseDto
         {
             Date = date,
-            Snapshots = snapshots.Select(MapToDto).ToList(),
+            Snapshots = snapshotDtos,
             Summary = summary
         };
 
