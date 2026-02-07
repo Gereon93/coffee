@@ -3,7 +3,13 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { execSync } from 'child_process'
 
-const commit = execSync('git rev-parse --short HEAD').toString().trim()
+let commit = process.env.BUILD_COMMIT ?? 'dev'
+try {
+  commit = execSync('git rev-parse --short HEAD').toString().trim()
+} catch {
+  // git not available (e.g. Docker build) — use BUILD_COMMIT env or fallback
+}
+
 const buildTime = new Date().toLocaleString('de-DE', {
   timeZone: 'Europe/Berlin',
   day: '2-digit',
