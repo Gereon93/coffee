@@ -51,18 +51,20 @@ public class StatsController : ControllerBase
     /// <summary>
     /// Get statistics for a specific date
     /// </summary>
+    /// <param name="date">Date in yyyy-MM-dd format</param>
+    /// <param name="tz">UTC offset in minutes (e.g. 60 for CET, 120 for CEST)</param>
     [HttpGet("daily/{date}")]
     [ProducesResponseType(typeof(DailyStatsResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> GetDaily(string date)
+    public async Task<IActionResult> GetDaily(string date, [FromQuery] int tz = 0)
     {
         if (!DateOnly.TryParse(date, out var parsedDate))
         {
             return BadRequest(new { error = "Invalid date format", details = new[] { "Use yyyy-MM-dd format" } });
         }
 
-        var snapshots = await _snapshotService.GetByDateAsync(parsedDate);
-        var summary = await _snapshotService.GetDailySummaryAsync(parsedDate);
+        var snapshots = await _snapshotService.GetByDateAsync(parsedDate, tz);
+        var summary = await _snapshotService.GetDailySummaryAsync(parsedDate, tz);
 
         var response = new DailyStatsResponseDto
         {
@@ -77,28 +79,31 @@ public class StatsController : ControllerBase
     /// <summary>
     /// Get statistics for a date range
     /// </summary>
+    /// <param name="from">Start date in yyyy-MM-dd format</param>
+    /// <param name="to">End date in yyyy-MM-dd format</param>
+    /// <param name="tz">UTC offset in minutes (e.g. 60 for CET, 120 for CEST)</param>
     [HttpGet("range")]
     [ProducesResponseType(typeof(RangeStatsResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> GetRange([FromQuery] string from, [FromQuery] string to)
+    public async Task<IActionResult> GetRange([FromQuery] string from, [FromQuery] string to, [FromQuery] int tz = 0)
     {
         if (!DateOnly.TryParse(from, out var fromDate) || !DateOnly.TryParse(to, out var toDate))
         {
             return BadRequest(new { error = "Invalid date format", details = new[] { "Use yyyy-MM-dd format for both from and to" } });
         }
 
-        var snapshots = await _snapshotService.GetByDateRangeAsync(fromDate, toDate);
+        var snapshots = await _snapshotService.GetByDateRangeAsync(fromDate, toDate, tz);
 
         // Get the last snapshot before the range for cross-day deltas
-        var rangeStart = fromDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var (rangeStart, _) = GetLocalDayBoundsUtc(fromDate, tz);
         var previousSnapshot = await _context.MachineSnapshots
             .Where(s => s.Timestamp < rangeStart)
             .OrderByDescending(s => s.Timestamp)
             .FirstOrDefaultAsync();
 
-        // Aggregate by date with cross-day delta support
+        // Aggregate by local date with cross-day delta support
         var groups = snapshots
-            .GroupBy(s => DateOnly.FromDateTime(s.Timestamp))
+            .GroupBy(s => DateOnly.FromDateTime(s.Timestamp.AddMinutes(tz)))
             .OrderBy(g => g.Key)
             .ToList();
 
@@ -137,13 +142,15 @@ public class StatsController : ControllerBase
     /// <summary>
     /// Get heatmap data (hour x day of week)
     /// </summary>
+    /// <param name="weeks">Number of weeks to include (max 52)</param>
+    /// <param name="tz">UTC offset in minutes (e.g. 60 for CET, 120 for CEST)</param>
     [HttpGet("heatmap")]
     [ProducesResponseType(typeof(HeatmapResponseDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetHeatmap([FromQuery] int weeks = 4)
+    public async Task<IActionResult> GetHeatmap([FromQuery] int weeks = 4, [FromQuery] int tz = 0)
     {
         weeks = Math.Min(weeks, 52); // Cap at 1 year
 
-        var heatmapData = await _snapshotService.GetHeatmapDataAsync(weeks);
+        var heatmapData = await _snapshotService.GetHeatmapDataAsync(weeks, tz);
 
         var response = new HeatmapResponseDto
         {
@@ -188,5 +195,13 @@ public class StatsController : ControllerBase
             BeverageCounterHotWater = snapshot.BeverageCounterHotWater,
             OperationState = snapshot.OperationState
         };
+    }
+
+    private static (DateTime Start, DateTime End) GetLocalDayBoundsUtc(DateOnly date, int tzOffsetMinutes)
+    {
+        var start = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)
+            .AddMinutes(-tzOffsetMinutes);
+        var end = start.AddDays(1);
+        return (start, end);
     }
 }
