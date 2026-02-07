@@ -1,5 +1,6 @@
 using CoffeeApi.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace CoffeeApi.Infrastructure;
 
@@ -56,5 +57,21 @@ public class AppDbContext : DbContext
             // Ignore computed property
             entity.Ignore(e => e.TotalBeverages);
         });
+
+        // SQLite loses DateTimeKind on roundtrip — force all DateTime properties to Utc
+        var utcConverter = new ValueConverter<DateTime, DateTime>(
+            v => v,
+            v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(DateTime) || property.ClrType == typeof(DateTime?))
+                {
+                    property.SetValueConverter(utcConverter);
+                }
+            }
+        }
     }
 }

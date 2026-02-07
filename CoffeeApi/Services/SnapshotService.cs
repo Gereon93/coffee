@@ -80,31 +80,30 @@ public class SnapshotService : ISnapshotService
         return (items, totalCount);
     }
 
-    public async Task<List<MachineSnapshot>> GetByDateAsync(DateOnly date)
+    public async Task<List<MachineSnapshot>> GetByDateAsync(DateOnly date, int tzOffsetMinutes = 0)
     {
-        var startOfDay = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var endOfDay = date.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
+        var (start, end) = GetLocalDayBoundsUtc(date, tzOffsetMinutes);
 
         return await _context.MachineSnapshots
-            .Where(s => s.Timestamp >= startOfDay && s.Timestamp <= endOfDay)
+            .Where(s => s.Timestamp >= start && s.Timestamp < end)
             .OrderBy(s => s.Timestamp)
             .ToListAsync();
     }
 
-    public async Task<List<MachineSnapshot>> GetByDateRangeAsync(DateOnly from, DateOnly to)
+    public async Task<List<MachineSnapshot>> GetByDateRangeAsync(DateOnly from, DateOnly to, int tzOffsetMinutes = 0)
     {
-        var startDate = from.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var endDate = to.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
+        var (start, _) = GetLocalDayBoundsUtc(from, tzOffsetMinutes);
+        var (_, end) = GetLocalDayBoundsUtc(to, tzOffsetMinutes);
 
         return await _context.MachineSnapshots
-            .Where(s => s.Timestamp >= startDate && s.Timestamp <= endDate)
+            .Where(s => s.Timestamp >= start && s.Timestamp < end)
             .OrderBy(s => s.Timestamp)
             .ToListAsync();
     }
 
-    public async Task<DailySummaryDto> GetDailySummaryAsync(DateOnly date)
+    public async Task<DailySummaryDto> GetDailySummaryAsync(DateOnly date, int tzOffsetMinutes = 0)
     {
-        var snapshots = await GetByDateAsync(date);
+        var snapshots = await GetByDateAsync(date, tzOffsetMinutes);
 
         if (snapshots.Count == 0)
         {
@@ -112,7 +111,7 @@ public class SnapshotService : ISnapshotService
         }
 
         // Get the last snapshot before this day for cross-day delta
-        var startOfDay = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var (startOfDay, _) = GetLocalDayBoundsUtc(date, tzOffsetMinutes);
         var previousSnapshot = await _context.MachineSnapshots
             .Where(s => s.Timestamp < startOfDay)
             .OrderByDescending(s => s.Timestamp)
@@ -144,7 +143,8 @@ public class SnapshotService : ISnapshotService
             if (delta > maxDelta)
             {
                 maxDelta = delta;
-                peakHour = curr.Timestamp.Hour;
+                // Return peak hour in caller's local time
+                peakHour = curr.Timestamp.AddMinutes(tzOffsetMinutes).Hour;
             }
         }
 
@@ -157,7 +157,7 @@ public class SnapshotService : ISnapshotService
         };
     }
 
-    public async Task<List<HeatmapDataPointDto>> GetHeatmapDataAsync(int weeks = 4)
+    public async Task<List<HeatmapDataPointDto>> GetHeatmapDataAsync(int weeks = 4, int tzOffsetMinutes = 0)
     {
         var startDate = DateTime.UtcNow.AddDays(-7 * weeks);
 
@@ -177,11 +177,14 @@ public class SnapshotService : ISnapshotService
 
             if (delta > 0)
             {
+                // Convert to caller's local time for grouping
+                var localTime = curr.Timestamp.AddMinutes(tzOffsetMinutes);
+
                 // ISO-8601: Monday = 1, Sunday = 7
-                var dayOfWeek = (int)curr.Timestamp.DayOfWeek;
+                var dayOfWeek = (int)localTime.DayOfWeek;
                 if (dayOfWeek == 0) dayOfWeek = 7; // Convert Sunday from 0 to 7
 
-                var key = (dayOfWeek, curr.Timestamp.Hour);
+                var key = (dayOfWeek, localTime.Hour);
 
                 if (!heatmapData.ContainsKey(key))
                     heatmapData[key] = 0;
@@ -200,6 +203,18 @@ public class SnapshotService : ISnapshotService
             .OrderBy(h => h.DayOfWeek)
             .ThenBy(h => h.Hour)
             .ToList();
+    }
+
+    /// <summary>
+    /// Calculates the UTC start (inclusive) and end (exclusive) of a local day.
+    /// </summary>
+    private static (DateTime Start, DateTime End) GetLocalDayBoundsUtc(DateOnly date, int tzOffsetMinutes)
+    {
+        // Local midnight in UTC = midnight - offset
+        var start = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)
+            .AddMinutes(-tzOffsetMinutes);
+        var end = start.AddDays(1);
+        return (start, end);
     }
 
     private MachineSnapshot MapToEntity(IngestPayloadDto payload)
