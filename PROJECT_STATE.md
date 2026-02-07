@@ -155,16 +155,19 @@ services:
 
 ---
 
-## Test-Abdeckung
+## Test-Abdeckung (33 Tests, alle gruen)
 
-| Bereich | Status | Details |
-|---------|--------|---------|
-| SnapshotService | Keine Tests | Idempotenz, Cross-Day Delta |
-| StatsController | Keine Tests | Daily, Range, Heatmap |
-| IngestController | Keine Tests | Payload-Parsing, Auth |
-| CoffeeTest/ (alt) | Obsolet | Nivona/MongoDB - kompiliert nicht mehr |
+| Testklasse | Tests | Bereich |
+|------------|-------|---------|
+| MachineSnapshotTests | 3 | TotalBeverages, Default Values |
+| SnapshotServiceIdempotencyTests | 5 | First Snapshot, Duplicate Skip, Counter Increase |
+| SnapshotServiceDailySummaryTests | 4 | Cross-Day Delta, Peak Hour, Baseline |
+| SnapshotServiceQueryTests | 5 | GetLatest, Pagination, GetByDate/Range |
+| SnapshotServiceHeatmapTests | 3 | DayOfWeek Grouping, Sunday=7 ISO-8601 |
+| IngestControllerTests | 4 | Null/Empty Validation, 201 Created, 200 Duplicate |
+| StatsControllerTests | 6 | Range Aggregation, Health, Heatmap Cap |
 
-**Handlungsbedarf:** Alte Tests in CoffeeTest/ durch neue EQ900-Tests ersetzen.
+Test-DB: EF Core InMemory. Run: `dotnet test CoffeeTest/`
 
 ---
 
@@ -183,3 +186,5 @@ services:
 | 2026-02-07 | build.sh: Lokaler Docker Build ersetzt CI Stage |
 | 2026-02-07 | Dashboard-Container (nginx) deployed |
 | 2026-02-07 | CoffeeWeb (Blazor) entfernt, Solution bereinigt |
+| 2026-02-07 | 33 EQ900-Tests (Idempotenz, Cross-Day, Controller) |
+| 2026-02-07 | Altlasten bereinigt (IST/SOLL_STAND, Agents, start.sh, CaptainDocker) |
