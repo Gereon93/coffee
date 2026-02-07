@@ -29,6 +29,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GIT_COMMIT="$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
 SERVICE="${1:-all}"
 NO_PUSH=false
 [[ "$2" == "--no-push" || "$3" == "--no-push" ]] && NO_PUSH=true
@@ -55,6 +56,7 @@ build_and_push() {
   echo ""
 
   docker build \
+    --build-arg BUILD_COMMIT="${GIT_COMMIT}" \
     -t "${full_image}:latest" \
     -t "${full_image}:${timestamp}" \
     "${SCRIPT_DIR}/${build_context}"

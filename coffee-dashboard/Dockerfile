@@ -1,6 +1,10 @@
 # Coffee Dashboard - React/Vite
 FROM node:22-alpine AS build
 WORKDIR /app
+
+ARG BUILD_COMMIT=unknown
+ENV BUILD_COMMIT=$BUILD_COMMIT
+
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
