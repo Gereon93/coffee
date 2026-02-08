@@ -15,6 +15,7 @@ set -e
 # --- Configuration (edit these for other repos) ---
 REGISTRY="192.168.2.143:5050"
 PROJECT="gereon/coffee"
+DOCKER="${DOCKER:-podman}"
 
 declare -A SERVICES=(
   [api]="CoffeeApi:coffee-api"
@@ -55,7 +56,7 @@ build_and_push() {
   echo "  Image:    ${full_image}"
   echo ""
 
-  docker build \
+  $DOCKER build \
     --build-arg BUILD_COMMIT="${GIT_COMMIT}" \
     -t "${full_image}:latest" \
     -t "${full_image}:${timestamp}" \
@@ -65,8 +66,8 @@ build_and_push() {
 
   if [[ "$NO_PUSH" == false ]]; then
     echo -e "${YELLOW}Pushing...${NC}"
-    docker push "${full_image}:latest"
-    docker push "${full_image}:${timestamp}"
+    $DOCKER push "${full_image}:latest"
+    $DOCKER push "${full_image}:${timestamp}"
     echo -e "${GREEN}Pushed: ${full_image}:latest${NC}"
     echo -e "${GREEN}Pushed: ${full_image}:${timestamp}${NC}"
   else
