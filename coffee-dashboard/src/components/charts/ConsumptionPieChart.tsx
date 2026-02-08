@@ -62,10 +62,11 @@ export function ConsumptionPieChart({ data }: Props) {
               color: '#e7e5e4',
               fontSize: '0.875rem',
             }}
+            itemStyle={{ color: '#e7e5e4' }}
           />
           <Legend
             formatter={(value) => (
-              <span className="text-sm text-stone-600 dark:text-stone-400">{value}</span>
+              <span className="!text-sm !text-stone-600 dark:!text-stone-400">{value}</span>
             )}
           />
         </PieChart>
