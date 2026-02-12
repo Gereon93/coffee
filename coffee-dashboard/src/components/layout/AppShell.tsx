@@ -1,10 +1,49 @@
+import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { NavBar } from './NavBar';
 
+type Theme = 'light' | 'dark';
+const THEME_STORAGE_KEY = 'coffee-dashboard-theme';
+
+function getInitialTheme(): Theme {
+  if (typeof window === 'undefined') {
+    return 'light';
+  }
+
+  try {
+    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (storedTheme === 'light' || storedTheme === 'dark') {
+      return storedTheme;
+    }
+  } catch {
+    // Ignore localStorage errors and continue with system preference.
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 export function AppShell() {
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+
+  useEffect(() => {
+    const isDarkMode = theme === 'dark';
+    document.documentElement.classList.toggle('dark', isDarkMode);
+    document.documentElement.style.colorScheme = theme;
+
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {
+      // Ignore localStorage errors.
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'));
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-stone-50 text-stone-900 dark:bg-stone-950 dark:text-stone-100">
-      <NavBar />
+      <NavBar isDarkMode={theme === 'dark'} onToggleTheme={toggleTheme} />
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
         <Outlet />
       </main>
