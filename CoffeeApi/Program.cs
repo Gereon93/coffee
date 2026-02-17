@@ -12,6 +12,8 @@ namespace CoffeeApi
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            builder.Configuration.AddJsonFile("appsettings.Secrets.json", optional: true, reloadOnChange: false);
+
             // Add services to the container
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
@@ -25,6 +27,9 @@ namespace CoffeeApi
                 options.UseSqlite(connectionString));
 
             builder.Services.AddScoped<ISnapshotService, SnapshotService>();
+
+            // ===== n8n Webhook Service (HomeConnect) =====
+            builder.Services.AddHttpClient<IHomeConnectService, HomeConnectService>();
 
             builder.Services.AddCors(options =>
             {
