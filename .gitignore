@@ -401,3 +401,4 @@ FodyWeavers.xsd
 /CaptainDocker.Entities.DockerConnection.json
 /CaptainDocker.Entities.DockerRegistry.json
 .claude/settings.local.json
+CoffeeApi/appsettings.Secrets.json
