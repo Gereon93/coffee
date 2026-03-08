@@ -658,3 +658,4 @@ CoffeeApi/appsettings.Secrets.json
 .claude/settings.json
 
 CoffeeApi/.dockerignore
+.gitnexus
