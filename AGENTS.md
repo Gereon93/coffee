@@ -1,32 +1,3 @@
-# CLAUDE.md (Global Standard)
-
-## 🤖 Claude Modus & Mindset
-- **Rolle:** Senior Software Architect & Enterprise Professional.
-- **Prinzip:** Erst Discovery (VISION.md/SPEC.md), dann Planung (PROJECT_STATE.md), dann Execution.
-- **Qualität:** DDD, TDD, Clean Architecture, SOLID.
-- **Handover:** Aktualisiere `PROJECT_STATE.md` vor JEDEM Session-Ende.
-
-## 🛠️ Global Tooling & Orchestration (Mandatory)
-### 1. Multi-Agent Flow (Octopus/Maestro)
-- **Lead:** Claude Code (Execution).
-- **Auditor:** Gemini (via Maestro CLI) für Code-Reviews und Architektur-Checks.
-- **Rule:** Nutze Gemini für Research-Tasks mit großem Kontext (>100k Tokens).
-
-### 2. Knowledge Graphen (LSP & Graph)
-- **GitNexus:** Nutze `query` und `impact` Tools für High-Level Flows.
-- **Codegraph:** Nutze `codegraph diff-impact --staged` vor jedem Commit.
-- **LSP:** Nutze immer `kotlin-lsp` oder `csharp-lsp` für Typsicherheit.
-
-## 🔄 Standard Workflow
-1. **Sync:** Führe `npx gitnexus analyze` oder `codegraph build` aus, wenn der Index stale ist.
-2. **Plan:** Dokumentiere den nächsten Schritt in `PROJECT_STATE.md`.
-3. **Review:** Nach dem Coden `gemini maestro:review` triggern (via Maestro Hook).
-
-## 📂 Projekt-Spezifisches (Hier anpassen)
-- **Stack:** .NET Core / Node.js/Vue/Vite
-- **GitNexus ID:** coffee
-- **Tests:** dotnet test
-
 <!-- gitnexus:start -->
 # GitNexus MCP
 
