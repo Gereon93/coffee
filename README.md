@@ -31,16 +31,23 @@ EQ900 ──> Home Connect API ──> n8n (alle 15 Min) ──> Coffee API ─�
 
 ### Docker Deployment (Produktion)
 
-1. Images bauen und in die Registry pushen:
+**Container-Images** werden automatisch von der GitLab-Pipeline gebaut und gepusht, sobald auf `main` gemerget wird:
+
+- `192.168.2.143:5050/gereon/coffee/coffee-api:latest`
+- `192.168.2.143:5050/gereon/coffee/coffee-dashboard:latest`
+
+Zusaetzlich wird jeder Build mit `:${CI_COMMIT_SHORT_SHA}` getaggt fuer Rollbacks.
+
+**Fallback fuer lokale Builds** (wenn die CI nicht verfuegbar ist):
 
 ```bash
-./build.sh all           # Baut API + Dashboard, pusht zur Registry
+./build.sh all           # Baut API + Dashboard lokal, pusht zur Registry
 ./build.sh api           # Nur API
 ./build.sh dashboard     # Nur Dashboard
 ./build.sh api --no-push # Nur bauen, nicht pushen
 ```
 
-2. Docker Compose in Portainer deployen:
+**Docker Compose in Portainer deployen:**
 
 ```yaml
 version: "3.8"
