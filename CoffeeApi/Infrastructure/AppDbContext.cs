@@ -14,6 +14,7 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<MachineSnapshot> MachineSnapshots { get; set; } = null!;
+    public DbSet<ExcludedDay> ExcludedDays { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -56,6 +57,24 @@ public class AppDbContext : DbContext
 
             // Ignore computed property
             entity.Ignore(e => e.TotalBeverages);
+        });
+
+        modelBuilder.Entity<ExcludedDay>(entity =>
+        {
+            entity.HasKey(e => e.Date);
+
+            entity.Property(e => e.Date)
+                .IsRequired()
+                .HasConversion(
+                    v => v.ToString("yyyy-MM-dd"),
+                    v => DateOnly.Parse(v));
+
+            entity.Property(e => e.Reason)
+                .IsRequired()
+                .HasMaxLength(500);
+
+            entity.Property(e => e.CreatedAt)
+                .IsRequired();
         });
 
         // SQLite loses DateTimeKind on roundtrip — force all DateTime properties to Utc

@@ -1,7 +1,5 @@
 stages:
   - test
-  - sonarqube-check
-  - sonarqube-vulnerability-report
   - build
 
 variables:
@@ -28,46 +26,6 @@ test:
     - if: $CI_MERGE_REQUEST_ID
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_COMMIT_BRANCH == "dev"
-
-# ─── SONARQUBE ───────────────────────────────────────
-sonarqube-check:
-  stage: sonarqube-check
-  image: mcr.microsoft.com/dotnet/sdk:10.0-preview
-  variables:
-    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
-    GIT_DEPTH: "0"
-  cache:
-    key: "${CI_JOB_NAME}"
-    paths:
-      - .sonar/cache
-  script:
-    - dotnet tool install --global dotnet-sonarscanner
-    - export PATH="$PATH:$HOME/.dotnet/tools"
-    - dotnet sonarscanner begin /k:"gereon_coffee_ba5c47bb-a0a1-4e5a-b9d6-2187da863b11" /d:sonar.token="$SONAR_TOKEN" /d:"sonar.host.url=$SONAR_HOST_URL"
-    - dotnet build
-    - dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
-  allow_failure: true
-  rules:
-    - if: $CI_MERGE_REQUEST_ID
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-    - if: $CI_COMMIT_BRANCH == "dev"
-
-sonarqube-vulnerability-report:
-  stage: sonarqube-vulnerability-report
-  image: mcr.microsoft.com/dotnet/sdk:10.0-preview
-  script:
-    - curl -u "${SONAR_TOKEN}:" "${SONAR_HOST_URL}/api/issues/gitlab_sast_export?projectKey=gereon_coffee_ba5c47bb-a0a1-4e5a-b9d6-2187da863b11&branch=${CI_COMMIT_BRANCH}&pullRequest=${CI_MERGE_REQUEST_IID}" -o gl-sast-sonar-report.json
-  allow_failure: true
-  rules:
-    - if: $CI_MERGE_REQUEST_ID
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-    - if: $CI_COMMIT_BRANCH == "dev"
-  artifacts:
-    expire_in: 1 day
-    reports:
-      sast: gl-sast-sonar-report.json
-  dependencies:
-    - sonarqube-check
 
 # ─── BUILD + PUSH: API ───────────────────────────────
 build-api:

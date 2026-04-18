@@ -43,11 +43,13 @@ namespace CoffeeApi
 
             var app = builder.Build();
 
-            // Ensure database is created
+            // Baseline pre-migration DBs, then apply pending migrations
             using (var scope = app.Services.CreateScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                db.Database.EnsureCreated();
+                var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("MigrationBaseliner");
+                MigrationBaseliner.EnsureBaselined(db, logger);
+                db.Database.Migrate();
             }
 
             // Configure the HTTP request pipeline

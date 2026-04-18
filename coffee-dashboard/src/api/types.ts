@@ -67,3 +67,14 @@ export interface HealthResponse {
   database: string;
   lastSnapshot: string | null;
 }
+
+export interface ExcludedDay {
+  date: string;        // yyyy-MM-dd
+  reason: string;
+  createdAt: string;   // ISO timestamp
+}
+
+export interface CreateExcludedDayPayload {
+  date: string;        // yyyy-MM-dd
+  reason: string;
+}
