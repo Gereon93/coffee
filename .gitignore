@@ -32,6 +32,8 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+# Allow frontend source components named 'log'
+!coffee-dashboard/src/**/log/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
@@ -402,6 +404,11 @@ FodyWeavers.xsd
 /CaptainDocker.Entities.DockerRegistry.json
 .claude/settings.local.json
 CoffeeApi/appsettings.Secrets.json
+
+# SQLite dev database (auto-generated on local run)
+CoffeeApi/coffee.db
+CoffeeApi/coffee.db-shm
+CoffeeApi/coffee.db-wal
 
 .claude/agents/gsd-codebase-mapper.md
 
