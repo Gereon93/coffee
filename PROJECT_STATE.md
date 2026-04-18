@@ -183,3 +183,5 @@ Test-DB: EF Core InMemory. Run: `dotnet test CoffeeTest/`
 | 2026-02-07 | Altlasten bereinigt (IST/SOLL_STAND, Agents, start.sh, CaptainDocker) |
 | 2026-02-07 | Projekt abgeschlossen - alle Phasen Done |
 | 2026-04-18 | CI-Pipeline reaktiviert: Kaniko baut API+Dashboard auf main |
+| 2026-04-18 | EF Core Migrations + Auto-Baseliner: sichere Schema-Rollouts ohne NAS-SSH |
+| 2026-04-18 | Massenimport-Flag: Tage per Log-Tab markierbar, aus Stats/Anomalie ausgeblendet |

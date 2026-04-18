@@ -6,6 +6,8 @@ import type {
   HealthResponse,
   PaginatedResponse,
   SnapshotResponse,
+  ExcludedDay,
+  CreateExcludedDayPayload,
 } from './types';
 
 /** Browser UTC offset in minutes (positive for east of UTC, e.g. 60 for CET) */
@@ -40,4 +42,29 @@ export function fetchSnapshots(page: number, pageSize = 50) {
   return fetchJson<PaginatedResponse<SnapshotResponse>>(
     `/api/stats?page=${page}&pageSize=${pageSize}`,
   );
+}
+
+export function fetchExcludedDays() {
+  return fetchJson<ExcludedDay[]>('/api/stats/excluded-days');
+}
+
+export async function addExcludedDay(payload: CreateExcludedDayPayload): Promise<ExcludedDay> {
+  const res = await fetch('/api/stats/excluded-days', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(body.error ?? `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function removeExcludedDay(date: string): Promise<void> {
+  const res = await fetch(`/api/stats/excluded-days/${date}`, { method: 'DELETE' });
+  if (!res.ok && res.status !== 204) {
+    const body = await res.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(body.error ?? `HTTP ${res.status}`);
+  }
 }
