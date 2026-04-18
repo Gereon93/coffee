@@ -117,6 +117,9 @@ dotnet test CoffeeTest/
 | GET | `/api/stats/heatmap?weeks=4` | Heatmap-Daten (Wochentag x Stunde) | - |
 | GET | `/api/health` | Health Check | - |
 | GET | `/scalar/v1` | Interaktive API-Dokumentation | - |
+| GET | `/api/stats/excluded-days` | Tage, die als Massenimport markiert sind | - |
+| POST | `/api/stats/excluded-days` | Tag als Massenimport markieren | - |
+| DELETE | `/api/stats/excluded-days/{date}` | Markierung aufheben | - |
 
 ### Authentifizierung
 
@@ -148,6 +151,7 @@ Der Ingest-Endpoint ist idempotent: Wenn ein Snapshot mit identischen Zaehlern b
 | Heatmap | Wochentag x Stunde Matrix |
 | Anomalie-Erkennung | Z-Score basiert, markiert ungewoehnliche Tage |
 | Dark Mode | Automatisch nach System Preference |
+| Massenimport-Markierung | Tage ueber Log-Tab als Backfill markieren, grau mit Label im Chart, aus Statistik ausgeschlossen |
 
 ## Projektstruktur
 
@@ -216,3 +220,23 @@ NAS: /volume2/docker_ssd/coffee-data/coffee.db
 ```
 
 Fuer ein Backup reicht es, diese Datei zu kopieren. Die DB wird per Docker Volume in den API-Container gemountet und ueberlebt Container-Updates.
+
+## Schema-Migrationen
+
+Das Backend nutzt **EF Core Migrations**. Beim Container-Start wird sequentiell ausgefuehrt:
+
+1. `MigrationBaseliner.EnsureBaselined()` — erkennt automatisch Pre-Migration-DBs (z.B. die urspruengliche Prod-DB von der NAS, die mit `EnsureCreated()` angelegt wurde) und seedet `__EFMigrationsHistory` mit der Initial-Migration, sodass keine Tabelle doppelt angelegt wird.
+2. `Database.Migrate()` — wendet alle pending Migrations an, bestehende Daten bleiben unberuehrt.
+
+### Neue Migration anlegen
+
+```bash
+cd CoffeeApi
+dotnet ef migrations add <NameDerAenderung>
+```
+
+Beim naechsten Deploy laeuft sie beim Container-Start automatisch. Kein manueller SQL-Schritt, kein SSH noetig.
+
+### Tests und Migrations
+
+Tests in `CoffeeTest/` nutzen `InMemoryDatabase` — kein Migration-Support. `TestDbContextFactory.Create()` nutzt weiterhin `EnsureCreated()`. Der `MigrationBaseliner` wird separat gegen eine temporaere SQLite-Datei getestet (`MigrationBaselinerTests`).
