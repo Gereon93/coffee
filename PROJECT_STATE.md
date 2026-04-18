@@ -68,7 +68,6 @@ Keine offenen Aufgaben. Optionale Ideen fuer die Zukunft:
 - Date Picker fuer historische Tage im Dashboard
 - Dark Mode Toggle (aktuell System Preference)
 - Loading Skeletons statt Spinner
-- GitLab Runner mit .NET 10 SDK Image fuer vollautomatische CI/CD
 
 ---
 
@@ -183,3 +182,4 @@ Test-DB: EF Core InMemory. Run: `dotnet test CoffeeTest/`
 | 2026-02-07 | 33 EQ900-Tests (Idempotenz, Cross-Day, Controller) |
 | 2026-02-07 | Altlasten bereinigt (IST/SOLL_STAND, Agents, start.sh, CaptainDocker) |
 | 2026-02-07 | Projekt abgeschlossen - alle Phasen Done |
+| 2026-04-18 | CI-Pipeline reaktiviert: Kaniko baut API+Dashboard auf main |
