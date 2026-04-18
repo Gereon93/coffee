@@ -13,6 +13,8 @@ import { useHeatmap } from '../hooks/useHeatmap';
 import { useLatestSnapshot } from '../hooks/useLatestSnapshot';
 import { useTimePeriod } from '../hooks/useTimePeriod';
 import { useAnomalyDetection } from '../hooks/useAnomalyDetection';
+import { useExcludedDays } from '../hooks/useExcludedDays';
+import { buildExcludedSet } from '../lib/excludedDayUtils';
 
 export function DashboardPage() {
   const { period, setPeriod, from, to } = useTimePeriod();
@@ -20,7 +22,9 @@ export function DashboardPage() {
   const range = useStatsRange(from, to);
   const heatmap = useHeatmap(4);
   const latest = useLatestSnapshot();
-  const anomalies = useAnomalyDetection(range.data?.data);
+  const excluded = useExcludedDays();
+  const excludedSet = buildExcludedSet(excluded.data);
+  const anomalies = useAnomalyDetection(range.data?.data, excludedSet);
 
   return (
     <div className="space-y-6">
@@ -35,7 +39,13 @@ export function DashboardPage() {
         <ErrorMessage />
       ) : (
         <>
-          <KpiCardGrid summary={daily.data?.summary} rangeData={range.data?.data} period={period} latestSnapshot={latest.data} />
+          <KpiCardGrid
+            summary={daily.data?.summary}
+            rangeData={range.data?.data}
+            excludedSet={excludedSet}
+            period={period}
+            latestSnapshot={latest.data}
+          />
           {daily.data?.snapshots && (
             <HourlyPeaksChart snapshots={daily.data.snapshots} />
           )}
@@ -48,7 +58,7 @@ export function DashboardPage() {
         <ErrorMessage />
       ) : range.data ? (
         <>
-          <DailyBarChart data={range.data.data} anomalies={anomalies} />
+          <DailyBarChart data={range.data.data} anomalies={anomalies} excludedSet={excludedSet} />
 
           <div className="grid gap-6 lg:grid-cols-2">
             <TrendLineChart data={range.data.data} />
