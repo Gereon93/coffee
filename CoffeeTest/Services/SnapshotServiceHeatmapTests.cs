@@ -1,3 +1,4 @@
+using CoffeeApi.Domain;
 using CoffeeApi.Services;
 using CoffeeTest.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -39,6 +40,38 @@ public class SnapshotServiceHeatmapTests
         Assert.Equal(1, result[0].DayOfWeek); // Monday = 1
         Assert.Equal(11, result[0].Hour);
         Assert.Equal(2, result[0].Count);
+    }
+
+    [Fact]
+    public async Task GetHeatmapData_SkipsDeltasOnExcludedDays()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+
+        // Friday 20:00 baseline, Friday 21:00 mass-import spike (+30),
+        // Saturday 08:00 normal delta (+1). Friday is marked as excluded.
+        var friday = DateTime.UtcNow.Date;
+        while (friday.DayOfWeek != DayOfWeek.Friday) friday = friday.AddDays(-1);
+        var saturday = friday.AddDays(1);
+
+        db.MachineSnapshots.AddRange(
+            new SnapshotBuilder().At(friday.AddHours(20)).WithCoffee(100).Build(),
+            new SnapshotBuilder().At(friday.AddHours(21)).WithCoffee(130).Build(),
+            new SnapshotBuilder().At(saturday.AddHours(8)).WithCoffee(131).Build()
+        );
+        db.ExcludedDays.Add(new ExcludedDay
+        {
+            Date = DateOnly.FromDateTime(friday),
+            Reason = "mass import",
+            CreatedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var result = await service.GetHeatmapDataAsync(4);
+
+        // Friday bucket (day 5, hour 21) must be absent; Saturday bucket (day 6, hour 8) stays.
+        Assert.DoesNotContain(result, h => h.DayOfWeek == 5 && h.Hour == 21);
+        Assert.Contains(result, h => h.DayOfWeek == 6 && h.Hour == 8 && h.Count == 1);
     }
 
     [Fact]
