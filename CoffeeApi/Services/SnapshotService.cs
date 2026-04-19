@@ -166,6 +166,10 @@ public class SnapshotService : ISnapshotService
             .OrderBy(s => s.Timestamp)
             .ToListAsync();
 
+        var excludedDates = (await _context.ExcludedDays
+            .Select(d => d.Date)
+            .ToListAsync()).ToHashSet();
+
         // Group by day of week and hour, count consumption deltas
         var heatmapData = new Dictionary<(int DayOfWeek, int Hour), int>();
 
@@ -179,6 +183,10 @@ public class SnapshotService : ISnapshotService
             {
                 // Convert to caller's local time for grouping
                 var localTime = curr.Timestamp.AddMinutes(tzOffsetMinutes);
+
+                // Skip deltas landing on mass-import / excluded local dates
+                if (excludedDates.Contains(DateOnly.FromDateTime(localTime)))
+                    continue;
 
                 // ISO-8601: Monday = 1, Sunday = 7
                 var dayOfWeek = (int)localTime.DayOfWeek;
