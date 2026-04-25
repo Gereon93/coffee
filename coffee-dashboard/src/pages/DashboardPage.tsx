@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { KpiCardGrid } from '../components/cards/KpiCardGrid';
 import { TimePeriodSelector } from '../components/controls/TimePeriodSelector';
 import { DailyBarChart } from '../components/charts/DailyBarChart';
@@ -7,14 +8,16 @@ import { HourlyPeaksChart } from '../components/charts/HourlyPeaksChart';
 import { WeekdayComparisonChart } from '../components/charts/WeekdayComparisonChart';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { ErrorMessage } from '../components/shared/ErrorMessage';
+import { MarkDayEventModal } from '../components/dashboard/MarkDayEventModal';
 import { useDailyStats } from '../hooks/useDailyStats';
 import { useStatsRange } from '../hooks/useStatsRange';
 import { useHeatmap } from '../hooks/useHeatmap';
 import { useLatestSnapshot } from '../hooks/useLatestSnapshot';
 import { useTimePeriod } from '../hooks/useTimePeriod';
 import { useAnomalyDetection } from '../hooks/useAnomalyDetection';
-import { useExcludedDays } from '../hooks/useExcludedDays';
-import { buildExcludedSet } from '../lib/excludedDayUtils';
+import { useMarkedDays } from '../hooks/useMarkedDays';
+import { buildMarkedDayMaps } from '../lib/markedDayUtils';
+import { formatDisplayDate } from '../lib/dateUtils';
 
 export function DashboardPage() {
   const { period, setPeriod, from, to } = useTimePeriod();
@@ -22,9 +25,10 @@ export function DashboardPage() {
   const range = useStatsRange(from, to);
   const heatmap = useHeatmap(4);
   const latest = useLatestSnapshot();
-  const excluded = useExcludedDays();
-  const excludedSet = buildExcludedSet(excluded.data);
-  const anomalies = useAnomalyDetection(range.data?.data, excludedSet);
+  const { data: marked } = useMarkedDays();
+  const { byDate, massImportDates, allMarkedDates } = buildMarkedDayMaps(marked);
+  const [modalDate, setModalDate] = useState<string | null>(null);
+  const anomalies = useAnomalyDetection(range.data?.data, allMarkedDates);
 
   return (
     <div className="space-y-6">
@@ -42,7 +46,7 @@ export function DashboardPage() {
           <KpiCardGrid
             summary={daily.data?.summary}
             rangeData={range.data?.data}
-            excludedSet={excludedSet}
+            excludedSet={massImportDates}
             period={period}
             latestSnapshot={latest.data}
           />
@@ -58,7 +62,13 @@ export function DashboardPage() {
         <ErrorMessage />
       ) : range.data ? (
         <>
-          <DailyBarChart data={range.data.data} anomalies={anomalies} excludedSet={excludedSet} />
+          <DailyBarChart
+            data={range.data.data}
+            anomalies={anomalies}
+            excludedSet={massImportDates}
+            eventByDate={byDate}
+            onBarClick={setModalDate}
+          />
 
           <div className="grid gap-6 lg:grid-cols-2">
             <TrendLineChart data={range.data.data} />
@@ -72,6 +82,16 @@ export function DashboardPage() {
           </div>
         </>
       ) : null}
+
+      {modalDate && (
+        <MarkDayEventModal
+          date={modalDate}
+          displayDate={formatDisplayDate(modalDate)}
+          existing={byDate.get(modalDate) ?? null}
+          open={true}
+          onClose={() => setModalDate(null)}
+        />
+      )}
     </div>
   );
 }

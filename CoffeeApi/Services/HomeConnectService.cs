@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using CoffeeApi.DTOs;
 
 namespace CoffeeApi.Services;
 
@@ -38,4 +39,51 @@ public class HomeConnectService : IHomeConnectService
         var response = await _httpClient.PutAsync(_webhookUrl, content);
         response.EnsureSuccessStatusCode();
     }
+
+    public async Task<CoffeeStatusDto> GetStatusAsync()
+    {
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var response = await _httpClient.GetAsync(_webhookUrl, cts.Token);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("n8n status webhook returned {Status}", (int)response.StatusCode);
+                return Unreachable($"Status-Service antwortete mit {(int)response.StatusCode}");
+            }
+
+            var body = await response.Content.ReadAsStringAsync(cts.Token);
+            var parsed = System.Text.Json.JsonSerializer.Deserialize<CoffeeStatusDto>(body,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (parsed == null)
+            {
+                return Unreachable("Status-Antwort konnte nicht geparsed werden");
+            }
+
+            return parsed;
+        }
+        catch (TaskCanceledException)
+        {
+            _logger.LogWarning("n8n status webhook timed out");
+            return Unreachable("Status-Service antwortet nicht (Timeout)");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "n8n status webhook failed");
+            return Unreachable("Status-Service nicht erreichbar");
+        }
+    }
+
+    private static CoffeeStatusDto Unreachable(string message) => new()
+    {
+        Status = "ok",
+        Reachable = false,
+        PowerState = null,
+        OperationState = null,
+        Label = "Offline",
+        LastUpdated = DateTime.UtcNow,
+        Message = message
+    };
 }
