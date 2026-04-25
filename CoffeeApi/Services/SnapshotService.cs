@@ -166,7 +166,8 @@ public class SnapshotService : ISnapshotService
             .OrderBy(s => s.Timestamp)
             .ToListAsync();
 
-        var excludedDates = (await _context.ExcludedDays
+        var excludedDates = (await _context.MarkedDays
+            .Where(d => d.Kind == "mass-import")
             .Select(d => d.Date)
             .ToListAsync()).ToHashSet();
 

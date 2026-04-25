@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Grid3x3, ScrollText, Moon, Sun } from 'lucide-react';
+import { CoffeePowerButton } from './CoffeePowerButton';
 
 const links = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -39,15 +40,18 @@ export function NavBar({ isDarkMode, onToggleTheme }: NavBarProps) {
           ))}
         </div>
 
-        <button
-          type="button"
-          onClick={onToggleTheme}
-          className="ml-auto inline-flex items-center gap-2 rounded-md border border-stone-300 px-3 py-1.5 text-sm text-stone-700 transition-colors hover:bg-stone-100 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
-          aria-label={isDarkMode ? 'Zum hellen Modus wechseln' : 'Zum dunklen Modus wechseln'}
-        >
-          {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          {isDarkMode ? 'Hell' : 'Dunkel'}
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <CoffeePowerButton />
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            className="inline-flex items-center gap-2 rounded-md border border-stone-300 px-3 py-1.5 text-sm text-stone-700 transition-colors hover:bg-stone-100 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
+            aria-label={isDarkMode ? 'Zum hellen Modus wechseln' : 'Zum dunklen Modus wechseln'}
+          >
+            {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {isDarkMode ? 'Hell' : 'Dunkel'}
+          </button>
+        </div>
       </div>
     </nav>
   );

@@ -58,6 +58,8 @@
 | Heatmap (Wochentag x Stunde) | Done |
 | Anomalie-Erkennung (Z-Score) | Done |
 | Dark Mode (System Preference) | Done |
+| Power-Toggle in NavBar (Status + Ein/Aus) | Done |
+| Event-Annotationen auf Tagesbalken (🎂 👥 🎉 🏥 ✈️ 📌) | Done |
 
 ---
 
@@ -102,6 +104,11 @@ Keine offenen Aufgaben. Optionale Ideen fuer die Zukunft:
 | GET | `/api/stats/heatmap?weeks=4` | Heatmap-Daten |
 | GET | `/api/health` | Health Check |
 | GET | `/scalar/v1` | API Dokumentation |
+| GET | `/api/stats/marked-days` | Markierte Tage (mass-import + event), Filter ?kind= |
+| POST | `/api/stats/marked-days` | Tag markieren (mass-import oder event) |
+| DELETE | `/api/stats/marked-days/{date}` | Markierung entfernen |
+| POST | `/coffee/power` | Maschine ein-/ausschalten (n8n -> HomeConnect) |
+| GET | `/coffee/status` | Live-Status der Maschine (cached 7s) |
 
 ---
 
@@ -185,3 +192,4 @@ Test-DB: EF Core InMemory. Run: `dotnet test CoffeeTest/`
 | 2026-04-18 | CI-Pipeline reaktiviert: Kaniko baut API+Dashboard auf main |
 | 2026-04-18 | EF Core Migrations + Auto-Baseliner: sichere Schema-Rollouts ohne NAS-SSH |
 | 2026-04-18 | Massenimport-Flag: Tage per Log-Tab markierbar, aus Stats/Anomalie ausgeblendet |
+| 2026-04-25 | Coffee Status (GET /coffee/status, 7s Cache), Power-Toggle in NavBar, Day-Event-Annotationen (MarkedDay mit kind+eventType) |
