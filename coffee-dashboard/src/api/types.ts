@@ -68,13 +68,41 @@ export interface HealthResponse {
   lastSnapshot: string | null;
 }
 
-export interface ExcludedDay {
-  date: string;        // yyyy-MM-dd
+export type MarkedDayKind = 'mass-import' | 'event';
+
+export type EventType =
+  | 'birthday'
+  | 'visitors'
+  | 'party'
+  | 'sick'
+  | 'vacation'
+  | 'other';
+
+export interface MarkedDay {
+  date: string;            // yyyy-MM-dd
+  kind: MarkedDayKind;
+  eventType: EventType | null;
   reason: string;
-  createdAt: string;   // ISO timestamp
+  createdAt: string;       // ISO timestamp
 }
 
-export interface CreateExcludedDayPayload {
-  date: string;        // yyyy-MM-dd
+export interface CreateMarkedDayPayload {
+  date: string;            // yyyy-MM-dd
+  kind: MarkedDayKind;
+  eventType?: EventType;
   reason: string;
+}
+
+// Backward-compat alias for existing LogPage code (will be removed in Task 19)
+export type ExcludedDay = MarkedDay;
+export type CreateExcludedDayPayload = CreateMarkedDayPayload;
+
+export interface CoffeeStatus {
+  status: 'ok' | 'error';
+  reachable: boolean;
+  powerState: 'on' | 'off' | 'standby' | null;
+  operationState: 'inactive' | 'ready' | 'run' | 'pause' | 'finished' | 'error' | null;
+  label: string;
+  lastUpdated: string;
+  message?: string;
 }
