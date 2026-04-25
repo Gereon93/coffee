@@ -14,7 +14,7 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<MachineSnapshot> MachineSnapshots { get; set; } = null!;
-    public DbSet<ExcludedDay> ExcludedDays { get; set; } = null!;
+    public DbSet<MarkedDay> MarkedDays { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -59,7 +59,7 @@ public class AppDbContext : DbContext
             entity.Ignore(e => e.TotalBeverages);
         });
 
-        modelBuilder.Entity<ExcludedDay>(entity =>
+        modelBuilder.Entity<MarkedDay>(entity =>
         {
             entity.HasKey(e => e.Date);
 
@@ -68,6 +68,14 @@ public class AppDbContext : DbContext
                 .HasConversion(
                     v => v.ToString("yyyy-MM-dd"),
                     v => DateOnly.Parse(v));
+
+            entity.Property(e => e.Kind)
+                .IsRequired()
+                .HasMaxLength(20)
+                .HasDefaultValue("mass-import");
+
+            entity.Property(e => e.EventType)
+                .HasMaxLength(20);
 
             entity.Property(e => e.Reason)
                 .IsRequired()
