@@ -30,6 +30,7 @@ namespace CoffeeApi
 
             // ===== n8n Webhook Service (HomeConnect) =====
             builder.Services.AddHttpClient<IHomeConnectService, HomeConnectService>();
+            builder.Services.AddMemoryCache();
 
             builder.Services.AddCors(options =>
             {
