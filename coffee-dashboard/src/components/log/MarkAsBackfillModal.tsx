@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { useAddExcludedDay } from '../../hooks/useMarkedDays';
+import { useAddMarkedDay } from '../../hooks/useMarkedDays';
 
 interface Props {
   date: string; // yyyy-MM-dd
@@ -12,7 +12,7 @@ interface Props {
 export function MarkAsBackfillModal({ date, displayDate, open, onClose }: Props) {
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const mutation = useAddExcludedDay();
+  const mutation = useAddMarkedDay();
 
   useEffect(() => {
     if (open) {
@@ -30,7 +30,7 @@ export function MarkAsBackfillModal({ date, displayDate, open, onClose }: Props)
       return;
     }
     try {
-      await mutation.mutateAsync({ date, reason: reason.trim() });
+      await mutation.mutateAsync({ date, kind: 'mass-import', reason: reason.trim() });
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
