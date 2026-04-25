@@ -98,14 +98,7 @@ export function DailyBarChart({
         Taeglicher Verbrauch
       </h3>
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart
-          data={chartData}
-          onClick={(state: unknown) => {
-            const s = state as { activePayload?: Array<{ payload?: Entry }> } | null;
-            const payload = s?.activePayload?.[0]?.payload;
-            if (payload && onBarClick) onBarClick(payload.date);
-          }}
-        >
+        <BarChart data={chartData}>
           <XAxis
             dataKey="label"
             tick={{ fontSize: 12 }}
@@ -141,7 +134,16 @@ export function DailyBarChart({
               return [value ?? 0, label];
             }}
           />
-          <Bar dataKey="coffeeCount" stackId="a" radius={[0, 0, 0, 0]} cursor="pointer">
+          <Bar
+            dataKey="coffeeCount"
+            stackId="a"
+            radius={[0, 0, 0, 0]}
+            cursor="pointer"
+            onClick={(entry: unknown) => {
+              const e = entry as Entry | undefined;
+              if (onBarClick && e?.date) onBarClick(e.date);
+            }}
+          >
             {chartData.map((entry, i) => (
               <Cell
                 key={i}
@@ -151,7 +153,16 @@ export function DailyBarChart({
               />
             ))}
           </Bar>
-          <Bar dataKey="milkCount" stackId="a" radius={[4, 4, 0, 0]} cursor="pointer">
+          <Bar
+            dataKey="milkCount"
+            stackId="a"
+            radius={[4, 4, 0, 0]}
+            cursor="pointer"
+            onClick={(entry: unknown) => {
+              const e = entry as Entry | undefined;
+              if (onBarClick && e?.date) onBarClick(e.date);
+            }}
+          >
             {chartData.map((entry, i) => (
               <Cell
                 key={i}
