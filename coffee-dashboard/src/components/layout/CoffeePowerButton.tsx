@@ -43,6 +43,38 @@ export function CoffeePowerButton() {
   const { data: status } = useCoffeeStatus();
   const mutation = useSetCoffeePower();
 
+  // When status is unreachable but coffee-hours allow operation, the user knows
+  // the actual state of the machine — give them manual An/Aus buttons.
+  const isUnreachableInteractive =
+    !mutation.isPending && coffeeAllowed() && (!status || !status.reachable);
+
+  if (isUnreachableInteractive) {
+    return (
+      <div
+        className="inline-flex items-center gap-1 rounded-md border border-stone-300 bg-stone-50 px-1.5 py-0.5 text-xs dark:border-stone-700 dark:bg-stone-900"
+        title={status?.message ?? 'Status nicht abrufbar — manuell schalten'}
+      >
+        <PowerOff className="h-3.5 w-3.5 text-stone-400" />
+        <button
+          type="button"
+          onClick={() => mutation.mutate('on')}
+          className="rounded px-2 py-1 font-medium text-emerald-700 hover:bg-emerald-100 dark:text-emerald-300 dark:hover:bg-emerald-950"
+          aria-label="Kaffeemaschine einschalten"
+        >
+          An
+        </button>
+        <button
+          type="button"
+          onClick={() => mutation.mutate('off')}
+          className="rounded px-2 py-1 font-medium text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
+          aria-label="Kaffeemaschine ausschalten"
+        >
+          Aus
+        </button>
+      </div>
+    );
+  }
+
   const state = deriveState(status, mutation.isPending);
 
   const handleClick = () => {
