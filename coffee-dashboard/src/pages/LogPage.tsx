@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, AlertCircle, Undo2 } from 'lucide-react';
 import { useSnapshots } from '../hooks/useSnapshots';
-import { useExcludedDays, useRemoveExcludedDay } from '../hooks/useMarkedDays';
+import { useMarkedDays, useRemoveMarkedDay } from '../hooks/useMarkedDays';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { ErrorMessage } from '../components/shared/ErrorMessage';
 import { MarkAsBackfillModal } from '../components/log/MarkAsBackfillModal';
-import { buildExcludedSet } from '../lib/markedDayUtils';
+import { buildMarkedDayMaps } from '../lib/markedDayUtils';
 import type { SnapshotResponse } from '../api/types';
 
 function formatLocalTime(isoTimestamp: string): string {
@@ -51,15 +51,15 @@ export function LogPage() {
   const pageSize = 25;
 
   const { data, isLoading, isError } = useSnapshots(page, pageSize);
-  const excluded = useExcludedDays();
-  const removeMutation = useRemoveExcludedDay();
+  const { data: marked } = useMarkedDays('mass-import');
+  const removeMutation = useRemoveMarkedDay();
 
   if (isLoading) return <LoadingSpinner />;
   if (isError) return <ErrorMessage />;
   if (!data) return null;
 
   const { data: snapshots, pagination } = data;
-  const excludedSet = buildExcludedSet(excluded.data);
+  const { massImportDates: excludedSet } = buildMarkedDayMaps(marked);
 
   return (
     <div className="space-y-4">

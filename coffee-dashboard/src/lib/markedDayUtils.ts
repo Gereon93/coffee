@@ -1,4 +1,4 @@
-import type { DailyAggregate, MarkedDay } from '../api/types';
+import type { MarkedDay } from '../api/types';
 
 export interface MarkedDayMaps {
   byDate: Map<string, MarkedDay>;
@@ -22,20 +22,4 @@ export function buildMarkedDayMaps(marked: MarkedDay[] | undefined): MarkedDayMa
   }
 
   return { byDate, massImportDates, eventDates, allMarkedDates };
-}
-
-// Backward-compat helpers used by LogPage; will be inlined in Task 19.
-export function buildExcludedSet(marked: MarkedDay[] | undefined): Set<string> {
-  return buildMarkedDayMaps(marked).massImportDates;
-}
-
-export function isExcluded(date: string, excludedSet: Set<string>): boolean {
-  return excludedSet.has(date);
-}
-
-export function filterNonExcluded(
-  days: DailyAggregate[] | undefined,
-  excludedSet: Set<string>,
-): DailyAggregate[] {
-  return (days ?? []).filter((d) => !excludedSet.has(d.date));
 }
