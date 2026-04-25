@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, AlertCircle, Undo2 } from 'lucide-react';
 import { useSnapshots } from '../hooks/useSnapshots';
-import { useExcludedDays, useRemoveExcludedDay } from '../hooks/useExcludedDays';
+import { useExcludedDays, useRemoveExcludedDay } from '../hooks/useMarkedDays';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { ErrorMessage } from '../components/shared/ErrorMessage';
 import { MarkAsBackfillModal } from '../components/log/MarkAsBackfillModal';
-import { buildExcludedSet } from '../lib/excludedDayUtils';
+import { buildExcludedSet } from '../lib/markedDayUtils';
 import type { SnapshotResponse } from '../api/types';
 
 function formatLocalTime(isoTimestamp: string): string {
