@@ -93,10 +93,6 @@ export interface CreateMarkedDayPayload {
   reason: string;
 }
 
-// Backward-compat alias for existing LogPage code (will be removed in Task 19)
-export type ExcludedDay = MarkedDay;
-export type CreateExcludedDayPayload = CreateMarkedDayPayload;
-
 export interface CoffeeStatus {
   status: 'ok' | 'error';
   reachable: boolean;

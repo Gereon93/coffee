@@ -39,9 +39,3 @@ export function useRemoveMarkedDay() {
     },
   });
 }
-
-// Backward-compat aliases — temporarily preserved for callers in LogPage etc.
-// These will be removed in Task 19.
-export { useMarkedDays as useExcludedDays };
-export { useAddMarkedDay as useAddExcludedDay };
-export { useRemoveMarkedDay as useRemoveExcludedDay };
