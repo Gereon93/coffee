@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { useAddExcludedDay } from '../../hooks/useExcludedDays';
+import { useAddExcludedDay } from '../../hooks/useMarkedDays';
 
 interface Props {
   date: string; // yyyy-MM-dd

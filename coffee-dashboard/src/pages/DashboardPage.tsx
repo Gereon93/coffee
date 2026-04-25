@@ -13,8 +13,8 @@ import { useHeatmap } from '../hooks/useHeatmap';
 import { useLatestSnapshot } from '../hooks/useLatestSnapshot';
 import { useTimePeriod } from '../hooks/useTimePeriod';
 import { useAnomalyDetection } from '../hooks/useAnomalyDetection';
-import { useExcludedDays } from '../hooks/useExcludedDays';
-import { buildExcludedSet } from '../lib/excludedDayUtils';
+import { useExcludedDays } from '../hooks/useMarkedDays';
+import { buildExcludedSet } from '../lib/markedDayUtils';
 
 export function DashboardPage() {
   const { period, setPeriod, from, to } = useTimePeriod();
