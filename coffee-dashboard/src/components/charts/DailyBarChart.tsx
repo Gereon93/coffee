@@ -4,7 +4,7 @@ import {
 import type { DailyAggregate, MarkedDay } from '../../api/types';
 import type { AnomalyResult } from '../../lib/anomalyUtils';
 import { formatDate } from '../../lib/dateUtils';
-import { emojiForEventType } from '../dashboard/MarkDayEventModal';
+import { emojiForEventType } from '../../lib/eventTypeMeta';
 
 interface Props {
   data: DailyAggregate[];

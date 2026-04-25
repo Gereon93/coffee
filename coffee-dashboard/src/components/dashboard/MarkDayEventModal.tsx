@@ -2,25 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { useAddMarkedDay, useRemoveMarkedDay } from '../../hooks/useMarkedDays';
 import type { EventType, MarkedDay } from '../../api/types';
-
-interface QuickPick {
-  type: EventType;
-  emoji: string;
-  label: string;
-}
-
-const QUICK_PICKS: QuickPick[] = [
-  { type: 'birthday', emoji: '🎂', label: 'Geburtstag' },
-  { type: 'visitors', emoji: '👥', label: 'Besuch' },
-  { type: 'party',    emoji: '🎉', label: 'Feier' },
-  { type: 'sick',     emoji: '🏥', label: 'Krank' },
-  { type: 'vacation', emoji: '✈️', label: 'Urlaub' },
-  { type: 'other',    emoji: '📌', label: 'Sonstiges' },
-];
-
-export function emojiForEventType(t: EventType): string {
-  return QUICK_PICKS.find((p) => p.type === t)?.emoji ?? '📌';
-}
+import { EVENT_TYPE_META } from '../../lib/eventTypeMeta';
 
 interface Props {
   date: string;          // yyyy-MM-dd
@@ -134,7 +116,7 @@ export function MarkDayEventModal({ date, displayDate, existing, open, onClose }
             </p>
 
             <div className="grid grid-cols-3 gap-2">
-              {QUICK_PICKS.map((pick) => {
+              {EVENT_TYPE_META.map((pick) => {
                 const active = selected === pick.type;
                 return (
                   <button
