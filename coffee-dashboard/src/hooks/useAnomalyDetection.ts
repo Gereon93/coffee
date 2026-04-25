@@ -4,12 +4,12 @@ import { detectAnomalies } from '../lib/anomalyUtils';
 
 export function useAnomalyDetection(
   data: DailyAggregate[] | undefined,
-  excludedSet: Set<string>,
+  excludedFromAnomaly: Set<string>,
   threshold = 1.5,
 ) {
   return useMemo(() => {
     if (!data) return [];
-    const filtered = data.filter((d) => !excludedSet.has(d.date));
+    const filtered = data.filter((d) => !excludedFromAnomaly.has(d.date));
     return detectAnomalies(filtered, threshold);
-  }, [data, excludedSet, threshold]);
+  }, [data, excludedFromAnomaly, threshold]);
 }

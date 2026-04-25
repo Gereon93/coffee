@@ -59,9 +59,10 @@ public class SnapshotServiceHeatmapTests
             new SnapshotBuilder().At(friday.AddHours(21)).WithCoffee(130).Build(),
             new SnapshotBuilder().At(saturday.AddHours(8)).WithCoffee(131).Build()
         );
-        db.ExcludedDays.Add(new ExcludedDay
+        db.MarkedDays.Add(new MarkedDay
         {
             Date = DateOnly.FromDateTime(friday),
+            Kind = "mass-import",
             Reason = "mass import",
             CreatedAt = DateTime.UtcNow
         });
@@ -72,6 +73,36 @@ public class SnapshotServiceHeatmapTests
         // Friday bucket (day 5, hour 21) must be absent; Saturday bucket (day 6, hour 8) stays.
         Assert.DoesNotContain(result, h => h.DayOfWeek == 5 && h.Hour == 21);
         Assert.Contains(result, h => h.DayOfWeek == 6 && h.Hour == 8 && h.Count == 1);
+    }
+
+    [Fact]
+    public async Task GetHeatmapData_DoesNotSkipEventDays()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+
+        // Friday 20:00 baseline, Friday 21:00 +30 spike — Friday is marked as event (birthday).
+        // Event days must remain in the heatmap (they are valid, just annotated).
+        var friday = DateTime.UtcNow.Date;
+        while (friday.DayOfWeek != DayOfWeek.Friday) friday = friday.AddDays(-1);
+
+        db.MachineSnapshots.AddRange(
+            new SnapshotBuilder().At(friday.AddHours(20)).WithCoffee(100).Build(),
+            new SnapshotBuilder().At(friday.AddHours(21)).WithCoffee(130).Build()
+        );
+        db.MarkedDays.Add(new MarkedDay
+        {
+            Date = DateOnly.FromDateTime(friday),
+            Kind = "event",
+            EventType = "birthday",
+            Reason = "Schwiegereltern",
+            CreatedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var result = await service.GetHeatmapDataAsync(4);
+
+        Assert.Contains(result, h => h.DayOfWeek == 5 && h.Hour == 21 && h.Count == 30);
     }
 
     [Fact]

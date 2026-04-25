@@ -44,3 +44,8 @@ export function formatDate(date: string) {
 export function today() {
   return format(new Date(), DATE_FMT);
 }
+
+export function formatDisplayDate(dateKey: string): string {
+  const [y, m, d] = dateKey.split('-');
+  return `${d}.${m}.${y}`;
+}
