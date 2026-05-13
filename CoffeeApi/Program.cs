@@ -1,3 +1,4 @@
+using System.Globalization;
 using CoffeeApi.Infrastructure;
 using CoffeeApi.Middleware;
 using CoffeeApi.Services;
@@ -11,6 +12,26 @@ namespace CoffeeApi
         private static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            var sentryDsn = Environment.GetEnvironmentVariable("SENTRY_DSN");
+            if (!string.IsNullOrWhiteSpace(sentryDsn))
+            {
+                builder.WebHost.UseSentry(options =>
+                {
+                    options.Dsn = sentryDsn;
+                    options.Environment = Environment.GetEnvironmentVariable("SENTRY_ENVIRONMENT")
+                        ?? builder.Environment.EnvironmentName;
+                    options.Release = Environment.GetEnvironmentVariable("SENTRY_RELEASE") ?? "dev";
+                    options.SendDefaultPii = false;
+                    options.AttachStacktrace = true;
+                    options.TracesSampleRate = double.TryParse(
+                        Environment.GetEnvironmentVariable("SENTRY_TRACES_SAMPLE_RATE"),
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out var rate) ? rate : 0.0;
+                    options.DefaultTags["service"] = "coffee-api";
+                });
+            }
 
             builder.Configuration.AddJsonFile("appsettings.Secrets.json", optional: true, reloadOnChange: false);
 
