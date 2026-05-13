@@ -67,6 +67,9 @@ build-dashboard:
         --destination "$IMAGE_DASHBOARD:latest"
         --insecure-registry=192.168.2.143:5050
         --build-arg "BUILD_COMMIT=$HASH"
+        --build-arg "VITE_SENTRY_DSN=$VITE_SENTRY_DSN"
+        --build-arg "VITE_SENTRY_ENVIRONMENT=production"
+        --build-arg "VITE_SENTRY_RELEASE=$HASH"
     - echo "Pushed $IMAGE_DASHBOARD:$HASH + $IMAGE_DASHBOARD:latest"
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
