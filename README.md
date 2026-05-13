@@ -221,6 +221,15 @@ NAS: /volume2/docker_ssd/coffee-data/coffee.db
 
 Fuer ein Backup reicht es, diese Datei zu kopieren. Die DB wird per Docker Volume in den API-Container gemountet und ueberlebt Container-Updates.
 
+## Error-Tracking
+
+Errors gehen an https://errors.murgbyte.cloud (self-hosted GlitchTip, Sentry-API-kompatibel). DSN aus `Project -> Settings -> Client Keys` in der GlitchTip-UI holen und in die jeweilige `.env` eintragen:
+
+- Backend: `CoffeeApi/.env.example` zeigt die ENV-Variablen (`SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE`, `SENTRY_TRACES_SAMPLE_RATE`). Werden zur Laufzeit aus der Container-Env gelesen.
+- Frontend: `coffee-dashboard/.env` enthaelt `VITE_SENTRY_DSN`, `VITE_SENTRY_ENVIRONMENT`, `VITE_SENTRY_RELEASE`, `VITE_SENTRY_TRACES_SAMPLE_RATE`. Build-Time-Variablen — also vor `npm run build` setzen.
+
+Leerer DSN = Sentry komplett deaktiviert, kein Netzwerk-Call. Damit kann lokal ohne Anbindung entwickelt werden, ohne dass Test-Errors die Live-Instanz fluten.
+
 ## Schema-Migrationen
 
 Das Backend nutzt **EF Core Migrations**. Beim Container-Start wird sequentiell ausgefuehrt:
