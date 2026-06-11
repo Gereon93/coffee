@@ -175,11 +175,11 @@ Test-DB: EF Core InMemory. Run: `dotnet test CoffeeTest/`
 
 | Datum | Aenderung |
 |-------|----------|
-| 2025-01-25 | Projekt-Pivot: Nivona -> EQ900, MongoDB -> SQLite |
-| 2025-01-25 | Core API implementiert (Ingest, Stats, Idempotenz) |
-| 2025-01-25 | Deployment: Docker Registry, Portainer |
-| 2025-01-25 | n8n Integration: Workflow laeuft produktiv |
-| 2025-01-25 | MongoDB komplett entfernt |
+| 2026-01-25 | Projekt-Pivot: Nivona -> EQ900, MongoDB -> SQLite |
+| 2026-01-25 | Core API implementiert (Ingest, Stats, Idempotenz) |
+| 2026-01-25 | Deployment: Docker Registry, Portainer |
+| 2026-01-25 | n8n Integration: Workflow laeuft produktiv |
+| 2026-01-25 | MongoDB komplett entfernt |
 | 2026-02-07 | React Dashboard: KPI, Charts, Heatmap, Peaks, Wochentage |
 | 2026-02-07 | Backend: Cross-Day Delta Fix (Daily + Range) |
 | 2026-02-07 | Gesamt-Ansicht mit absoluten Countern |

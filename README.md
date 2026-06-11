@@ -4,13 +4,14 @@ Tracking und Visualisierung des Kaffeekonsums einer Siemens EQ900 Kaffeemaschine
 
 Die Maschine liefert per BSH Home Connect API Zaehlerstaende (Kaffee, Milch, Heisswasser, etc.), die alle 15 Minuten ueber n8n abgerufen und in einer SQLite-Datenbank gespeichert werden. Ein React-Dashboard zeigt Verbrauch, Trends und Muster an.
 
-> **Hintergrund — vom Screenshot-OCR zur API-Integration:** Die erste Version
-> trackte eine *Nivona*-Maschine, die keine offene Schnittstelle bietet. Die
-> Zaehlerstaende wurden damals per **Tesseract-OCR aus App-Screenshots**
-> extrahiert — fragil und wartungsintensiv. Mit dem Wechsel auf die Siemens
-> EQ900 (Teil des BSH/Home-Connect-Oekosystems) wurde der gesamte OCR-Pfad
-> durch eine saubere **API-Integration** ersetzt. Die alte Loesung lebt nur
-> noch in der Git-History.
+> **Hintergrund — vom Screenshot-OCR zur API-Integration:** Das Projekt
+> startete 2023 mit einer *Nivona*-Maschine, die keine offene Schnittstelle
+> bietet. Die Zaehlerstaende wurden damals per **Tesseract-OCR aus
+> App-Screenshots** extrahiert — fragil und wartungsintensiv. Mit dem Umstieg
+> auf eine Siemens EQ900 (Teil des BSH/Home-Connect-Oekosystems) wurde Anfang
+> 2026 der gesamte OCR-Pfad durch eine saubere **API-Integration** ersetzt und
+> der Storage von MongoDB auf SQLite + EF Core umgestellt. Die alte Loesung
+> lebt nur noch in der Git-History.
 
 ## Architektur
 
