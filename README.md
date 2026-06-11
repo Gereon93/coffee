@@ -1,8 +1,16 @@
 # Coffee Analytics Hub
 
-Tracking und Visualisierung des Kaffeekonsums einer Philips EQ900 Kaffeemaschine.
+Tracking und Visualisierung des Kaffeekonsums einer Siemens EQ900 Kaffeemaschine.
 
-Die Maschine liefert per Home Connect API Zaehlerstaende (Kaffee, Milch, Heisswasser, etc.), die alle 15 Minuten ueber n8n abgerufen und in einer SQLite-Datenbank gespeichert werden. Ein React-Dashboard zeigt Verbrauch, Trends und Muster an.
+Die Maschine liefert per BSH Home Connect API Zaehlerstaende (Kaffee, Milch, Heisswasser, etc.), die alle 15 Minuten ueber n8n abgerufen und in einer SQLite-Datenbank gespeichert werden. Ein React-Dashboard zeigt Verbrauch, Trends und Muster an.
+
+> **Hintergrund — vom Screenshot-OCR zur API-Integration:** Die erste Version
+> trackte eine *Nivona*-Maschine, die keine offene Schnittstelle bietet. Die
+> Zaehlerstaende wurden damals per **Tesseract-OCR aus App-Screenshots**
+> extrahiert — fragil und wartungsintensiv. Mit dem Wechsel auf die Siemens
+> EQ900 (Teil des BSH/Home-Connect-Oekosystems) wurde der gesamte OCR-Pfad
+> durch eine saubere **API-Integration** ersetzt. Die alte Loesung lebt nur
+> noch in der Git-History.
 
 ## Architektur
 
@@ -31,12 +39,12 @@ EQ900 ──> Home Connect API ──> n8n (alle 15 Min) ──> Coffee API ─�
 
 ### Docker Deployment (Produktion)
 
-**Container-Images** werden automatisch von der GitLab-Pipeline gebaut und gepusht, sobald auf `main` gemerget wird:
+**Container-Images** werden automatisch von **GitHub Actions** gebaut und in die GitHub Container Registry (GHCR) gepusht, sobald auf `main` gemerget wird:
 
-- `192.168.2.143:5050/gereon/coffee/coffee-api:latest`
-- `192.168.2.143:5050/gereon/coffee/coffee-dashboard:latest`
+- `ghcr.io/gereon93/coffee-api:latest`
+- `ghcr.io/gereon93/coffee-dashboard:latest`
 
-Zusaetzlich wird jeder Build mit `:${CI_COMMIT_SHORT_SHA}` getaggt fuer Rollbacks.
+Zusaetzlich wird jeder Build mit `:sha-<short-sha>` getaggt fuer Rollbacks.
 
 **Fallback fuer lokale Builds** (wenn die CI nicht verfuegbar ist):
 
@@ -54,20 +62,20 @@ version: "3.8"
 
 services:
   coffee-api:
-    image: 192.168.2.143:5050/gereon/coffee/coffee-api:latest
+    image: ghcr.io/gereon93/coffee-api:latest
     container_name: coffee-api
     restart: unless-stopped
     ports:
       - "8089:8080"
     volumes:
-      - /volume2/docker_ssd/coffee-data:/app/data
+      - /path/to/coffee-data:/app/data
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Default: "Data Source=/app/data/coffee.db"
       ApiKey: <dein-api-key>
 
   coffee-dashboard:
-    image: 192.168.2.143:5050/gereon/coffee/coffee-dashboard:latest
+    image: ghcr.io/gereon93/coffee-dashboard:latest
     container_name: coffee-dashboard
     restart: unless-stopped
     ports:
@@ -76,7 +84,7 @@ services:
       - coffee-api
 ```
 
-**Wichtig:** Das Volume `/volume2/docker_ssd/coffee-data` speichert die SQLite-Datenbank persistent. Ohne dieses Volume gehen Daten bei Container-Neustarts verloren.
+**Wichtig:** Das Volume `/path/to/coffee-data` speichert die SQLite-Datenbank persistent. Ohne dieses Volume gehen Daten bei Container-Neustarts verloren.
 
 ### Lokale Entwicklung
 
@@ -96,14 +104,15 @@ cd coffee-dashboard
 npm install
 npm run dev
 # Laeuft auf http://localhost:5173
-# Proxy leitet /api/* an die NAS-API weiter (konfiguriert in vite.config.ts)
+# Proxy leitet /api/* an http://localhost:8089 weiter
+# (ueberschreibbar via VITE_API_PROXY_TARGET, konfiguriert in vite.config.ts)
 ```
 
 **Tests:**
 
 ```bash
 dotnet test CoffeeTest/
-# 33 Tests: Idempotenz, Cross-Day Deltas, Controller, Heatmap
+# 77 Tests: Idempotenz, Cross-Day Deltas, Controller, Heatmap, Power, HomeConnect
 ```
 
 ## API Endpoints
@@ -126,7 +135,7 @@ dotnet test CoffeeTest/
 Der Ingest-Endpoint ist per API-Key geschuetzt. Der Key wird als `ApiKey` Environment-Variable im Container gesetzt und muss als `X-Api-Key` Header mitgeschickt werden:
 
 ```bash
-curl -X POST http://192.168.2.143:8089/api/ingest \
+curl -X POST http://coffee.example.local:8089/api/ingest \
   -H "Content-Type: application/json" \
   -H "X-Api-Key: <dein-key>" \
   -d '{"data":{"status":[{"key":"ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee","value":42}]}}'
@@ -195,17 +204,22 @@ Die API erkennt Duplikate automatisch - wenn sich die Zaehler nicht geaendert ha
 
 ## Tests
 
-33 Tests decken die Kernlogik ab:
+77 Tests decken die Kernlogik ab — Services, Controller (jeder Branch), Domain und Infrastruktur:
 
 | Testklasse | Tests | Bereich |
 |------------|-------|---------|
-| MachineSnapshotTests | 3 | TotalBeverages, Default Values |
 | SnapshotServiceIdempotencyTests | 5 | First Snapshot, Duplicate Skip, Counter Increase |
-| SnapshotServiceDailySummaryTests | 4 | Cross-Day Delta, Peak Hour, Baseline |
-| SnapshotServiceQueryTests | 5 | GetLatest, Pagination, GetByDate/Range |
-| SnapshotServiceHeatmapTests | 3 | DayOfWeek Grouping, Sunday=7 (ISO-8601) |
+| SnapshotServiceDailySummaryTests | 7 | Cross-Day Delta, Peak Hour, Baseline |
+| SnapshotServiceQueryTests | 7 | GetLatest, Pagination, GetByDate/Range |
+| SnapshotServiceHeatmapTests | 5 | DayOfWeek Grouping, Sunday=7 (ISO-8601) |
+| HomeConnectServiceTests | 11 | Power-Webhook, Status-Parsing, Timeout/Netzwerkfehler, Basic-Auth |
 | IngestControllerTests | 4 | Null/Empty Validation, 201 Created, 200 Duplicate |
-| StatsControllerTests | 6 | Range Aggregation, Health, Heatmap Cap |
+| StatsControllerTests | 7 | Range Aggregation, Health, Heatmap Cap |
+| MarkedDaysControllerTests | 15 | CRUD, Validierung, Event-Typen, Edge-Cases |
+| PowerControllerTests | 7 | On/Off, ungueltiger State (400), Service-Fehler (500) |
+| CoffeeStatusControllerTests | 3 | Payload, Caching (TTL), Unreachable-Passthrough |
+| MachineSnapshotTests | 3 | TotalBeverages, Default Values |
+| MigrationBaselinerTests | 3 | EF Migration History Baselining |
 
 ```bash
 dotnet test CoffeeTest/
@@ -216,14 +230,14 @@ dotnet test CoffeeTest/
 Die gesamte Datenhaltung liegt in einer einzigen SQLite-Datei:
 
 ```
-NAS: /volume2/docker_ssd/coffee-data/coffee.db
+NAS: /path/to/coffee-data/coffee.db
 ```
 
 Fuer ein Backup reicht es, diese Datei zu kopieren. Die DB wird per Docker Volume in den API-Container gemountet und ueberlebt Container-Updates.
 
 ## Error-Tracking
 
-Errors gehen an https://errors.murgbyte.cloud (self-hosted GlitchTip, Sentry-API-kompatibel). DSN aus `Project -> Settings -> Client Keys` in der GlitchTip-UI holen und in die jeweilige `.env` eintragen:
+Errors gehen an https://glitchtip.example.com (self-hosted GlitchTip, Sentry-API-kompatibel). DSN aus `Project -> Settings -> Client Keys` in der GlitchTip-UI holen und in die jeweilige `.env` eintragen:
 
 - Backend: `CoffeeApi/.env.example` zeigt die ENV-Variablen (`SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE`, `SENTRY_TRACES_SAMPLE_RATE`). Werden zur Laufzeit aus der Container-Env gelesen.
 - Frontend: `coffee-dashboard/.env` enthaelt `VITE_SENTRY_DSN`, `VITE_SENTRY_ENVIRONMENT`, `VITE_SENTRY_RELEASE`, `VITE_SENTRY_TRACES_SAMPLE_RATE`. Build-Time-Variablen — also vor `npm run build` setzen.
