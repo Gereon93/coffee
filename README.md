@@ -29,6 +29,19 @@ EQ900 ──> Home Connect API ──> n8n (alle 15 Min) ──> Coffee API ─�
 | Scheduler | n8n (externer Workflow) | - |
 | Hosting | Docker auf Synology NAS via Portainer | - |
 
+**Design-Entscheidung — n8n als Cloud-Gateway:** Die Coffee API und das
+Dashboard laufen bewusst **nur im lokalen Netz** und sind nicht aus dem
+Internet erreichbar. Einzig n8n spricht mit der Home Connect Cloud — es pollt
+die Zaehlerstaende und schiebt sie per POST in die LAN-API (Pull-Prinzip statt
+offenem Port). Auch die umgekehrte Richtung (Maschine ein-/ausschalten) laeuft
+ueber einen n8n-Webhook als Relay. Vorteile:
+
+- Kein Port-Forwarding, kein Reverse-Proxy, keine Angriffsflaeche am NAS
+- Die BSH/Home-Connect-Credentials (OAuth-Tokens) leben ausschliesslich in
+  n8n — die API selbst kennt sie nicht
+- Scheduling, Retries und Token-Refresh sind n8n-Aufgaben und halten die API
+  schlank
+
 ## Voraussetzungen
 
 - **Docker** (fuer Deployment)
