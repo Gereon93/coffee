@@ -4,13 +4,14 @@ Tracking und Visualisierung des Kaffeekonsums einer Siemens EQ900 Kaffeemaschine
 
 Die Maschine liefert per BSH Home Connect API Zaehlerstaende (Kaffee, Milch, Heisswasser, etc.), die alle 15 Minuten ueber n8n abgerufen und in einer SQLite-Datenbank gespeichert werden. Ein React-Dashboard zeigt Verbrauch, Trends und Muster an.
 
-> **Hintergrund — vom Screenshot-OCR zur API-Integration:** Die erste Version
-> trackte eine *Nivona*-Maschine, die keine offene Schnittstelle bietet. Die
-> Zaehlerstaende wurden damals per **Tesseract-OCR aus App-Screenshots**
-> extrahiert — fragil und wartungsintensiv. Mit dem Wechsel auf die Siemens
-> EQ900 (Teil des BSH/Home-Connect-Oekosystems) wurde der gesamte OCR-Pfad
-> durch eine saubere **API-Integration** ersetzt. Die alte Loesung lebt nur
-> noch in der Git-History.
+> **Hintergrund — vom Screenshot-OCR zur API-Integration:** Das Projekt
+> startete 2023 mit einer *Nivona*-Maschine, die keine offene Schnittstelle
+> bietet. Die Zaehlerstaende wurden damals per **Tesseract-OCR aus
+> App-Screenshots** extrahiert — fragil und wartungsintensiv. Mit dem Umstieg
+> auf eine Siemens EQ900 (Teil des BSH/Home-Connect-Oekosystems) wurde Anfang
+> 2026 der gesamte OCR-Pfad durch eine saubere **API-Integration** ersetzt und
+> der Storage von MongoDB auf SQLite + EF Core umgestellt. Die alte Loesung
+> lebt nur noch in der Git-History.
 
 ## Architektur
 
@@ -27,6 +28,19 @@ EQ900 ──> Home Connect API ──> n8n (alle 15 Min) ──> Coffee API ─�
 | Coffee Dashboard | React 19, Vite, Recharts, Tailwind CSS v4 | 8090 |
 | Scheduler | n8n (externer Workflow) | - |
 | Hosting | Docker auf Synology NAS via Portainer | - |
+
+**Design-Entscheidung — n8n als Cloud-Gateway:** Die Coffee API und das
+Dashboard laufen bewusst **nur im lokalen Netz** und sind nicht aus dem
+Internet erreichbar. Einzig n8n spricht mit der Home Connect Cloud — es pollt
+die Zaehlerstaende und schiebt sie per POST in die LAN-API (Pull-Prinzip statt
+offenem Port). Auch die umgekehrte Richtung (Maschine ein-/ausschalten) laeuft
+ueber einen n8n-Webhook als Relay. Vorteile:
+
+- Kein Port-Forwarding, kein Reverse-Proxy, keine Angriffsflaeche am NAS
+- Die BSH/Home-Connect-Credentials (OAuth-Tokens) leben ausschliesslich in
+  n8n — die API selbst kennt sie nicht
+- Scheduling, Retries und Token-Refresh sind n8n-Aufgaben und halten die API
+  schlank
 
 ## Voraussetzungen
 
