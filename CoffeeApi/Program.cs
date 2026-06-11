@@ -7,7 +7,7 @@ using Scalar.AspNetCore;
 
 namespace CoffeeApi
 {
-    public static class Program
+    public class Program
     {
         private static void Main(string[] args)
         {
