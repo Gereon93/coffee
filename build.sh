@@ -13,8 +13,10 @@
 set -e
 
 # --- Configuration (edit these for other repos) ---
-REGISTRY="192.168.2.143:5050"
-PROJECT="gereon/coffee"
+# Images are pushed to the GitHub Container Registry (ghcr.io).
+# Set PROJECT to your GitHub username/org (lowercase) and run `docker login ghcr.io` first.
+REGISTRY="ghcr.io"
+PROJECT="gereon93"
 DOCKER="${DOCKER:-podman}"
 
 declare -A SERVICES=(

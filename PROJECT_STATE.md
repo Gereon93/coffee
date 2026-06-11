@@ -32,12 +32,12 @@
 
 | Komponente | Status | Details |
 |------------|--------|---------|
-| Coffee API | Live | `192.168.2.143:8089` |
-| Coffee Dashboard | Live | `192.168.2.143:8090` |
+| Coffee API | Live | `coffee.example.local:8089` |
+| Coffee Dashboard | Live | `coffee.example.local:8090` |
 | SQLite DB | Live | Persistiert in Docker Volume |
 | n8n Workflow | Live | Cron alle 15 Min (07:00-02:00) |
 | Idempotenz | Funktioniert | Duplikate werden uebersprungen |
-| Scalar UI | Live | `192.168.2.143:8089/scalar/v1` |
+| Scalar UI | Live | `coffee.example.local:8089/scalar/v1` |
 | API-Key Auth | Live | `/api/ingest` geschuetzt |
 | Cross-Day Deltas | Funktioniert | Tagesuebergreifende Bezuege korrekt |
 
@@ -87,7 +87,7 @@ Keine offenen Aufgaben. Optionale Ideen fuer die Zukunft:
 | Scheduler | n8n (extern) |
 | Auth | API-Key Header |
 | Container | Docker (nginx + .NET) |
-| Registry | GitLab (192.168.2.143:5050) |
+| Registry | GitLab (ghcr.io) |
 | Hosting | Portainer auf NAS |
 | Build | build.sh (lokal) |
 
@@ -116,8 +116,8 @@ Keine offenen Aufgaben. Optionale Ideen fuer die Zukunft:
 
 | Image | Registry |
 |-------|----------|
-| `coffee-api:latest` | `192.168.2.143:5050/gereon/coffee/coffee-api` |
-| `coffee-dashboard:latest` | `192.168.2.143:5050/gereon/coffee/coffee-dashboard` |
+| `coffee-api:latest` | `ghcr.io/gereon93/coffee-api` |
+| `coffee-dashboard:latest` | `ghcr.io/gereon93/coffee-dashboard` |
 
 Build: `./build.sh all` (oder `api` / `dashboard` einzeln)
 
@@ -131,20 +131,20 @@ version: "3.8"
 
 services:
   coffee-api:
-    image: 192.168.2.143:5050/gereon/coffee/coffee-api:latest
+    image: ghcr.io/gereon93/coffee-api:latest
     container_name: coffee-api
     restart: unless-stopped
     ports:
       - "8089:8080"
     volumes:
-      - /volume2/docker_ssd/coffee-data:/app/data
+      - /path/to/coffee-data:/app/data
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Default: "Data Source=/app/data/coffee.db"
       ApiKey: <secret>
 
   coffee-dashboard:
-    image: 192.168.2.143:5050/gereon/coffee/coffee-dashboard:latest
+    image: ghcr.io/gereon93/coffee-dashboard:latest
     container_name: coffee-dashboard
     restart: unless-stopped
     ports:

@@ -666,3 +666,7 @@ CoffeeApi/coffee.db-wal
 
 CoffeeApi/.dockerignore
 .gitnexus
+
+# macOS
+.DS_Store
+**/.DS_Store
