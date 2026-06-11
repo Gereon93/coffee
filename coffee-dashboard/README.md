@@ -11,7 +11,7 @@ npm run build    # Production Build
 npm run lint     # ESLint
 ```
 
-Der Vite Dev-Server proxied `/api/*` Requests an `http://192.168.2.143:8089` (konfiguriert in `vite.config.ts`).
+Der Vite Dev-Server proxied `/api/*` Requests an `http://localhost:8089` (konfiguriert in `vite.config.ts`, ueberschreibbar via `VITE_API_PROXY_TARGET`).
 
 ## Docker
 

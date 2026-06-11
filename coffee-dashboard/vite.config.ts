@@ -28,7 +28,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://192.168.2.143:8089',
+        // Backend-Adresse fuer den Dev-Proxy; ueber VITE_API_PROXY_TARGET ueberschreibbar.
+        target: process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:8089',
         changeOrigin: true,
       },
     },
