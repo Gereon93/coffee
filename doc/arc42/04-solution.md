@@ -15,10 +15,19 @@
 
 ## 4.2 Timezone Strategy
 
-All timestamps are stored as UTC in SQLite. The frontend sends its UTC offset
-(`tz` query parameter, in minutes) so the backend can compute local day
-boundaries for aggregation. This avoids hardcoding CET/CEST and supports
-arbitrary client timezones.
+All timestamps are stored as UTC (`DateTimeKind.Utc`) in SQLite. The frontend
+sends its current UTC offset via the `tz` query parameter (in minutes, e.g. 60
+for CET, 120 for CEST). The backend uses this offset to compute local day
+boundaries for aggregation.
+
+**Limitation:** The offset is computed once per request from
+`new Date().getTimezoneOffset()`. This means queries that span CET/CEST
+boundaries (e.g. a 52-week heatmap viewed during CEST that includes winter
+dates) will use the current offset for all dates, shifting local midnight by
+one hour for dates in the other DST period. This is a known trade-off; a
+zone-aware solution (e.g. passing `Europe/Berlin` and using `TimeZoneInfo`)
+would be more correct but adds complexity that is not needed for the primary
+use case (single-timezone household).
 
 ## 4.3 Cross-Day Delta Strategy
 

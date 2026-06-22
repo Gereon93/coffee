@@ -62,7 +62,7 @@
 ### Ingest Flow (n8n → API → SQLite)
 
 1. n8n polls BSH Home Connect API for current machine status
-2. n8n POSTs the raw JSON payload to `/api/ingest` with `X-API-Key` header
+2. n8n POSTs the raw JSON payload to `http://<NAS-IP>:8089/api/ingest` with `X-API-Key` header (or `http://coffee-api:8080/api/ingest` if n8n runs in the same Docker network)
 3. API validates the payload, maps Home Connect keys to domain properties
 4. API performs idempotency check (counter comparison with last snapshot)
 5. If counters increased: new snapshot is persisted (201 Created)

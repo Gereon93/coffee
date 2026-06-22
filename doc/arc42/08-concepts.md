@@ -56,11 +56,18 @@ trigger a new snapshot.
 - All timestamps are stored as UTC (`DateTimeKind.Utc`) in SQLite.
 - A global EF Core `ValueConverter` forces `DateTimeKind.Utc` on read,
   compensating for SQLite's loss of kind information.
-- The frontend sends its UTC offset via the `tz` query parameter (in
-  minutes, e.g. 60 for CET, 120 for CEST).
+- The frontend sends its current UTC offset via the `tz` query parameter
+  (in minutes, e.g. 60 for CET, 120 for CEST).
 - The backend computes local day boundaries as
   `local_midnight - tz_offset` in UTC.
 - Peak hour and heatmap grouping use the client's local time.
+
+**Limitation:** The offset is computed once per request from the browser's
+current timezone. Queries spanning CET/CEST boundaries (e.g. a 52-week
+heatmap viewed during CEST that includes winter dates) use the current
+offset for all dates, shifting local midnight by one hour for dates in
+the other DST period. This is acceptable for the primary use case
+(single-timezone household) but is a known trade-off.
 
 ## 8.4 Security
 
@@ -69,7 +76,7 @@ trigger a new snapshot.
 | Ingest authentication | API key via `X-API-Key` header; configured via `ApiKey` env var |
 | Power control | No authentication (LAN-only deployment); UI-level time lock (07:00-18:00 Berlin) |
 | Read endpoints | No authentication (LAN-only) |
-| CORS | Allow all (LAN-only; no cross-origin concerns) |
+| CORS | Allow all (LAN-only deployment; note: a malicious website could make cross-origin requests to the local API, bypassing UI-level protections like the power time lock) |
 | Secrets | n8n credentials in `appsettings.Secrets.json` (gitignored); API key in env var |
 | Error tracking | `SendDefaultPii = false`; no PII in Sentry events |
 

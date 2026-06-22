@@ -38,7 +38,7 @@ Quality
 | Scenario | Expected Outcome |
 |----------|-----------------|
 | n8n sends the same payload twice | First: 201 Created. Second: 200 OK, no duplicate record |
-| Machine counter resets to 0 | System stores the new snapshot; delta computation uses `Math.Max(0, ...)` to avoid negative values |
+| Machine counter resets to 0 | System treats reset as duplicate (counters not increased); reset is not persisted. This is a known limitation documented in issue #8. |
 | BSH API is unreachable | `/coffee/status` returns `reachable: false` with "Offline" label; no exception thrown |
 | User queries daily stats for a day with no snapshots | Returns empty snapshot list and zeroed summary |
 | Container restarts with existing database | MigrationBaseliner detects pre-migration DB; `Migrate()` applies only pending migrations |

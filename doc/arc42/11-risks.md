@@ -18,6 +18,8 @@
 | TD-12 | No rate limiting | Low | No rate limiting configured on any endpoint. |
 | TD-13 | `coffee-dashboard/.env` committed to repository | Low | The `.env` file is tracked in git; should be in `.gitignore` if it contains environment-specific values. |
 | TD-14 | `HourlyPeaksChart` uses local `getHours()` | Medium | The chart component calls `new Date(timestamp).getHours()` which uses the browser's local timezone, but the backend already converts timestamps based on the `tz` parameter. This could lead to double-conversion. |
+| TD-15 | Counter reset not handled | Medium | If the machine's counters reset to 0 (e.g. after maintenance), the idempotency logic treats it as a duplicate (counters not increased) and does not persist the reset. This means the baseline for delta computation remains at the old high value, causing incorrect (negative, clamped to 0) deltas until counters exceed the previous high. |
+| TD-16 | Timezone offset not DST-aware | Low | The `tz` parameter is computed once per request from the browser's current timezone. Queries spanning CET/CEST boundaries use the current offset for all dates, causing a 1-hour shift for dates in the other DST period. |
 
 ## 11.2 Risks
 

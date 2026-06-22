@@ -33,7 +33,7 @@
 - **Context:** n8n delivers the same payload every 15 minutes if counters haven't changed.
 - **Decision:** Only persist a new snapshot when at least one beverage counter has increased.
 - **Rationale:** Prevents duplicate records; reduces storage; simplifies delta computation.
-- **Consequences:** Status-only changes (e.g. OperationState) are not recorded. Acceptable because consumption is the primary interest.
+- **Consequences:** Status-only changes (e.g. OperationState) are not recorded. Acceptable because consumption is the primary interest. Counter resets (e.g. after machine maintenance) are also not recorded — the reset baseline is lost, causing incorrect deltas until counters exceed the previous high. This is a known limitation (see TD-15 in risks).
 
 ## ADR-006: React over Blazor
 

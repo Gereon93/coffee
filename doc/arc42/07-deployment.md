@@ -33,7 +33,7 @@
 │                                                                      │
 │  Cron: */15 7-2 * * *                                               │
 │  1. GET BSH Home Connect API (OAuth2)                                │
-│  2. POST /api/ingest → coffee-api:8089                               │
+│  2. POST http://<NAS-IP>:8089/api/ingest                             │
 │  3. Webhook relay: coffee-power → BSH API                            │
 │                                                                      │
 └──────────────────────────────────────────────────────────────────────┘
@@ -65,7 +65,7 @@
 | Base image | `nginx:alpine` |
 | Port | 80 (mapped to 8090 on host) |
 | Routing | SPA: all routes → `index.html` |
-| Proxy | `/api/*`, `/scalar/*`, `/openapi/*` → `coffee-api:8080` |
+| Proxy | `/api/*`, `/coffee/*`, `/scalar/*`, `/openapi/*` → `coffee-api:8080` |
 | Caching | `/assets/*` → 1 year, immutable |
 
 ## 7.3 CI/CD Pipeline
