@@ -35,10 +35,12 @@ public class StatsController : ControllerBase
         {
             return BadRequest(new { error = "Invalid page", details = new[] { "page must be >= 1" } });
         }
-        if (pageSize < 1 || pageSize > 100)
+        if (pageSize < 1)
         {
-            return BadRequest(new { error = "Invalid pageSize", details = new[] { "pageSize must be between 1 and 100" } });
+            return BadRequest(new { error = "Invalid pageSize", details = new[] { "pageSize must be >= 1" } });
         }
+
+        pageSize = Math.Min(pageSize, 100);
 
         var (items, totalCount) = await _snapshotService.GetAllAsync(page, pageSize);
 

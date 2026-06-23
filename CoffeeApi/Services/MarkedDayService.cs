@@ -22,6 +22,11 @@ public class MarkedDayService : IMarkedDayService
         _logger = logger;
     }
 
+    public bool IsValidKind(string? kind)
+    {
+        return kind != null && ValidKinds.Contains(kind);
+    }
+
     public async Task<IReadOnlyList<MarkedDayDto>> GetAllAsync(string? kind = null)
     {
         var query = _context.MarkedDays.AsQueryable();
@@ -43,17 +48,17 @@ public class MarkedDayService : IMarkedDayService
             .ToListAsync();
     }
 
-    public async Task<(bool Success, MarkedDayDto? Dto, string? Error, string? Detail)> CreateAsync(CreateMarkedDayDto dto)
+    public async Task<(bool Success, MarkedDayDto? Dto, MarkedDayError Error, string? Detail)> CreateAsync(CreateMarkedDayDto dto)
     {
         if (!DateOnly.TryParseExact(dto.Date, "yyyy-MM-dd", out var parsedDate))
         {
-            return (false, null, "Invalid date", "Use yyyy-MM-dd format");
+            return (false, null, MarkedDayError.InvalidDate, "Use yyyy-MM-dd format");
         }
 
         var kind = string.IsNullOrWhiteSpace(dto.Kind) ? "mass-import" : dto.Kind;
         if (!ValidKinds.Contains(kind))
         {
-            return (false, null, "Invalid kind", $"kind must be one of: {string.Join(", ", ValidKinds)}");
+            return (false, null, MarkedDayError.InvalidKind, $"kind must be one of: {string.Join(", ", ValidKinds)}");
         }
 
         string? eventType = null;
@@ -61,20 +66,20 @@ public class MarkedDayService : IMarkedDayService
         {
             if (string.IsNullOrWhiteSpace(dto.EventType) || !ValidEventTypes.Contains(dto.EventType))
             {
-                return (false, null, "Invalid eventType", $"eventType must be one of: {string.Join(", ", ValidEventTypes)}");
+                return (false, null, MarkedDayError.InvalidEventType, $"eventType must be one of: {string.Join(", ", ValidEventTypes)}");
             }
             eventType = dto.EventType;
         }
 
         if (kind == "mass-import" && string.IsNullOrWhiteSpace(dto.Reason))
         {
-            return (false, null, "Reason required", "Reason must not be empty for mass-import");
+            return (false, null, MarkedDayError.ReasonRequired, "Reason must not be empty for mass-import");
         }
 
         var exists = await _context.MarkedDays.AnyAsync(d => d.Date == parsedDate);
         if (exists)
         {
-            return (false, null, "Already marked", $"Day {dto.Date} is already marked");
+            return (false, null, MarkedDayError.AlreadyMarked, $"Day {dto.Date} is already marked");
         }
 
         var entity = new MarkedDay
@@ -100,26 +105,26 @@ public class MarkedDayService : IMarkedDayService
             CreatedAt = entity.CreatedAt
         };
 
-        return (true, response, null, null);
+        return (true, response, MarkedDayError.None, null);
     }
 
-    public async Task<(bool Success, string? Error, string? Detail)> DeleteAsync(string date)
+    public async Task<(bool Success, MarkedDayError Error, string? Detail)> DeleteAsync(string date)
     {
         if (!DateOnly.TryParseExact(date, "yyyy-MM-dd", out var parsedDate))
         {
-            return (false, "Invalid date", "Use yyyy-MM-dd format");
+            return (false, MarkedDayError.InvalidDate, "Use yyyy-MM-dd format");
         }
 
         var entity = await _context.MarkedDays.FirstOrDefaultAsync(d => d.Date == parsedDate);
         if (entity == null)
         {
-            return (false, "Not found", $"Day {date} is not marked");
+            return (false, MarkedDayError.NotFound, $"Day {date} is not marked");
         }
 
         _context.MarkedDays.Remove(entity);
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Day {Date} unmarked", date);
-        return (true, null, null);
+        return (true, MarkedDayError.None, null);
     }
 }

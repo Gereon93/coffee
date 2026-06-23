@@ -8,8 +8,6 @@ namespace CoffeeApi.Controllers;
 [Route("api/stats/marked-days")]
 public class MarkedDaysController : ControllerBase
 {
-    private static readonly HashSet<string> ValidKinds = new() { "mass-import", "event" };
-
     private readonly IMarkedDayService _markedDayService;
 
     public MarkedDaysController(IMarkedDayService markedDayService)
@@ -21,9 +19,9 @@ public class MarkedDaysController : ControllerBase
     [ProducesResponseType(typeof(IReadOnlyList<MarkedDayDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll([FromQuery] string? kind = null)
     {
-        if (kind != null && !ValidKinds.Contains(kind))
+        if (kind != null && !_markedDayService.IsValidKind(kind))
         {
-            return BadRequest(new { error = "Invalid kind", details = new[] { $"kind must be one of: {string.Join(", ", ValidKinds)}" } });
+            return BadRequest(new { error = "Invalid kind", details = new[] { "kind must be 'mass-import' or 'event'" } });
         }
 
         var days = await _markedDayService.GetAllAsync(kind);
@@ -40,11 +38,16 @@ public class MarkedDaysController : ControllerBase
 
         if (!success)
         {
-            if (error == "Already marked")
+            var details = new[] { detail! };
+            return error switch
             {
-                return Conflict(new { error, details = new[] { detail! } });
-            }
-            return BadRequest(new { error, details = new[] { detail! } });
+                MarkedDayError.AlreadyMarked => Conflict(new { error = "Already marked", details }),
+                MarkedDayError.InvalidDate => BadRequest(new { error = "Invalid date", details }),
+                MarkedDayError.InvalidKind => BadRequest(new { error = "Invalid kind", details }),
+                MarkedDayError.InvalidEventType => BadRequest(new { error = "Invalid eventType", details }),
+                MarkedDayError.ReasonRequired => BadRequest(new { error = "Reason required", details }),
+                _ => BadRequest(new { error = "Unknown error", details })
+            };
         }
 
         return CreatedAtAction(nameof(GetAll), markedDayDto);
@@ -60,11 +63,13 @@ public class MarkedDaysController : ControllerBase
 
         if (!success)
         {
-            if (error == "Not found")
+            var details = new[] { detail! };
+            return error switch
             {
-                return NotFound(new { error, details = new[] { detail! } });
-            }
-            return BadRequest(new { error, details = new[] { detail! } });
+                MarkedDayError.NotFound => NotFound(new { error = "Not found", details }),
+                MarkedDayError.InvalidDate => BadRequest(new { error = "Invalid date", details }),
+                _ => BadRequest(new { error = "Unknown error", details })
+            };
         }
 
         return NoContent();
