@@ -45,4 +45,9 @@ public interface ISnapshotService
     /// Get aggregated data for heatmap (timezone-aware)
     /// </summary>
     Task<List<HeatmapDataPointDto>> GetHeatmapDataAsync(int weeks = 4, int tzOffsetMinutes = 0);
+
+    /// <summary>
+    /// Get the last snapshot before a given timestamp
+    /// </summary>
+    Task<MachineSnapshot?> GetLastSnapshotBeforeAsync(DateTime timestamp);
 }

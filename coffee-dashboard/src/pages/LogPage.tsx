@@ -6,6 +6,7 @@ import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { ErrorMessage } from '../components/shared/ErrorMessage';
 import { MarkAsBackfillModal } from '../components/log/MarkAsBackfillModal';
 import { buildMarkedDayMaps } from '../lib/markedDayUtils';
+import { formatDisplayDate } from '../lib/dateUtils';
 import type { SnapshotResponse } from '../api/types';
 
 function formatLocalTime(isoTimestamp: string): string {
@@ -21,11 +22,6 @@ function toLocalDateKey(isoTimestamp: string): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
-}
-
-function formatDisplayDate(dateKey: string): string {
-  const [y, m, d] = dateKey.split('-');
-  return `${d}.${m}.${y}`;
 }
 
 function DeltaBadge({

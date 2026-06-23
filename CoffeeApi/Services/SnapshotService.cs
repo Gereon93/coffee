@@ -14,20 +14,6 @@ public class SnapshotService : ISnapshotService
     private readonly AppDbContext _context;
     private readonly ILogger<SnapshotService> _logger;
 
-    // Home Connect key mappings
-    private static readonly Dictionary<string, string> KeyMappings = new()
-    {
-        ["BSH.Common.Status.OperationState"] = "OperationState",
-        ["BSH.Common.Status.RemoteControlStartAllowed"] = "RemoteControlAllowed",
-        ["BSH.Common.Status.LocalControlActive"] = "LocalControlActive",
-        ["BSH.Common.Status.InteriorIlluminationActive"] = "InteriorIlluminationActive",
-        ["ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee"] = "BeverageCounterCoffee",
-        ["ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffeeAndMilk"] = "BeverageCounterCoffeeAndMilk",
-        ["ConsumerProducts.CoffeeMaker.Status.BeverageCounterMilk"] = "BeverageCounterMilk",
-        ["ConsumerProducts.CoffeeMaker.Status.BeverageCounterHotWaterCups"] = "BeverageCounterHotWaterCups",
-        ["ConsumerProducts.CoffeeMaker.Status.BeverageCounterHotWater"] = "BeverageCounterHotWater"
-    };
-
     public SnapshotService(AppDbContext context, ILogger<SnapshotService> logger)
     {
         _context = context;
@@ -212,6 +198,14 @@ public class SnapshotService : ISnapshotService
             .OrderBy(h => h.DayOfWeek)
             .ThenBy(h => h.Hour)
             .ToList();
+    }
+
+    public async Task<MachineSnapshot?> GetLastSnapshotBeforeAsync(DateTime timestamp)
+    {
+        return await _context.MachineSnapshots
+            .Where(s => s.Timestamp < timestamp)
+            .OrderByDescending(s => s.Timestamp)
+            .FirstOrDefaultAsync();
     }
 
     /// <summary>

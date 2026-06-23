@@ -14,7 +14,7 @@ namespace CoffeeApi.Controllers;
 public class CoffeeStatusController : ControllerBase
 {
     private const string CacheKey = "coffee:status";
-    private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(7);
+    private static readonly TimeSpan BshApiCacheTtl = TimeSpan.FromSeconds(7);
 
     private readonly IHomeConnectService _homeConnect;
     private readonly IMemoryCache _cache;
@@ -35,7 +35,7 @@ public class CoffeeStatusController : ControllerBase
         }
 
         var fresh = await _homeConnect.GetStatusAsync();
-        _cache.Set(CacheKey, fresh, CacheTtl);
+        _cache.Set(CacheKey, fresh, BshApiCacheTtl);
         return Ok(fresh);
     }
 }

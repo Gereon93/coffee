@@ -2,6 +2,7 @@ using CoffeeApi.Controllers;
 using CoffeeApi.Domain;
 using CoffeeApi.DTOs;
 using CoffeeApi.Infrastructure;
+using CoffeeApi.Services;
 using CoffeeTest.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +14,8 @@ public class MarkedDaysControllerTests
 {
     private static MarkedDaysController CreateController(AppDbContext db)
     {
-        return new MarkedDaysController(db, NullLogger<MarkedDaysController>.Instance);
+        var service = new MarkedDayService(db, NullLogger<MarkedDayService>.Instance);
+        return new MarkedDaysController(service);
     }
 
     [Fact]
