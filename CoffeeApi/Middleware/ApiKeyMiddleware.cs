@@ -42,7 +42,8 @@ public class ApiKeyMiddleware
         }
 
         // Check for API key in header
-        if (!context.Request.Headers.TryGetValue(ApiKeyHeaderName, out var providedApiKey))
+        if (!context.Request.Headers.TryGetValue(ApiKeyHeaderName, out var providedApiKeyValues)
+            || providedApiKeyValues.ToString() is not string providedApiKey)
         {
             _logger.LogWarning("API request without API key from {IP}", context.Connection.RemoteIpAddress);
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;

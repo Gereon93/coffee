@@ -48,6 +48,7 @@ namespace CoffeeApi
                 options.UseSqlite(connectionString));
 
             builder.Services.AddScoped<ISnapshotService, SnapshotService>();
+            builder.Services.AddScoped<IMarkedDayService, MarkedDayService>();
 
             // ===== n8n Webhook Service (HomeConnect) =====
             builder.Services.AddHttpClient<IHomeConnectService, HomeConnectService>();

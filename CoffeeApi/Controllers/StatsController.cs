@@ -31,6 +31,15 @@ public class StatsController : ControllerBase
     [ProducesResponseType(typeof(PaginatedResponseDto<SnapshotResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
+        if (page < 1)
+        {
+            return BadRequest(new { error = "Invalid page", details = new[] { "page must be >= 1" } });
+        }
+        if (pageSize < 1 || pageSize > 100)
+        {
+            return BadRequest(new { error = "Invalid pageSize", details = new[] { "pageSize must be between 1 and 100" } });
+        }
+
         var (items, totalCount) = await _snapshotService.GetAllAsync(page, pageSize);
 
         var response = new PaginatedResponseDto<SnapshotResponseDto>
@@ -72,10 +81,7 @@ public class StatsController : ControllerBase
         if (snapshots.Count > 0)
         {
             var (startOfDay, _) = GetLocalDayBoundsUtc(parsedDate, tz);
-            var baseline = await _context.MachineSnapshots
-                .Where(s => s.Timestamp < startOfDay)
-                .OrderByDescending(s => s.Timestamp)
-                .FirstOrDefaultAsync();
+            var baseline = await _snapshotService.GetLastSnapshotBeforeAsync(startOfDay);
             if (baseline != null)
             {
                 snapshotDtos.Add(MapToDto(baseline));
@@ -113,10 +119,7 @@ public class StatsController : ControllerBase
 
         // Get the last snapshot before the range for cross-day deltas
         var (rangeStart, _) = GetLocalDayBoundsUtc(fromDate, tz);
-        var previousSnapshot = await _context.MachineSnapshots
-            .Where(s => s.Timestamp < rangeStart)
-            .OrderByDescending(s => s.Timestamp)
-            .FirstOrDefaultAsync();
+        var previousSnapshot = await _snapshotService.GetLastSnapshotBeforeAsync(rangeStart);
 
         // Aggregate by local date with cross-day delta support
         var groups = snapshots
