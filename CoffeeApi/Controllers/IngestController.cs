@@ -62,7 +62,7 @@ public class IngestController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing ingest payload");
-            return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            return StatusCode(500, new { error = "Internal server error" });
         }
     }
 }

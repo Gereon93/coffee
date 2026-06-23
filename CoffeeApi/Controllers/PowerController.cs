@@ -45,7 +45,7 @@ public class PowerController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to set power state to {State}", request.State);
-            return StatusCode(500, new { status = "error", message = ex.Message });
+            return StatusCode(500, new { status = "error", message = "Failed to set power state" });
         }
     }
 }

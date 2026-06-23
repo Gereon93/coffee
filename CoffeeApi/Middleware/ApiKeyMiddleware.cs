@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+
 namespace CoffeeApi.Middleware;
 
 /// <summary>
@@ -52,7 +54,9 @@ public class ApiKeyMiddleware
             return;
         }
 
-        if (!configuredApiKey.Equals(providedApiKey))
+        if (!CryptographicOperations.FixedTimeEquals(
+            System.Text.Encoding.UTF8.GetBytes(configuredApiKey),
+            System.Text.Encoding.UTF8.GetBytes(providedApiKey)))
         {
             _logger.LogWarning("Invalid API key attempt from {IP}", context.Connection.RemoteIpAddress);
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
