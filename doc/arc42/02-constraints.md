@@ -45,5 +45,5 @@ decisions — decisions are in [04](04-solution.md) and [09](09-design.md).
 | Constraint | Detail |
 |------------|--------|
 | **BSH Home Connect terms** | Rate limits and acceptable-use policy apply. Polling cadence (15 min) and the 7-second status cache exist to stay inside them. |
-| **No personal data** | The system stores machine counters and timestamps only. No user accounts, no names, no identifiers. Sentry runs with `SendDefaultPii = false` on both sides. This keeps GDPR obligations out of scope — it is a constraint, not a feature. |
+| **Minimal personal data** | No user accounts, no identifiers, no telemetry about who brewed what. Sentry runs with `SendDefaultPii = false` on both sides. **One exception:** `MarkedDay.Reason` is free text up to 500 characters, entered by a user and written verbatim into an information-level log line by `MarkedDayService`. `SendDefaultPii = false` does not sanitise application-supplied log values. A note like "Besuch von Oma Erika" therefore reaches both the database and the logs. The GDPR surface is small, not empty — see [08.4](08-concepts.md#84-security). |
 | **MIT License** | `LICENSE` at repository root. |

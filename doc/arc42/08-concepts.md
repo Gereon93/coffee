@@ -44,7 +44,7 @@ A manual annotation on one local calendar date.
 | Kind | Meaning | Effect on statistics |
 |------|---------|---------------------|
 | `mass-import` | Data backfilled in bulk; the timestamps do not reflect when coffee was actually brewed | Excluded from the heatmap; excluded from anomaly detection; row greyed out in the log |
-| `event` | Real data that looks unusual for a known reason | Fully included; annotated in the bar chart |
+| `event` | Real data that looks unusual for a known reason | Included in consumption totals and the heatmap; annotated in the bar chart. **Excluded from anomaly detection** — an explained day should not also be flagged as unexplained |
 
 One annotation per date, enforced by the primary key. A day cannot be both
 kinds — accepted, since the two are mutually exclusive in practice.
@@ -143,10 +143,12 @@ is to pass the zone id and use `TimeZoneInfo`. See
 
 ### Threat model
 
-The system holds no personal data and no credentials of value beyond the n8n
-webhook basic-auth pair and the ingest API key. The realistic threats are
-(a) accidental exposure of the n8n webhook and (b) unwanted actuation of a
-physical appliance.
+The system holds no accounts and no identifiers, and no credentials of value
+beyond the n8n webhook basic-auth pair and the ingest API key. It is not
+entirely free of personal data: `MarkedDay.Reason` is user-entered free text.
+The realistic threats are (a) accidental exposure of the n8n webhook,
+(b) unwanted actuation of a physical appliance, and (c) user-entered notes
+ending up somewhere they were not expected.
 
 ### Controls in place
 
@@ -170,6 +172,7 @@ physical appliance.
 | **API docs are public on the LAN** | Scalar and `/openapi/v1.json` are proxied by nginx without auth. |
 | **No rate limiting** | No throttling on any endpoint. |
 | **Proxy headers not honoured** | The API does not use forwarded-headers middleware, so the client IP logged on a failed API-key attempt is nginx's, not the caller's. |
+| **User-entered text reaches the logs** | `MarkedDayService.CreateAsync` writes `Reason` verbatim into an information-level log line. It is free text up to 500 characters and can contain names. `SendDefaultPii = false` governs framework-collected data, not application-supplied log values, so it does not help here. No retention policy covers the logs. |
 
 These are consequences of the LAN-only assumption (TC-3). They become
 release-blocking the moment the deployment model changes. Tracked in

@@ -23,7 +23,7 @@ reset is a hard problem (see [ADR-005](09-design.md#adr-005-counter-based-idempo
 | **Analytics dashboard** | A React SPA renders daily totals, trends, a consumption split, hourly peaks, a weekday×hour heatmap, and weekday comparison. |
 | **Anomaly detection** | Days whose total exceeds the range mean by more than 1.5 standard deviations are flagged in the bar chart. |
 | **Machine control** | Power on/off and live status, relayed through the API to n8n to Home Connect. |
-| **Manual annotations** | A day can be marked `mass-import` (backfilled data, excluded from statistics) or `event` (real data with an explanation: birthday, visitors, party, sick, vacation, other). |
+| **Manual annotations** | A day can be marked `mass-import` (backfilled data, excluded from the heatmap and from anomaly detection) or `event` (real data with an explanation: birthday, visitors, party, sick, vacation, other — kept in consumption totals and the heatmap, but not flagged as an anomaly). |
 | **Operational visibility** | `GET /api/health`, structured logs, Sentry/GlitchTip error tracking in both backend and frontend. |
 
 ## 1.2 Requirements Overview

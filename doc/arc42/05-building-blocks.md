@@ -147,9 +147,11 @@ exceptions to a generic 500. No authentication, no server-side time window.
 `HomeConnectService.GetStatusAsync` with a 7-second TTL, sized to protect the
 BSH quota against a user clicking refresh.
 
-**`HomeConnectService`** — Typed `HttpClient`. Reads `N8n:PowerWebhookUrl` at
-construction and throws if it is missing (fail fast at startup rather than at
-first use). Attaches HTTP Basic credentials when configured. `SetPowerStateAsync`
+**`HomeConnectService`** — Typed `HttpClient`. Reads `N8n:PowerWebhookUrl` in
+its constructor and throws if it is missing. Because a typed client is resolved
+per request, that throw happens when a `/coffee/*` action is first activated,
+**not** at startup: the application starts cleanly and the first status or
+power request fails with 500. Attaches HTTP Basic credentials when configured. `SetPowerStateAsync`
 propagates failures via `EnsureSuccessStatusCode`; `GetStatusAsync` swallows
 every failure and returns an `Unreachable(...)` DTO instead.
 

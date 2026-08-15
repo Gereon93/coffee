@@ -4,13 +4,13 @@
 
 | Term | Definition |
 |------|-----------|
-| **Anomaly** | A day whose total consumption exceeds the mean of the selected range by more than 1.5 standard deviations. Computed client-side over the range currently displayed, after `mass-import` days have been removed. |
+| **Anomaly** | A day whose total consumption exceeds the mean of the selected range by more than 1.5 standard deviations. Computed client-side over the range currently displayed, after **all** annotated days — `mass-import` *and* `event` — have been removed from the baseline. |
 | **Baseline** | The snapshot used as the subtrahend when computing a period's consumption. Normally the last snapshot strictly *before* the period; only when none exists does the period's own first snapshot serve. |
 | **Beverage counter** | A monotonically increasing lifetime count for one beverage category, as reported by the machine. Never reset by the application. |
 | **Counter** | Short for beverage counter. |
 | **Cross-day delta** | A consumption delta computed across midnight, using the previous day's last snapshot as the baseline. Exists so that beverages brewed before the day's first sample are attributed to the correct day. |
 | **Delta** | The difference between two counter readings — the actual consumption between them. |
-| **Event** | A `MarkedDay` kind: real data with a known explanation (`birthday`, `visitors`, `party`, `sick`, `vacation`, `other`). Stays in all statistics. |
+| **Event** | A `MarkedDay` kind: real data with a known explanation (`birthday`, `visitors`, `party`, `sick`, `vacation`, `other`). Stays in consumption totals and the heatmap, but is excluded from anomaly detection. |
 | **Heatmap** | Consumption aggregated into a weekday (1 = Monday … 7 = Sunday) × hour matrix over a rolling window of *n* weeks. |
 | **Idempotency** | Here: processing the same ingest payload any number of times produces exactly one stored row and the same response. |
 | **Ingest** | Receiving a Home Connect payload from n8n and, if the counters increased, persisting it as a snapshot. |

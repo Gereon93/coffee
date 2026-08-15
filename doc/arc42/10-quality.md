@@ -17,7 +17,7 @@ graph LR
     C --> C1["Deltas correct across<br/>day boundaries"]
     C --> C2["Local day boundaries<br/>correct for the caller"]
     C --> C3["Idempotency — no duplicates"]
-    C --> C4["mass-import excluded,<br/>event included"]
+    C --> C4["mass-import out of heatmap,<br/>both kinds out of anomalies"]
 
     R --> R1["Unattended 24/7"]
     R --> R2["Upstream outage degrades,<br/>does not break"]
@@ -62,7 +62,7 @@ that pins the behaviour, or states that it is unverified.
 | Q-2 | Client sends `tz=120` (CEST) for `2026-08-15` | Query window is `[2026-08-14T22:00Z, 2026-08-15T22:00Z)` | `SnapshotServiceQueryTests` |
 | Q-3 | A day in the requested range has no snapshots | The day is absent from `data[]` — not present with zeros | `StatsControllerTests` |
 | Q-4 | A day is marked `mass-import` | Its deltas are excluded from heatmap buckets and from anomaly statistics | `SnapshotServiceHeatmapTests` |
-| Q-5 | A day is marked `event` | It stays fully in all statistics and is annotated in the chart | `MarkedDaysControllerTests` |
+| Q-5 | A day is marked `event` | It stays in consumption totals and heatmap aggregates and is annotated in the chart, but is **excluded from anomaly detection** — `DashboardPage` passes `allMarkedDates` (mass-import ∪ event) to `useAnomalyDetection` | backend CRUD by `MarkedDaysControllerTests`; the exclusion itself is frontend-only and untested |
 | Q-6 | Snapshot has 5 coffee, 3 coffee+milk, 2 milk, 1 hot-water cup, 500 ml hot water | `TotalBeverages == 11` — millilitres excluded | `MachineSnapshotTests` |
 | Q-7 | Heatmap groups a Sunday sample | `dayOfWeek == 7`, ISO-8601 style | `SnapshotServiceHeatmapTests` |
 | Q-8 | A 52-week heatmap is requested during CEST and spans the CET period | **Known deviation:** winter samples are shifted by one hour. Accepted, see [ADR-004](09-design.md#adr-004-client-driven-timezone-offset) | not covered |
@@ -76,7 +76,7 @@ that pins the behaviour, or states that it is unverified.
 | Q-11 | n8n rejects a power command | `500` with a generic message; the exception is logged and reported to GlitchTip | `PowerControllerTests` |
 | Q-12 | Container restarts against an existing pre-migration database | `MigrationBaseliner` seeds the history; only pending migrations apply; no data loss | `MigrationBaselinerTests` |
 | Q-13 | Ingest arrives with an empty `data.status` | `400` with `{ error, details[] }`; nothing written | `IngestControllerTests` |
-| Q-14 | Database file is unreachable | `/api/health` reports `database: "disconnected"` | `ApiIntegrationTests` |
+| Q-14 | Database file is unreachable | **Known deviation:** `Health()` awaits `GetLatestAsync()` *before* `CanConnectAsync()`, so the query throws and the endpoint answers 5xx. The `database: "disconnected"` payload is unreachable for exactly the failure it was written for | not covered — `ApiIntegrationTests.Health_ReturnsOk` only exercises a reachable database |
 | Q-15 | The machine's counters reset to 0 after maintenance | **Known deviation:** treated as "no increase", not stored; deltas clamp to 0 until counters pass the old maximum | [11](11-risks.md) |
 
 ### Security

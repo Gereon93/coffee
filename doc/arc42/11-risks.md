@@ -19,6 +19,7 @@ generic CVSS-style score.
 | TD-04 | **No forwarded-headers handling** | Low | The API sits behind nginx but does not use `UseForwardedHeaders`. The remote address logged on a failed API-key attempt is the proxy's, making that log line useless for its purpose. |
 | TD-05 | **API documentation served unauthenticated in production** | Low | Scalar (`/scalar/v1`) and `/openapi/v1.json` are proxied by nginx and reachable by anyone on the LAN. Acceptable under TC-3; becomes a finding the moment the deployment model changes. |
 | TD-06 | **No rate limiting** | Low | No throttling anywhere. `/coffee/power` relays straight to n8n and therefore to BSH. |
+| TD-28 | **User-entered free text is written to the logs** | Low | `MarkedDayService.CreateAsync` logs `Reason` verbatim at information level. The field is free text up to 500 characters and can contain names or other personal data. `SendDefaultPii = false` does not sanitise application-supplied log values. Either drop `Reason` from the log line or state a retention policy for the container logs. |
 
 ### Correctness
 
@@ -29,6 +30,7 @@ generic CVSS-style score.
 | TD-09 | **Frontend write calls bypass the API client** | Medium | `addMarkedDay`, `removeMarkedDay` (`src/api/stats.ts`) and `setCoffeePower` (`src/api/coffee.ts`) call `fetch` directly with hardcoded relative paths, ignoring `fetchJson` and `BASE_URL`. Reads honour `VITE_API_BASE_URL`, writes do not — so in any split-origin setup reads work and writes 404. They also duplicate error handling and throw a bare `Error` instead of `ApiError`. |
 | TD-10 | **Vite dev proxy does not cover `/coffee`** | Low | `vite.config.ts` proxies only `/api`. Under `npm run dev` the power button and the live status widget hit the dev server and fail. Local development of those features needs undocumented extra configuration. |
 | TD-11 | **Fixed UTC offset is not DST-aware** | Low | `tz` is a single offset applied to every date in a request. Ranges spanning a CET/CEST transition shift by one hour on the far side. Accepted trade-off, see [ADR-004](09-design.md#adr-004-client-driven-timezone-offset). |
+| TD-27 | **`/api/health` cannot report a broken database** | Medium | `Health()` awaits `_snapshotService.GetLatestAsync()` *before* evaluating `CanConnectAsync()`, without a `try`/`catch`. If SQLite is unavailable the query throws and the endpoint answers 5xx — the `database: "disconnected"` branch is unreachable for precisely the failure it exists for. `ApiIntegrationTests.Health_ReturnsOk` only exercises a reachable database, so nothing catches this. Either wrap the probe or drop the field. |
 
 ### Architecture and code quality
 
@@ -76,7 +78,7 @@ Ranked by risk removed per unit of effort, not by severity alone.
 1. **TD-20** — a frontend CI job. Small, mechanical, and it is the gate that stops every future frontend regression.
 2. **TD-01** — CORS to a fixed origin, API key on the write endpoints. Small diff, removes the only risk in this list with a physical effect.
 3. **TD-03 / TD-23** — bump EF Core and OpenAPI packages to the .NET 10 line; clears the vulnerability warning as a side effect.
-4. **TD-09 / TD-10** — route frontend writes through `fetchJson`, extend the dev proxy to `/coffee`. Both are small and both remove a class of "works in prod, not locally" confusion.
+4. **TD-09 / TD-10 / TD-27** — route frontend writes through `fetchJson`, extend the dev proxy to `/coffee`, and make the health probe survive a broken database. All three are small and each removes a case where the system misreports its own state.
 5. **TD-12 / TD-14** — move the range aggregation into `SnapshotService` and delete the duplicated day-bounds method. One behaviour, one home.
 6. **TD-21 / TD-22** — a test runner plus tests for the four pure `lib/` functions, and an error boundary around the routes.
 7. **TD-02, TD-07, TD-13** — deeper changes with real design questions attached; worth their own discussion rather than a drive-by fix.
