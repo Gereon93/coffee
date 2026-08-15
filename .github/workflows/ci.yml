@@ -25,3 +25,31 @@ jobs:
 
       - name: Test
         run: dotnet test CoffeeTest/CoffeeTest.csproj --no-build -c Release --verbosity normal
+
+  dashboard:
+    name: Build & Test (Dashboard)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: coffee-dashboard
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: coffee-dashboard/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
