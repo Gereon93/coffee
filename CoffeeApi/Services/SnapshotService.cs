@@ -11,6 +11,9 @@ namespace CoffeeApi.Services;
 /// </summary>
 public class SnapshotService : ISnapshotService
 {
+    /// <summary>Upper bound on <c>pageSize</c>; larger requests are clamped.</summary>
+    public const int MaxPageSize = 100;
+
     private readonly AppDbContext _context;
     private readonly ILogger<SnapshotService> _logger;
 
@@ -57,7 +60,7 @@ public class SnapshotService : ISnapshotService
 
     public async Task<(List<MachineSnapshot> Items, int TotalCount)> GetAllAsync(int page = 1, int pageSize = 50)
     {
-        pageSize = Math.Min(pageSize, 100); // Cap at 100
+        pageSize = Math.Min(pageSize, MaxPageSize);
         var totalCount = await _context.MachineSnapshots.CountAsync();
 
         var items = await _context.MachineSnapshots

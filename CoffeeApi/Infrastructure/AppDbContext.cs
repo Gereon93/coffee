@@ -47,15 +47,6 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.MachineId)
                 .HasDatabaseName("IX_MachineSnapshots_MachineId");
 
-            // Composite index for idempotency checks
-            entity.HasIndex(e => new {
-                    e.MachineId,
-                    e.BeverageCounterCoffee,
-                    e.BeverageCounterCoffeeAndMilk,
-                    e.BeverageCounterMilk
-                })
-                .HasDatabaseName("IX_MachineSnapshots_Idempotency");
-
             // Ignore computed property
             entity.Ignore(e => e.TotalBeverages);
         });

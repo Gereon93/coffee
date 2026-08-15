@@ -1,5 +1,14 @@
 import type { DailyAggregate } from '../api/types';
 
+/**
+ * Z-score above which a day counts as an anomaly. 1.5 sigma flags the clearly
+ * unusual days without drowning the badge in normal week-to-week variation.
+ */
+export const ANOMALY_Z_SCORE_THRESHOLD = 1.5;
+
+/** Below this many days mean and standard deviation carry no information. */
+const MIN_DAYS_FOR_DETECTION = 3;
+
 export interface AnomalyResult {
   date: string;
   total: number;
@@ -9,9 +18,9 @@ export interface AnomalyResult {
 
 export function detectAnomalies(
   data: DailyAggregate[],
-  threshold = 1.5,
+  threshold = ANOMALY_Z_SCORE_THRESHOLD,
 ): AnomalyResult[] {
-  if (data.length < 3) {
+  if (data.length < MIN_DAYS_FOR_DETECTION) {
     return data.map((d) => ({
       date: d.date,
       total: d.total,

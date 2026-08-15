@@ -33,6 +33,12 @@ NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GIT_COMMIT="$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
+# Same tag shape as the CI workflow (docker/metadata-action type=sha), so a local
+# image can be traced back to its commit. A dirty tree says so in the tag.
+if [[ -n "$(git -C "$SCRIPT_DIR" status --porcelain 2>/dev/null)" ]]; then
+  GIT_COMMIT="${GIT_COMMIT}-dirty"
+fi
+IMAGE_TAG="sha-${GIT_COMMIT}"
 SERVICE="${1:-all}"
 NO_PUSH=false
 [[ "$2" == "--no-push" || "$3" == "--no-push" ]] && NO_PUSH=true
@@ -50,8 +56,6 @@ build_and_push() {
   local build_context="${config%%:*}"
   local image_name="${config##*:}"
   local full_image="${REGISTRY}/${PROJECT}/${image_name}"
-  local timestamp
-  timestamp=$(date +%Y%m%d-%H%M%S)
 
   echo -e "${YELLOW}━━━ Building ${name} ━━━${NC}"
   echo "  Context:  ${build_context}"
@@ -61,7 +65,7 @@ build_and_push() {
   $DOCKER build \
     --build-arg BUILD_COMMIT="${GIT_COMMIT}" \
     -t "${full_image}:latest" \
-    -t "${full_image}:${timestamp}" \
+    -t "${full_image}:${IMAGE_TAG}" \
     "${SCRIPT_DIR}/${build_context}"
 
   echo -e "${GREEN}Build OK${NC}"
@@ -69,9 +73,9 @@ build_and_push() {
   if [[ "$NO_PUSH" == false ]]; then
     echo -e "${YELLOW}Pushing...${NC}"
     $DOCKER push "${full_image}:latest"
-    $DOCKER push "${full_image}:${timestamp}"
+    $DOCKER push "${full_image}:${IMAGE_TAG}"
     echo -e "${GREEN}Pushed: ${full_image}:latest${NC}"
-    echo -e "${GREEN}Pushed: ${full_image}:${timestamp}${NC}"
+    echo -e "${GREEN}Pushed: ${full_image}:${IMAGE_TAG}${NC}"
   else
     echo -e "${YELLOW}Skipped push (--no-push)${NC}"
   fi

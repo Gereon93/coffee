@@ -159,18 +159,19 @@ cd coffee-dashboard && npm run test
 | POST | `/api/stats/marked-days` | Tag markieren (`mass-import` oder `event`) | - |
 | DELETE | `/api/stats/marked-days/{date}` | Markierung aufheben | - |
 | GET | `/coffee/status` | Live-Status der Maschine (7s Server-Cache) | - |
-| POST | `/coffee/power` | Maschine ein-/ausschalten (`{"state":"on"\|"off"}`) | - |
+| POST | `/coffee/power` | Maschine ein-/ausschalten (`{"state":"on"\|"off"}`), max. 10/min | - |
 | GET | `/api/health` | Health Check inkl. `lastSnapshot` | - |
-| GET | `/scalar/v1` | Interaktive API-Dokumentation | - |
+| GET | `/scalar/v1` | Interaktive API-Dokumentation (nur `Development`) | - |
 
 Der `tz`-Parameter ist der UTC-Offset des Clients **in Minuten** (60 = CET,
 120 = CEST). Das Frontend haengt ihn automatisch an. Ohne Angabe wird UTC
 verwendet. Vollstaendiger Contract: [`SPEC.md`](SPEC.md).
 
-> **Hinweis zur Absicherung:** Nur `/api/ingest` ist per API-Key geschuetzt.
-> Die schreibenden Endpunkte `/coffee/power` und `/api/stats/marked-days`
-> sind offen — tragbar nur unter der LAN-only-Annahme.
-> Siehe [TD-01](doc/arc42/11-risks.md#security).
+> **Hinweis zur Absicherung:** Alle schreibenden Endpunkte (`/api/ingest`,
+> `POST /coffee/power`, `POST` / `DELETE /api/stats/marked-days`) verlangen den
+> API-Key; lesende Endpunkte sind offen — tragbar nur unter der
+> LAN-only-Annahme. `POST /coffee/power` ist zusaetzlich auf 10 Anfragen pro
+> Minute begrenzt (darueber `429`), weil der Aufruf bis zu BSH durchreicht.
 >
 > CORS erlaubt nur die Origins aus `Cors:AllowedOrigins` (Umgebungsvariable
 > `Cors__AllowedOrigins__0`). In `Development` gelten ohne Konfiguration

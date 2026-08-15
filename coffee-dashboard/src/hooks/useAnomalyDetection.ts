@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import type { DailyAggregate } from '../api/types';
-import { detectAnomalies } from '../lib/anomalyUtils';
+import { ANOMALY_Z_SCORE_THRESHOLD, detectAnomalies } from '../lib/anomalyUtils';
 
 export function useAnomalyDetection(
   data: DailyAggregate[] | undefined,
   excludedFromAnomaly: Set<string>,
-  threshold = 1.5,
+  threshold = ANOMALY_Z_SCORE_THRESHOLD,
 ) {
   return useMemo(() => {
     if (!data) return [];

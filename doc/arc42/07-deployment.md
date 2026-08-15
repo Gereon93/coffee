@@ -48,6 +48,8 @@ risk that framing does *not* cover.
 | Listen | `ASPNETCORE_URLS=http://+:8080`, published on host `:8089` |
 | Volume | `/app/data` — persists `coffee.db` across container replacement |
 | Health | `GET /api/health` → `{ status, timestamp, database, lastSnapshot }` |
+| Throttling | `POST /coffee/power`: 10 requests per minute, `429` beyond it |
+| API docs | `Development` only — `/scalar/v1` and `/openapi/v1.json` answer `404` in the image |
 
 ### Configuration
 
@@ -59,6 +61,7 @@ underscore maps to the configuration separator: `ConnectionStrings__Default`.
 |----------------|---------|----------------------|
 | `ConnectionStrings__Default` | SQLite path | Falls back to `Data Source=coffee.db` in the working directory. The Dockerfile sets `/app/data/coffee.db`. |
 | `ApiKey` | Shared secret for the protected endpoints: `POST /api/ingest`, `POST /coffee/power`, `POST` and `DELETE /api/stats/marked-days` | **Those endpoints become unauthenticated**; a warning is logged per request |
+| `ForwardedHeaders__KnownNetworks__0` | CIDR (or plain IP) of the reverse proxy, e.g. `172.16.0.0/12` for the Docker bridge. Enables `X-Forwarded-For`, so a rejected request logs the caller's address instead of the proxy's | The forwarded-headers middleware is not registered; logs show the proxy address |
 | `N8n__PowerWebhookUrl` | Power/status webhook | `HomeConnectService` throws on construction → 500 on the first `/coffee/*` request |
 | `N8n__BasicAuthUser` / `N8n__BasicAuthPassword` | Webhook credentials | No `Authorization` header is sent |
 | `SENTRY_DSN` | Error tracking endpoint | Sentry is not initialised at all |
@@ -79,7 +82,7 @@ underscore maps to the configuration separator: `ConnectionStrings__Default`.
 | Image | `ghcr.io/gereon93/coffee-dashboard:latest` and `:sha-<short>` |
 | Listen | `:80`, published on host `:8090` |
 | SPA routing | `try_files $uri $uri/ /index.html` |
-| Reverse proxy | `/api/`, `/coffee/`, `/scalar/`, `/openapi/` → `http://coffee-api:8080` |
+| Reverse proxy | `/api/`, `/coffee/` → `http://coffee-api:8080`, forwarding `X-Real-IP` and `X-Forwarded-For` |
 | Config rendering | `nginx.conf.template` → `/etc/nginx/templates/default.conf.template`, rendered by the entrypoint with `envsubst` (`NGINX_ENVSUBST_FILTER=^API_KEY$`) |
 | Static caching | `/assets/` → `expires 1y`, `Cache-Control: public, immutable` |
 
@@ -101,7 +104,7 @@ shipping that key to the client.
 > **Any reverse proxy that fronts `coffee-api` must inject this header.** When
 > the dashboard container is retired in favour of a shared frontend, that
 > frontend's proxy takes over the injection — otherwise its write calls get
-> `401`. Reads, `/scalar/` and `/openapi/` need no key.
+> `401`. Reads need no key.
 
 ### Build-time variables
 
@@ -175,8 +178,9 @@ regular automated dependency PRs.
 DOCKER=docker ./build.sh all
 ```
 
-It tags `:latest` and a `:YYYYmmdd-HHMMSS` timestamp — a different tagging
-scheme from CI's `:sha-<short>`.
+It tags `:latest` and `:sha-<short>`, the same scheme CI uses, so a locally
+built image points at a commit. A working tree with uncommitted changes yields
+`:sha-<short>-dirty`.
 
 ## 7.6 Operations
 
@@ -188,11 +192,10 @@ scheme from CI's `:sha-<short>`.
 | **Health check** | `curl http://<NAS-IP>:8089/api/health` — `lastSnapshot` far in the past means the n8n workflow, not the API, is broken. |
 | **Log inspection** | `docker logs coffee-api` — structured logs including skipped-snapshot debug lines and API-key warnings. |
 | **Error triage** | GlitchTip, tagged `service=coffee-api` / `service=coffee-dashboard`. |
-| **API exploration** | `http://<NAS-IP>:8090/scalar/v1`. |
+| **API exploration** | `SPEC.md`, or `http://localhost:5000/scalar/v1` against a locally running API. |
 
-> Scalar and the raw OpenAPI document are proxied and reachable by anyone on
-> the LAN, in production, without authentication. Intentional for a LAN-only
-> deployment; worth knowing before the deployment model changes.
+> Scalar and the raw OpenAPI document are mapped in `Development` only and are
+> no longer proxied by nginx: in production both answer `404`.
 
 ## 7.7 Mapping Building Blocks to Infrastructure
 

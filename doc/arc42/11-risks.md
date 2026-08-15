@@ -1,6 +1,6 @@
 # 11. Risks and Technical Debt
 
-State verified against the code and a full test run: 87 xUnit tests
+State verified against the code and a full test run: 102 xUnit tests
 (`CoffeeTest/`) and 102 Vitest tests (`coffee-dashboard/`), all passing. Items
 already fixed have been removed from this list rather than left as noise.
 
@@ -16,9 +16,9 @@ generic CVSS-style score.
 | TD-01 | **Write endpoints unauthenticated** | ~~Medium~~ **Resolved** | `ApiKeyMiddleware` now protects `POST /coffee/power` and `POST` / `DELETE /api/stats/marked-days` alongside `/api/ingest`; the route table is method-aware, so the reads on those paths stay open. The dashboard's nginx injects the key from the `API_KEY` container variable, keeping it out of the browser bundle. Residual: anything that reaches the dashboard port is served the key by that proxy — the same reach as pressing the button in the UI. Closing that needs user authentication, not a shared secret. See [8.4](08-concepts.md#84-security). |
 | TD-02 | **Missing `ApiKey` silently disables ingest authentication** | Medium | `ApiKeyMiddleware` logs a warning and forwards the request when no key is configured. A configuration mistake in production removes authentication instead of failing loudly. Failing closed in `Production` and open only in `Development` would match the intent. |
 | TD-03 | **Known-vulnerable transitive dependency** | Medium | `dotnet restore` emits `NU1903: Package 'SQLitePCLRaw.lib.e_sqlite3' 2.1.10 has a known high severity vulnerability` (GHSA-2m69-gcr7-jv3q), pulled in by `Microsoft.EntityFrameworkCore.Sqlite` 9.0.0. It is a warning; nothing fails. `<TreatWarningsAsErrors>` for `NU1903`, or `NuGetAudit` set to error, would gate it. |
-| TD-04 | **No forwarded-headers handling** | Low | The API sits behind nginx but does not use `UseForwardedHeaders`. The remote address logged on a failed API-key attempt is the proxy's, making that log line useless for its purpose. |
-| TD-05 | **API documentation served unauthenticated in production** | Low | Scalar (`/scalar/v1`) and `/openapi/v1.json` are proxied by nginx and reachable by anyone on the LAN. Acceptable under TC-3; becomes a finding the moment the deployment model changes. |
-| TD-06 | **No rate limiting** | Low | No throttling anywhere. `/coffee/power` relays straight to n8n and therefore to BSH. |
+| TD-04 | **No forwarded-headers handling** | ~~Low~~ **Resolved** | The API honours `X-Forwarded-For` when `ForwardedHeaders:KnownNetworks` names the proxy network, and the dashboard's nginx now sends the header. Unconfigured it stays off on purpose: the API port is reachable on the LAN, and an unrestricted forwarder would let a direct caller write any address it likes into the log. |
+| TD-05 | **API documentation served unauthenticated in production** | ~~Low~~ **Resolved** | `MapOpenApi` and `MapScalarApiReference` only run in `Development`, and nginx no longer proxies `/scalar/` or `/openapi/`. In production both answer `404`. |
+| TD-06 | **No rate limiting** | ~~Low~~ **Resolved** | `POST /coffee/power` runs under a fixed-window limiter (10 requests per minute, `429` beyond it) that sits in front of the API-key check, so unauthenticated attempts consume permits too. The remaining endpoints are reads against local SQLite and are not throttled. |
 
 ### Correctness
 
@@ -38,10 +38,10 @@ generic CVSS-style score.
 | TD-12 | **`StatsController` violates the documented layering** | Medium | It injects `AppDbContext` directly and performs the entire range aggregation — grouping by local date, rolling the baseline, computing deltas — inside the action. `CLAUDE.md` mandates Controller → Service → EF Core, and the delta arithmetic already exists in `SnapshotService.GetDailySummaryAsync`. Two copies of the same rule in two layers is how they drift apart. |
 | TD-13 | **`SnapshotService` carries five responsibilities** | Medium | 307 LOC and an 8-member interface spanning ingest and idempotency, Home Connect payload parsing, plain queries, statistical aggregation, and timezone arithmetic. It is not a god class by size, but it is one by cohesion: nothing about parsing `JsonElement` values belongs in the same type as heatmap bucketing. A natural split is a payload mapper, an ingest service, a query service, and a statistics service. |
 | TD-14 | **`GetLocalDayBoundsUtc` is duplicated verbatim** | Low | The same private method exists in both `SnapshotService` and `StatsController`. The day-boundary rule is core domain logic and must have exactly one definition. |
-| TD-16 | **Unused composite index** | Low | `IX_MachineSnapshots_Idempotency` over `(MachineId, Coffee, CoffeeAndMilk, Milk)` is declared for an idempotency strategy the code does not use — the check fetches the latest row by timestamp. It costs write throughput and buys nothing. |
-| TD-17 | **Magic numbers without names** | Low | Anomaly threshold `1.5` (`anomalyUtils.ts`, `useAnomalyDetection.ts`), the `'2020-01-01'` epoch for the `all` period (`dateUtils.ts`), the `3000` ms post-power settle delay (`useCoffeeStatus.ts`), the page-size cap `100`, and the heatmap week cap `52`. `AGENTS.md` requires these to be named constants. |
-| TD-18 | **Hardcoded `ProductVersion` in the baseliner** | Low | `MigrationBaseliner` writes `'9.0.0'` into `__EFMigrationsHistory`. Cosmetic — EF Core does not read it back — but it will be wrong and confusing after an EF upgrade. |
-| TD-19 | **`UseHttpsRedirection` with no HTTPS port** | Low | The container listens on HTTP only (`ASPNETCORE_URLS=http://+:8080`), so the middleware logs a "failed to determine the https port" warning on startup and does nothing. Dead configuration. |
+| TD-16 | **Unused composite index** | ~~Low~~ **Resolved** | `IX_MachineSnapshots_Idempotency` is gone from the model and dropped by migration `DropUnusedIdempotencyIndex`. The idempotency check still reads the latest row by timestamp, which `IX_MachineSnapshots_Timestamp` serves. |
+| TD-17 | **Magic numbers without names** | ~~Low~~ **Resolved** | Now `ANOMALY_Z_SCORE_THRESHOLD`, `ALL_TIME_START_DATE`, `POWER_SETTLE_DELAY_MS`, `SnapshotService.MaxPageSize` (which `StatsController` reuses instead of repeating the literal) and `StatsController.MaxHeatmapWeeks`. |
+| TD-18 | **Hardcoded `ProductVersion` in the baseliner** | ~~Low~~ **Resolved** | `MigrationBaseliner` writes `ProductInfo.GetVersion()`, so the row records the EF Core version that actually ran. |
+| TD-19 | **`UseHttpsRedirection` with no HTTPS port** | ~~Low~~ **Resolved** | The call is gone; a comment in `Program.cs` records that the container serves plain HTTP and TLS terminates upstream. |
 
 ### Quality gates and tooling
 
@@ -49,7 +49,7 @@ generic CVSS-style score.
 |----|------|----------|--------|
 | TD-22 | **No React error boundary** | Medium | Sentry is initialised but no boundary is mounted. A render-time exception in any chart takes the whole page to a blank screen instead of a contained error state — despite `ErrorMessage` already existing for the data-fetch case. |
 | TD-23 | **Package versions trail the target framework** | Low | The projects target `net10.0` while `Microsoft.EntityFrameworkCore.Sqlite`, `Microsoft.EntityFrameworkCore.Design`, and `Microsoft.AspNetCore.OpenApi` are pinned to `9.0.0`. It works by roll-forward, and it is also the reason for TD-03. |
-| TD-24 | **Divergent image tagging** | Low | CI tags `:latest` and `:sha-<short>`; `build.sh` tags `:latest` and `:YYYYmmdd-HHMMSS`. A locally built image cannot be traced back to a commit. |
+| TD-24 | **Divergent image tagging** | ~~Low~~ **Resolved** | `build.sh` tags `:latest` and `:sha-<short>` like CI does, and appends `-dirty` when the working tree has uncommitted changes rather than claiming a commit it does not match. |
 
 ## 11.2 Risk Register
 

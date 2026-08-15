@@ -59,12 +59,16 @@ public static class MigrationBaseliner
                         "ProductVersion" TEXT NOT NULL
                     );
                     INSERT OR IGNORE INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-                    VALUES (@id, '9.0.0');
+                    VALUES (@id, @version);
                 """;
                 var param = cmd.CreateParameter();
                 param.ParameterName = "@id";
                 param.Value = initialMigrationId;
                 cmd.Parameters.Add(param);
+                var versionParam = cmd.CreateParameter();
+                versionParam.ParameterName = "@version";
+                versionParam.Value = ProductInfo.GetVersion();
+                cmd.Parameters.Add(versionParam);
                 cmd.ExecuteNonQuery();
             }
             tx.Commit();

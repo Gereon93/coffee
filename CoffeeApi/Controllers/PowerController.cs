@@ -1,6 +1,7 @@
 using CoffeeApi.DTOs;
 using CoffeeApi.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace CoffeeApi.Controllers;
 
@@ -25,7 +26,9 @@ public class PowerController : ControllerBase
     /// </summary>
     /// <param name="request">{ "state": "on" | "off" }</param>
     [HttpPost("power")]
+    [EnableRateLimiting(Program.PowerRateLimitPolicy)]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> SetPower([FromBody] PowerRequestDto request)

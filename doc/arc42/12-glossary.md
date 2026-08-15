@@ -32,7 +32,7 @@
 | **Home Connect** | BSH's cloud platform and REST API for appliance integration. Requires OAuth2 and is rate-limited. |
 | **n8n** | Self-hosted workflow automation platform. Owns the schedule, the OAuth2 credentials, and both directions of BSH communication. |
 | **Portainer** | Web UI for Docker management, running on the Synology NAS. |
-| **Scalar** | The OpenAPI documentation UI used instead of Swagger. Served at `/scalar/v1`. |
+| **Scalar** | The OpenAPI documentation UI used instead of Swagger. Served at `/scalar/v1` when the API runs in `Development`. |
 | **Sentry** | The SDK and wire protocol used for error reporting; the receiving server here is GlitchTip. |
 | **SonarQube** | Static analysis, run against `main` when the corresponding secrets are configured. |
 

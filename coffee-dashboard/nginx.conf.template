@@ -1,4 +1,6 @@
 # Rendered by the nginx entrypoint (envsubst) at container start.
+# Scalar and the OpenAPI document are not proxied — the API only maps them in
+# Development.
 # ${API_KEY} must match the API's `ApiKey` setting — the write endpoints
 # (/coffee/power, POST+DELETE /api/stats/marked-days, /api/ingest) reject
 # requests without it. Nginx injects it so the key never enters the browser
@@ -19,6 +21,7 @@ server {
         proxy_pass http://coffee-api:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-API-Key "${API_KEY}";
     }
 
@@ -27,20 +30,8 @@ server {
         proxy_pass http://coffee-api:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-API-Key "${API_KEY}";
-    }
-
-    # Proxy Scalar API docs and OpenAPI spec
-    location /scalar/ {
-        proxy_pass http://coffee-api:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    location /openapi/ {
-        proxy_pass http://coffee-api:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
     }
 
     # Cache static assets
