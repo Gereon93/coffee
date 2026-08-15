@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { useAddMarkedDay, useRemoveMarkedDay } from '../../hooks/useMarkedDays';
 import type { EventType, MarkedDay } from '../../api/types';
@@ -12,7 +12,7 @@ interface Props {
   onClose: () => void;
 }
 
-export function MarkDayEventModal({ date, displayDate, existing, open, onClose }: Props) {
+export function MarkDayEventModal({ date, displayDate, existing, open, onClose }: Readonly<Props>) {
   const isMassImport = existing?.kind === 'mass-import';
   const existingEvent = existing?.kind === 'event' ? existing : null;
 
@@ -23,17 +23,11 @@ export function MarkDayEventModal({ date, displayDate, existing, open, onClose }
   const addMutation = useAddMarkedDay();
   const removeMutation = useRemoveMarkedDay();
 
-  useEffect(() => {
-    if (open) {
-      setSelected(existingEvent?.eventType ?? null);
-      setNote(existingEvent?.reason ?? '');
-      setError(null);
-    }
-  }, [open, existingEvent?.eventType, existingEvent?.reason]);
-
   if (!open) return null;
 
   const isPending = addMutation.isPending || removeMutation.isPending;
+  let submitLabel = existingEvent ? 'Aktualisieren' : 'Markieren';
+  if (isPending) submitLabel = 'Speichere…';
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,15 +63,17 @@ export function MarkDayEventModal({ date, displayDate, existing, open, onClose }
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      role="dialog"
-      aria-modal="true"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md rounded-xl border border-stone-200 bg-white p-6 shadow-xl dark:border-stone-800 dark:bg-stone-900"
-        onClick={(e) => e.stopPropagation()}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <button
+        type="button"
+        aria-label="Dialog schliessen"
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+      />
+      <dialog
+        open
+        aria-modal="true"
+        className="relative w-full max-w-md rounded-xl border border-stone-200 bg-white p-6 text-stone-900 shadow-xl dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100"
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Tag markieren — {displayDate}</h2>
@@ -180,13 +176,13 @@ export function MarkDayEventModal({ date, displayDate, existing, open, onClose }
                   disabled={isPending || !selected}
                   className="rounded-md bg-coffee-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-coffee-700 disabled:opacity-50"
                 >
-                  {isPending ? 'Speichere…' : existingEvent ? 'Aktualisieren' : 'Markieren'}
+                  {submitLabel}
                 </button>
               </div>
             </div>
           </form>
         )}
-      </div>
+      </dialog>
     </div>
   );
 }

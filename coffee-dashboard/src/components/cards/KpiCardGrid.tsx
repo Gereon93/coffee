@@ -18,7 +18,7 @@ const periodLabels: Record<TimePeriod, string> = {
   all: 'Gesamt',
 };
 
-export function KpiCardGrid({ summary, rangeData, excludedSet, period, latestSnapshot }: Props) {
+export function KpiCardGrid({ summary, rangeData, excludedSet, period, latestSnapshot }: Readonly<Props>) {
   const s = summary ?? { totalToday: 0, coffeeToday: 0, milkDrinksToday: 0, peakHour: null };
   const label = periodLabels[period];
 

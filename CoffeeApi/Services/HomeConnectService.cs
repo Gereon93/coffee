@@ -7,6 +7,8 @@ namespace CoffeeApi.Services;
 
 public class HomeConnectService : IHomeConnectService
 {
+    private static readonly JsonSerializerOptions StatusJsonOptions = new() { PropertyNameCaseInsensitive = true };
+
     private readonly HttpClient _httpClient;
     private readonly ILogger<HomeConnectService> _logger;
     private readonly string _webhookUrl;
@@ -49,13 +51,13 @@ public class HomeConnectService : IHomeConnectService
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("n8n status webhook returned {Status}", (int)response.StatusCode);
-                return Unreachable($"Status-Service antwortete mit {(int)response.StatusCode}");
+                var statusCode = (int)response.StatusCode;
+                _logger.LogWarning("n8n status webhook returned {Status}", statusCode);
+                return Unreachable($"Status-Service antwortete mit {statusCode}");
             }
 
             var body = await response.Content.ReadAsStringAsync(cts.Token);
-            var parsed = System.Text.Json.JsonSerializer.Deserialize<CoffeeStatusDto>(body,
-                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var parsed = JsonSerializer.Deserialize<CoffeeStatusDto>(body, StatusJsonOptions);
 
             if (parsed == null)
             {
@@ -64,9 +66,9 @@ public class HomeConnectService : IHomeConnectService
 
             return parsed;
         }
-        catch (TaskCanceledException)
+        catch (TaskCanceledException ex)
         {
-            _logger.LogWarning("n8n status webhook timed out");
+            _logger.LogWarning(ex, "n8n status webhook timed out");
             return Unreachable("Status-Service antwortet nicht (Timeout)");
         }
         catch (Exception ex)

@@ -6,8 +6,7 @@ import { TrendLineChart } from '../components/charts/TrendLineChart';
 import { ConsumptionPieChart } from '../components/charts/ConsumptionPieChart';
 import { HourlyPeaksChart } from '../components/charts/HourlyPeaksChart';
 import { WeekdayComparisonChart } from '../components/charts/WeekdayComparisonChart';
-import { LoadingSpinner } from '../components/shared/LoadingSpinner';
-import { ErrorMessage } from '../components/shared/ErrorMessage';
+import { QueryBoundary } from '../components/shared/QueryBoundary';
 import { MarkDayEventModal } from '../components/dashboard/MarkDayEventModal';
 import { useDailyStats } from '../hooks/useDailyStats';
 import { useStatsRange } from '../hooks/useStatsRange';
@@ -37,11 +36,7 @@ export function DashboardPage() {
         <TimePeriodSelector value={period} onChange={setPeriod} />
       </div>
 
-      {daily.isLoading ? (
-        <LoadingSpinner />
-      ) : daily.isError ? (
-        <ErrorMessage />
-      ) : (
+      <QueryBoundary isLoading={daily.isLoading} isError={daily.isError}>
         <>
           <KpiCardGrid
             summary={daily.data?.summary}
@@ -54,37 +49,36 @@ export function DashboardPage() {
             <HourlyPeaksChart snapshots={daily.data.snapshots} />
           )}
         </>
-      )}
+      </QueryBoundary>
 
-      {range.isLoading ? (
-        <LoadingSpinner />
-      ) : range.isError ? (
-        <ErrorMessage />
-      ) : range.data ? (
-        <>
-          <DailyBarChart
-            data={range.data.data}
-            anomalies={anomalies}
-            excludedSet={massImportDates}
-            eventByDate={byDate}
-            onBarClick={setModalDate}
-          />
+      <QueryBoundary isLoading={range.isLoading} isError={range.isError}>
+        {range.data && (
+          <>
+            <DailyBarChart
+              data={range.data.data}
+              anomalies={anomalies}
+              excludedSet={massImportDates}
+              eventByDate={byDate}
+              onBarClick={setModalDate}
+            />
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <TrendLineChart data={range.data.data} />
-            <ConsumptionPieChart data={range.data.data} />
-          </div>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <TrendLineChart data={range.data.data} />
+              <ConsumptionPieChart data={range.data.data} />
+            </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            {heatmap.data?.heatmap && (
-              <WeekdayComparisonChart heatmap={heatmap.data.heatmap} />
-            )}
-          </div>
-        </>
-      ) : null}
+            <div className="grid gap-6 lg:grid-cols-2">
+              {heatmap.data?.heatmap && (
+                <WeekdayComparisonChart heatmap={heatmap.data.heatmap} />
+              )}
+            </div>
+          </>
+        )}
+      </QueryBoundary>
 
       {modalDate && (
         <MarkDayEventModal
+          key={modalDate}
           date={modalDate}
           displayDate={formatDisplayDate(modalDate)}
           existing={byDate.get(modalDate) ?? null}

@@ -8,6 +8,8 @@ namespace CoffeeApi.Controllers;
 [Route("api/stats/marked-days")]
 public class MarkedDaysController : ControllerBase
 {
+    private static readonly string[] KindDetails = ["kind must be 'mass-import' or 'event'"];
+
     private readonly IMarkedDayService _markedDayService;
 
     public MarkedDaysController(IMarkedDayService markedDayService)
@@ -21,7 +23,7 @@ public class MarkedDaysController : ControllerBase
     {
         if (kind != null && !_markedDayService.IsValidKind(kind))
         {
-            return BadRequest(new { error = "Invalid kind", details = new[] { "kind must be 'mass-import' or 'event'" } });
+            return BadRequest(new { error = "Invalid kind", details = KindDetails });
         }
 
         var days = await _markedDayService.GetAllAsync(kind);

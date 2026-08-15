@@ -13,7 +13,7 @@ public class StatsControllerTests
     {
         var db = TestDbContextFactory.Create(dbName);
         var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
-        var controller = new StatsController(service, db, NullLogger<StatsController>.Instance);
+        var controller = new StatsController(service, db);
         return (controller, service);
     }
 
@@ -67,7 +67,7 @@ public class StatsControllerTests
     {
         var db = TestDbContextFactory.Create();
         var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
-        var controller = new StatsController(service, db, NullLogger<StatsController>.Instance);
+        var controller = new StatsController(service, db);
 
         // Day before range (baseline)
         db.MachineSnapshots.Add(

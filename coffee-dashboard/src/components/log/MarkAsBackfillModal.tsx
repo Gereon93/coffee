@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useAddMarkedDay } from '../../hooks/useMarkedDays';
 
@@ -9,17 +9,10 @@ interface Props {
   onClose: () => void;
 }
 
-export function MarkAsBackfillModal({ date, displayDate, open, onClose }: Props) {
+export function MarkAsBackfillModal({ date, displayDate, open, onClose }: Readonly<Props>) {
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const mutation = useAddMarkedDay();
-
-  useEffect(() => {
-    if (open) {
-      setReason('');
-      setError(null);
-    }
-  }, [open]);
 
   if (!open) return null;
 
@@ -38,15 +31,17 @@ export function MarkAsBackfillModal({ date, displayDate, open, onClose }: Props)
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      role="dialog"
-      aria-modal="true"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md rounded-xl border border-stone-200 bg-white p-6 shadow-xl dark:border-stone-800 dark:bg-stone-900"
-        onClick={(e) => e.stopPropagation()}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <button
+        type="button"
+        aria-label="Dialog schliessen"
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+      />
+      <dialog
+        open
+        aria-modal="true"
+        className="relative w-full max-w-md rounded-xl border border-stone-200 bg-white p-6 text-stone-900 shadow-xl dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100"
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Als Massenimport markieren</h2>
@@ -104,7 +99,7 @@ export function MarkAsBackfillModal({ date, displayDate, open, onClose }: Props)
             </button>
           </div>
         </form>
-      </div>
+      </dialog>
     </div>
   );
 }

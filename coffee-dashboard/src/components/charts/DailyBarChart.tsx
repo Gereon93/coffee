@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Customized,
 } from 'recharts';
@@ -5,6 +6,55 @@ import type { DailyAggregate, MarkedDay } from '../../api/types';
 import type { AnomalyResult } from '../../lib/anomalyUtils';
 import { formatDate } from '../../lib/dateUtils';
 import { emojiForEventType } from '../../lib/eventTypeMeta';
+
+interface ChartEntry extends DailyAggregate {
+  label: string;
+  isAnomaly: boolean;
+  isExcluded: boolean;
+  event: MarkedDay | null;
+}
+
+interface RechartsInternals {
+  xAxisMap?: Record<string, { scale: (v: string) => number; bandwidth?: () => number }>;
+  yAxisMap?: Record<string, { scale: (v: number) => number }>;
+}
+
+const DEFAULT_BAND_WIDTH = 24;
+const EMOJI_OFFSET_ABOVE_BAR = 8;
+
+function makeEventBadges(chartData: ChartEntry[]) {
+  return function EventBadges(props: unknown) {
+    const { xAxisMap, yAxisMap } = props as RechartsInternals;
+    const x = xAxisMap ? Object.values(xAxisMap)[0] : null;
+    const y = yAxisMap ? Object.values(yAxisMap)[0] : null;
+    if (!x || !y) return null;
+
+    const bandwidth = typeof x.bandwidth === 'function' ? x.bandwidth() : DEFAULT_BAND_WIDTH;
+
+    return (
+      <g>
+        {chartData.map((entry) => {
+          if (!entry.event) return null;
+          const cx = x.scale(entry.label) + bandwidth / 2;
+          const cy = y.scale(entry.total) - EMOJI_OFFSET_ABOVE_BAR;
+          if (Number.isNaN(cx) || Number.isNaN(cy)) return null;
+          return (
+            <text
+              key={entry.date}
+              x={cx}
+              y={cy}
+              textAnchor="middle"
+              fontSize={14}
+              style={{ pointerEvents: 'none' }}
+            >
+              {emojiForEventType(entry.event.eventType ?? 'other')}
+            </text>
+          );
+        })}
+      </g>
+    );
+  };
+}
 
 interface Props {
   data: DailyAggregate[];
@@ -16,23 +66,25 @@ interface Props {
 
 export function DailyBarChart({
   data, anomalies, excludedSet, eventByDate, onBarClick,
-}: Props) {
+}: Readonly<Props>) {
   const anomalyDates = new Set(
     anomalies.filter((a) => a.isAnomaly).map((a) => a.date),
   );
 
-  const chartData = data.map((d) => {
+  const chartData: ChartEntry[] = data.map((d) => {
     const event = eventByDate.get(d.date);
     return {
       ...d,
       label: formatDate(d.date),
       isAnomaly: anomalyDates.has(d.date),
       isExcluded: excludedSet.has(d.date),
-      event: event && event.kind === 'event' ? event : null,
+      event: event?.kind === 'event' ? event : null,
     };
   });
 
-  type Entry = typeof chartData[number];
+  type Entry = ChartEntry;
+
+  const eventBadges = useMemo(() => makeEventBadges(chartData), [chartData]);
 
   const getCoffeeFill = (entry: Entry) => {
     if (entry.isExcluded) return '#a8a29e';
@@ -48,48 +100,6 @@ export function DailyBarChart({
     if (entry.isExcluded) return '#78716c';
     if (entry.isAnomaly) return '#dc2626';
     return 'none';
-  };
-
-  // Custom layer that renders an emoji on top of each bar that has an event annotation.
-  // Uses Recharts internal CategoricalChartProps via the Customized component.
-  const EventBadges = (props: unknown) => {
-    const p = props as {
-      formattedGraphicalItems?: Array<{
-        props: { data: Entry[] };
-        item: { props: { dataKey: string } };
-      }>;
-      xAxisMap?: Record<string, { scale: (v: string) => number; bandwidth?: () => number }>;
-      yAxisMap?: Record<string, { scale: (v: number) => number }>;
-    };
-
-    const x = p.xAxisMap ? Object.values(p.xAxisMap)[0] : null;
-    const y = p.yAxisMap ? Object.values(p.yAxisMap)[0] : null;
-    if (!x || !y) return null;
-
-    const bandwidth = typeof x.bandwidth === 'function' ? x.bandwidth() : 24;
-
-    return (
-      <g>
-        {chartData.map((entry, i) => {
-          if (!entry.event) return null;
-          const cx = x.scale(entry.label) + bandwidth / 2;
-          const cy = y.scale(entry.total) - 8;
-          if (Number.isNaN(cx) || Number.isNaN(cy)) return null;
-          return (
-            <text
-              key={i}
-              x={cx}
-              y={cy}
-              textAnchor="middle"
-              fontSize={14}
-              style={{ pointerEvents: 'none' }}
-            >
-              {emojiForEventType(entry.event.eventType ?? 'other')}
-            </text>
-          );
-        })}
-      </g>
-    );
   };
 
   return (
@@ -144,9 +154,9 @@ export function DailyBarChart({
               if (onBarClick && e?.date) onBarClick(e.date);
             }}
           >
-            {chartData.map((entry, i) => (
+            {chartData.map((entry) => (
               <Cell
-                key={i}
+                key={entry.date}
                 fill={getCoffeeFill(entry)}
                 stroke={getStroke(entry)}
                 strokeWidth={entry.isAnomaly || entry.isExcluded ? 2 : 0}
@@ -163,16 +173,16 @@ export function DailyBarChart({
               if (onBarClick && e?.date) onBarClick(e.date);
             }}
           >
-            {chartData.map((entry, i) => (
+            {chartData.map((entry) => (
               <Cell
-                key={i}
+                key={entry.date}
                 fill={getMilkFill(entry)}
                 stroke={getStroke(entry)}
                 strokeWidth={entry.isAnomaly || entry.isExcluded ? 2 : 0}
               />
             ))}
           </Bar>
-          <Customized component={EventBadges} />
+          <Customized component={eventBadges} />
         </BarChart>
       </ResponsiveContainer>
       <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-stone-500 dark:text-stone-400">

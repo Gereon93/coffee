@@ -13,7 +13,7 @@ type NavBarProps = {
   onToggleTheme: () => void;
 };
 
-export function NavBar({ isDarkMode, onToggleTheme }: NavBarProps) {
+export function NavBar({ isDarkMode, onToggleTheme }: Readonly<NavBarProps>) {
   return (
     <nav className="border-b border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-950">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-6 px-4">

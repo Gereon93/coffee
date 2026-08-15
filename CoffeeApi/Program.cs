@@ -9,6 +9,11 @@ namespace CoffeeApi
 {
     public class Program
     {
+        private static readonly string[] DefaultDevOrigins =
+            ["http://localhost:5173", "http://localhost:8090"];
+
+        protected Program() { }
+
         private static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
@@ -54,11 +59,17 @@ namespace CoffeeApi
             builder.Services.AddHttpClient<IHomeConnectService, HomeConnectService>();
             builder.Services.AddMemoryCache();
 
+            var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+            if (allowedOrigins is null || allowedOrigins.Length == 0)
+            {
+                allowedOrigins = DefaultDevOrigins;
+            }
+
             builder.Services.AddCors(options =>
             {
                 options.AddDefaultPolicy(policy =>
                 {
-                    policy.AllowAnyOrigin()
+                    policy.WithOrigins(allowedOrigins)
                           .AllowAnyHeader()
                           .AllowAnyMethod();
                 });

@@ -12,7 +12,7 @@ const options: { value: TimePeriod; label: string }[] = [
   { value: 'all', label: 'Gesamt' },
 ];
 
-export function TimePeriodSelector({ value, onChange }: Props) {
+export function TimePeriodSelector({ value, onChange }: Readonly<Props>) {
   return (
     <div className="inline-flex rounded-lg bg-stone-200 p-1 dark:bg-stone-800">
       {options.map((opt) => (

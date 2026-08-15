@@ -1,3 +1,4 @@
+using System.Globalization;
 using CoffeeApi.Domain;
 using CoffeeApi.DTOs;
 using CoffeeApi.Infrastructure;
@@ -7,6 +8,8 @@ namespace CoffeeApi.Services;
 
 public class MarkedDayService : IMarkedDayService
 {
+    private const string DateFormat = "yyyy-MM-dd";
+
     private static readonly HashSet<string> ValidKinds = new() { "mass-import", "event" };
     private static readonly HashSet<string> ValidEventTypes = new()
     {
@@ -39,7 +42,7 @@ public class MarkedDayService : IMarkedDayService
             .OrderByDescending(d => d.Date)
             .Select(d => new MarkedDayDto
             {
-                Date = d.Date.ToString("yyyy-MM-dd"),
+                Date = d.Date.ToString(DateFormat),
                 Kind = d.Kind,
                 EventType = d.EventType,
                 Reason = d.Reason,
@@ -50,7 +53,7 @@ public class MarkedDayService : IMarkedDayService
 
     public async Task<(bool Success, MarkedDayDto? Dto, MarkedDayError Error, string? Detail)> CreateAsync(CreateMarkedDayDto dto)
     {
-        if (!DateOnly.TryParseExact(dto.Date, "yyyy-MM-dd", out var parsedDate))
+        if (!DateOnly.TryParseExact(dto.Date, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
         {
             return (false, null, MarkedDayError.InvalidDate, "Use yyyy-MM-dd format");
         }
@@ -93,12 +96,11 @@ public class MarkedDayService : IMarkedDayService
         _context.MarkedDays.Add(entity);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Day {Date} marked as {Kind}{EventType}: {Reason}",
-            dto.Date, kind, eventType != null ? $"/{eventType}" : "", entity.Reason);
+        _logger.LogInformation("Day {Date} marked as {Kind} ({EventType})", dto.Date, kind, eventType);
 
         var response = new MarkedDayDto
         {
-            Date = entity.Date.ToString("yyyy-MM-dd"),
+            Date = entity.Date.ToString(DateFormat),
             Kind = entity.Kind,
             EventType = entity.EventType,
             Reason = entity.Reason,
@@ -110,7 +112,7 @@ public class MarkedDayService : IMarkedDayService
 
     public async Task<(bool Success, MarkedDayError Error, string? Detail)> DeleteAsync(string date)
     {
-        if (!DateOnly.TryParseExact(date, "yyyy-MM-dd", out var parsedDate))
+        if (!DateOnly.TryParseExact(date, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
         {
             return (false, MarkedDayError.InvalidDate, "Use yyyy-MM-dd format");
         }

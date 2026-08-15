@@ -7,7 +7,7 @@ interface Props {
   subtitle?: string;
 }
 
-export function KpiCard({ title, value, icon: Icon, subtitle }: Props) {
+export function KpiCard({ title, value, icon: Icon, subtitle }: Readonly<Props>) {
   return (
     <div className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-900">
       <div className="flex items-start justify-between">

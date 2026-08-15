@@ -57,7 +57,7 @@ function buildHourlyData(snapshots: SnapshotResponse[]): HourlyBucket[] {
   return buckets;
 }
 
-export function HourlyPeaksChart({ snapshots }: Props) {
+export function HourlyPeaksChart({ snapshots }: Readonly<Props>) {
   const data = buildHourlyData(snapshots);
 
   if (data.length === 0) {
@@ -107,9 +107,9 @@ export function HourlyPeaksChart({ snapshots }: Props) {
             labelFormatter={(label) => `${label} Uhr`}
           />
           <Bar dataKey="delta" radius={[4, 4, 0, 0]}>
-            {data.map((entry, i) => (
+            {data.map((entry) => (
               <Cell
-                key={i}
+                key={entry.hour}
                 fill={entry.isPeak ? '#ea580c' : '#d97706'}
                 stroke={entry.isPeak ? '#c2410c' : 'none'}
                 strokeWidth={entry.isPeak ? 2 : 0}

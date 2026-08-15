@@ -24,13 +24,18 @@ function toLocalDateKey(isoTimestamp: string): string {
   return `${y}-${m}-${day}`;
 }
 
-function DeltaBadge({
-  current, previous, field,
-}: {
+type CounterField = keyof Pick<
+  SnapshotResponse,
+  'beverageCounterCoffee' | 'beverageCounterCoffeeAndMilk' | 'beverageCounterMilk' | 'beverageCounterHotWaterCups'
+>;
+
+interface DeltaBadgeProps {
   current: SnapshotResponse;
   previous: SnapshotResponse | null;
-  field: keyof Pick<SnapshotResponse, 'beverageCounterCoffee' | 'beverageCounterCoffeeAndMilk' | 'beverageCounterMilk' | 'beverageCounterHotWaterCups'>;
-}) {
+  field: CounterField;
+}
+
+function DeltaBadge({ current, previous, field }: Readonly<DeltaBadgeProps>) {
   if (!previous) return null;
   const delta = current[field] - previous[field];
   if (delta <= 0) return null;
@@ -175,6 +180,7 @@ export function LogPage() {
 
       {modalDateKey && (
         <MarkAsBackfillModal
+          key={modalDateKey}
           date={modalDateKey}
           displayDate={formatDisplayDate(modalDateKey)}
           open={true}

@@ -38,8 +38,11 @@ public class SnapshotService : ISnapshotService
         _context.MachineSnapshots.Add(newSnapshot);
         await _context.SaveChangesAsync();
 
+        var snapshotId = newSnapshot.Id;
+        var coffeeCount = newSnapshot.BeverageCounterCoffee;
+        var totalBeverages = newSnapshot.TotalBeverages;
         _logger.LogInformation("New snapshot created: {Id}, Coffee: {Coffee}, Total: {Total}",
-            newSnapshot.Id, newSnapshot.BeverageCounterCoffee, newSnapshot.TotalBeverages);
+            snapshotId, coffeeCount, totalBeverages);
 
         return (true, newSnapshot);
     }
@@ -103,8 +106,8 @@ public class SnapshotService : ISnapshotService
             .OrderByDescending(s => s.Timestamp)
             .FirstOrDefaultAsync();
 
-        var baseline = previousSnapshot ?? snapshots.First();
-        var last = snapshots.Last();
+        var baseline = previousSnapshot ?? snapshots[0];
+        var last = snapshots[^1];
 
         // Calculate today's consumption (delta from baseline to last)
         var coffeeToday = last.BeverageCounterCoffee - baseline.BeverageCounterCoffee;
@@ -220,7 +223,7 @@ public class SnapshotService : ISnapshotService
         return (start, end);
     }
 
-    private MachineSnapshot MapToEntity(IngestPayloadDto payload)
+    private static MachineSnapshot MapToEntity(IngestPayloadDto payload)
     {
         var snapshot = new MachineSnapshot
         {
