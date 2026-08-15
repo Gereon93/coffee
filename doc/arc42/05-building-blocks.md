@@ -8,7 +8,7 @@ graph TB
         API["<b>CoffeeApi</b><br/>ASP.NET Core 10<br/>~1 200 LOC"]
         TEST["<b>CoffeeTest</b><br/>xUnit, 81 tests<br/>~1 650 LOC"]
         DASH["<b>coffee-dashboard</b><br/>React 19 + Vite<br/>~2 300 LOC"]
-        CI["<b>.github/workflows</b><br/>ci · docker-publish<br/>sonar · review"]
+        CI["<b>.github/workflows</b><br/>ci · docker-publish<br/>sonar"]
         BUILD["<b>build.sh</b><br/>local image build/push"]
         DOC["<b>doc/arc42</b> + root docs"]
     end
@@ -25,7 +25,7 @@ graph TB
 | **CoffeeApi** | Ingest, persistence, statistics, day annotations, power relay, health | HTTP (see [03.2](03-context.md#interface-catalogue)) |
 | **CoffeeTest** | Unit, controller, and integration tests | References `CoffeeApi` |
 | **coffee-dashboard** | Visualisation and user interaction | Consumes the API; served by nginx |
-| **.github/workflows** | Build, test, image publish, static analysis, PR review | GitHub Actions |
+| **.github/workflows** | Build, test, image publish, static analysis | GitHub Actions |
 | **build.sh** | Manual Podman/Docker build + push to GHCR | Local operator tooling |
 | **doc/** + root markdown | Architecture, API contract, design language, conventions | — |
 
