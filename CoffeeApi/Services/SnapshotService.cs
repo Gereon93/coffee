@@ -223,6 +223,11 @@ public class SnapshotService : ISnapshotService
         return (start, end);
     }
 
+    public Task<bool> IsDatabaseReachableAsync()
+    {
+        return _context.Database.CanConnectAsync();
+    }
+
     private static MachineSnapshot MapToEntity(IngestPayloadDto payload)
     {
         var snapshot = new MachineSnapshot

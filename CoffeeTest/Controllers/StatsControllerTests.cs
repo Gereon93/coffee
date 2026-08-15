@@ -13,7 +13,7 @@ public class StatsControllerTests
     {
         var db = TestDbContextFactory.Create(dbName);
         var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
-        var controller = new StatsController(service, db);
+        var controller = new StatsController(service);
         return (controller, service);
     }
 
@@ -28,6 +28,43 @@ public class StatsControllerTests
         var response = Assert.IsType<PaginatedResponseDto<SnapshotResponseDto>>(ok.Value);
         Assert.Empty(response.Data);
         Assert.Equal(0, response.Pagination.TotalItems);
+    }
+
+    [Theory]
+    [InlineData("02/07/2026")]
+    [InlineData("7.2.2026")]
+    [InlineData("2026-2-7")]
+    public async Task GetDaily_NonCanonicalDate_ReturnsBadRequest(string date)
+    {
+        var (controller, _) = Create();
+
+        var result = await controller.GetDaily(date);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Theory]
+    [InlineData("02/07/2026", "2026-02-08")]
+    [InlineData("2026-02-07", "02/08/2026")]
+    public async Task GetRange_NonCanonicalDate_ReturnsBadRequest(string from, string to)
+    {
+        var (controller, _) = Create();
+
+        var result = await controller.GetRange(from, to);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Health_ReportsDatabaseConnected()
+    {
+        var (controller, _) = Create();
+
+        var result = await controller.Health();
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<HealthResponseDto>(ok.Value);
+        Assert.Equal("connected", response.Database);
     }
 
     [Fact]
@@ -67,7 +104,7 @@ public class StatsControllerTests
     {
         var db = TestDbContextFactory.Create();
         var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
-        var controller = new StatsController(service, db);
+        var controller = new StatsController(service);
 
         // Day before range (baseline)
         db.MachineSnapshots.Add(

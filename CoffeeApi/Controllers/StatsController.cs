@@ -1,9 +1,7 @@
 using System.Globalization;
 using CoffeeApi.DTOs;
-using CoffeeApi.Infrastructure;
 using CoffeeApi.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace CoffeeApi.Controllers;
 
@@ -14,18 +12,18 @@ namespace CoffeeApi.Controllers;
 [Route("api/[controller]")]
 public class StatsController : ControllerBase
 {
+    private const string DateFormat = "yyyy-MM-dd";
+
     private static readonly string[] PageDetails = ["page must be >= 1"];
     private static readonly string[] PageSizeDetails = ["pageSize must be >= 1"];
     private static readonly string[] DateFormatDetails = ["Use yyyy-MM-dd format"];
     private static readonly string[] RangeFormatDetails = ["Use yyyy-MM-dd format for both from and to"];
 
     private readonly ISnapshotService _snapshotService;
-    private readonly AppDbContext _context;
 
-    public StatsController(ISnapshotService snapshotService, AppDbContext context)
+    public StatsController(ISnapshotService snapshotService)
     {
         _snapshotService = snapshotService;
-        _context = context;
     }
 
     /// <summary>
@@ -73,7 +71,7 @@ public class StatsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetDaily(string date, [FromQuery] int tz = 0)
     {
-        if (!DateOnly.TryParse(date, CultureInfo.InvariantCulture, out var parsedDate))
+        if (!DateOnly.TryParseExact(date, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
         {
             return BadRequest(new { error = "Invalid date format", details = DateFormatDetails });
         }
@@ -116,8 +114,8 @@ public class StatsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetRange([FromQuery] string from, [FromQuery] string to, [FromQuery] int tz = 0)
     {
-        if (!DateOnly.TryParse(from, CultureInfo.InvariantCulture, out var fromDate)
-            || !DateOnly.TryParse(to, CultureInfo.InvariantCulture, out var toDate))
+        if (!DateOnly.TryParseExact(from, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var fromDate)
+            || !DateOnly.TryParseExact(to, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var toDate))
         {
             return BadRequest(new { error = "Invalid date format", details = RangeFormatDetails });
         }
@@ -201,7 +199,7 @@ public class StatsController : ControllerBase
         {
             Status = "healthy",
             Timestamp = DateTime.UtcNow,
-            Database = await _context.Database.CanConnectAsync() ? "connected" : "disconnected",
+            Database = await _snapshotService.IsDatabaseReachableAsync() ? "connected" : "disconnected",
             LastSnapshot = lastSnapshot?.Timestamp
         };
 

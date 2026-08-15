@@ -108,7 +108,7 @@ host's clock rendered in Berlin time.
 
 ```bash
 dotnet build Coffee.sln -c Release   # build everything
-dotnet test CoffeeTest/              # 81 tests
+dotnet test CoffeeTest/              # 87 tests
 cd CoffeeApi && dotnet run           # API + Scalar UI at /scalar/v1
 cd coffee-dashboard && npm run dev    # dashboard on :5173
 ```

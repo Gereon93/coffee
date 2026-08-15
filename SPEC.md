@@ -24,8 +24,8 @@ automatisch an.
 
 | Environment | URL |
 |-------------|-----|
-| Development | `http://localhost:5000` (Dashboard-Dev-Server proxied `/api` auf `http://localhost:8089`) |
-| Production | `http://coffee.example.local:8089` (LAN, hinter nginx auf Port 8090) |
+| Development | `http://localhost:5000` — so startet `dotnet run`. Der Vite-Dev-Server proxied `/api` per Default auf `http://localhost:8089`; fuer den lokal laufenden `dotnet run` also `VITE_API_PROXY_TARGET=http://localhost:5000` setzen. |
+| Production | `http://coffee.example.local:8089` — Container-Port der API. Das Dashboard liegt auf `:8090` und proxied `/api`, `/coffee`, `/scalar` und `/openapi` per nginx an die API weiter. |
 
 ---
 

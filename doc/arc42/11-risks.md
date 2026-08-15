@@ -1,7 +1,7 @@
 # 11. Risks and Technical Debt
 
-State verified against the code and a full test run: 81 xUnit tests
-(`CoffeeTest/`) and 97 Vitest tests (`coffee-dashboard/`), all passing. Items
+State verified against the code and a full test run: 87 xUnit tests
+(`CoffeeTest/`) and 100 Vitest tests (`coffee-dashboard/`), all passing. Items
 already fixed have been removed from this list rather than left as noise.
 
 Severity is about impact on this system in its intended deployment, not a

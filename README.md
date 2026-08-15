@@ -140,10 +140,10 @@ npm run dev
 
 ```bash
 dotnet test CoffeeTest/
-# 81 Tests: Idempotenz, Cross-Day Deltas, Controller, Heatmap, Power, HomeConnect, Integration
+# 87 Tests: Idempotenz, Cross-Day Deltas, Controller, Heatmap, Power, HomeConnect, Integration
 
 cd coffee-dashboard && npm run test
-# 97 Tests: lib/api/hooks, Charts, Modals, Power-Button, Seiten
+# 100 Tests: lib/api/hooks, Charts, Modals, Power-Button, Seiten
 ```
 
 ## API Endpoints
@@ -169,8 +169,13 @@ verwendet. Vollstaendiger Contract: [`SPEC.md`](SPEC.md).
 
 > **Hinweis zur Absicherung:** Nur `/api/ingest` ist per API-Key geschuetzt.
 > Die schreibenden Endpunkte `/coffee/power` und `/api/stats/marked-days`
-> sind offen und CORS steht auf `AllowAnyOrigin` — tragbar nur unter der
-> LAN-only-Annahme. Siehe [TD-01](doc/arc42/11-risks.md#security).
+> sind offen — tragbar nur unter der LAN-only-Annahme.
+> Siehe [TD-01](doc/arc42/11-risks.md#security).
+>
+> CORS erlaubt nur die Origins aus `Cors:AllowedOrigins` (Environment:
+> `Cors__AllowedOrigins__0`). Ohne Konfiguration gelten `http://localhost:5173`
+> und `http://localhost:8090`, damit Dev-Server und Dashboard-Container ohne
+> Zusatzschritt funktionieren.
 
 ### Authentifizierung
 
@@ -237,7 +242,7 @@ coffee/
 │   │   └── pages/          #   Dashboard, Heatmap, Log
 │   ├── nginx.conf          #   SPA Routing + API Proxy
 │   └── Dockerfile
-├── CoffeeTest/             # 81 Unit-, Controller- und Integrationstests
+├── CoffeeTest/             # 87 Unit-, Controller- und Integrationstests
 │   ├── Controllers/        #   Alle fuenf Controller, jeder Branch
 │   ├── Domain/             #   MachineSnapshot
 │   ├── Helpers/            #   TestDbContextFactory, SnapshotBuilder, StubHttpMessageHandler
@@ -274,7 +279,7 @@ Die API erkennt Duplikate automatisch - wenn sich die Zaehler nicht geaendert ha
 
 ## Tests
 
-81 Tests decken die Kernlogik ab — Services, Controller (jeder Branch), Domain und Infrastruktur:
+87 Tests decken die Kernlogik ab — Services, Controller (jeder Branch), Domain und Infrastruktur:
 
 | Testklasse | Tests | Bereich |
 |------------|-------|---------|
@@ -284,7 +289,7 @@ Die API erkennt Duplikate automatisch - wenn sich die Zaehler nicht geaendert ha
 | SnapshotServiceHeatmapTests | 5 | DayOfWeek Grouping, Sunday=7 (ISO-8601) |
 | HomeConnectServiceTests | 11 | Power-Webhook, Status-Parsing, Timeout/Netzwerkfehler, Basic-Auth |
 | IngestControllerTests | 4 | Null/Empty Validation, 201 Created, 200 Duplicate |
-| StatsControllerTests | 7 | Range Aggregation, Health, Heatmap Cap |
+| StatsControllerTests | 13 | Range Aggregation, Health, Heatmap Cap, Datumsformat |
 | MarkedDaysControllerTests | 15 | CRUD, Validierung, Event-Typen, Edge-Cases |
 | PowerControllerTests | 7 | On/Off, ungueltiger State (400, 4 Faelle), Service-Fehler (500) |
 | CoffeeStatusControllerTests | 3 | Payload, Caching (TTL), Unreachable-Passthrough |
