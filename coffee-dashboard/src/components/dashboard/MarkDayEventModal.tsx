@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { useAddMarkedDay, useRemoveMarkedDay } from '../../hooks/useMarkedDays';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type { EventType, MarkedDay } from '../../api/types';
 import { EVENT_TYPE_META } from '../../lib/eventTypeMeta';
 
@@ -24,7 +25,10 @@ export function MarkDayEventModal({ date, displayDate, existing, open, onClose }
   const addMutation = useAddMarkedDay();
   const removeMutation = useRemoveMarkedDay();
 
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
   useEscapeKey(onClose, open);
+  useFocusTrap(dialogRef, open);
 
   if (!open) return null;
 
@@ -74,6 +78,7 @@ export function MarkDayEventModal({ date, displayDate, existing, open, onClose }
         onClick={onClose}
       />
       <dialog
+        ref={dialogRef}
         open
         aria-modal="true"
         className="relative w-full max-w-md rounded-xl border border-stone-200 bg-white p-6 text-stone-900 shadow-xl dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100"

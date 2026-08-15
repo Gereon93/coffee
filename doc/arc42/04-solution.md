@@ -128,4 +128,4 @@ fresh databases. See [ADR-007](09-design.md#adr-007-migration-baseliner).
 | CI | `.github/workflows/ci.yml` — restore, build, test for the API; install, lint, test, build for the dashboard; on every push and PR |
 | Static analysis | SonarQube scan on `main` (`sonar.yml`), including coverage from both test suites. Automated LLM review on PRs is currently disabled |
 
-Current state: **87 backend tests and 100 dashboard tests, all passing.**
+Current state: **87 backend tests and 102 dashboard tests, all passing.**

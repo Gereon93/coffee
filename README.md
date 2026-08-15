@@ -143,7 +143,7 @@ dotnet test CoffeeTest/
 # 87 Tests: Idempotenz, Cross-Day Deltas, Controller, Heatmap, Power, HomeConnect, Integration
 
 cd coffee-dashboard && npm run test
-# 100 Tests: lib/api/hooks, Charts, Modals, Power-Button, Seiten
+# 102 Tests: lib/api/hooks, Charts, Modals, Power-Button, Seiten
 ```
 
 ## API Endpoints

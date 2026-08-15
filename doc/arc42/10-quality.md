@@ -37,7 +37,7 @@ graph LR
 
     M --> M1["Controller → Service → EF"]
     M --> M2["DTOs at the boundary"]
-    M --> M3["87 + 100 tests, all green"]
+    M --> M3["87 + 102 tests, all green"]
 
     U --> U1["Mobile-first, dark mode"]
     U --> U2["German labels"]
@@ -108,7 +108,7 @@ targets are comfortable, and the honest statement is that they are unmeasured.
 |---|----------|------------------|--------|
 | Q-25 | A new behaviour is added to a service | It ships with unit tests in the same change | Convention (`CLAUDE.md`), review-enforced |
 | Q-26 | A behaviour crosses a boundary (DB, HTTP) | It ships with an integration test as well | Convention (`AGENTS.md`) |
-| Q-27 | The full suite is run | 87 backend tests pass in under a second; the 100 dashboard tests in a few seconds | Verified |
+| Q-27 | The full suite is run | 87 backend tests pass in under a second; the 102 dashboard tests in a few seconds | Verified |
 | Q-28 | A frontend change is pushed | **Gap:** no CI job builds, type-checks, or lints the frontend | [11](11-risks.md) |
 | Q-29 | A dependency with a known vulnerability enters the graph | **Gap:** `NU1903` is emitted as a warning; nothing fails the build | [11](11-risks.md) |
 

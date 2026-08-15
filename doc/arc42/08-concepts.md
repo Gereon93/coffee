@@ -222,7 +222,7 @@ revisiting only if the dataset grew by orders of magnitude.
 | Integration | `WebApplicationFactory` + real SQLite | Full HTTP pipeline: routing, middleware, API-key enforcement, migrations |
 | Frontend | ESLint + `tsc -b` | Compile-time only |
 
-**Current state: 87 backend tests and 100 dashboard tests, all passing.**
+**Current state: 87 backend tests and 102 dashboard tests, all passing.**
 
 Test data is constructed via `SnapshotBuilder` so tests state only the values
 they care about.

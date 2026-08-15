@@ -103,6 +103,41 @@ describe('MarkAsBackfillModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('moves focus into the dialog and traps Tab', async () => {
+    renderWithQuery(
+      <MarkAsBackfillModal date="2026-08-15" displayDate="15.08.2026" open onClose={vi.fn()} />,
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expect(document.activeElement).toBe(screen.getByLabelText('Grund'));
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+
+    const focusable = [...dialog.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled])')];
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    last.focus();
+    await userEvent.tab();
+    expect(document.activeElement).toBe(first);
+
+    await userEvent.tab({ shift: true });
+    expect(document.activeElement).toBe(last);
+  });
+
+  it('restores focus to the opener when it closes', async () => {
+    const opener = document.createElement('button');
+    document.body.appendChild(opener);
+    opener.focus();
+
+    const { unmount } = renderWithQuery(
+      <MarkAsBackfillModal date="2026-08-15" displayDate="15.08.2026" open onClose={vi.fn()} />,
+    );
+    unmount();
+
+    expect(document.activeElement).toBe(opener);
+    opener.remove();
+  });
+
   it('ignores Escape while closed', async () => {
     const onClose = vi.fn();
     renderWithQuery(

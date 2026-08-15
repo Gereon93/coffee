@@ -56,5 +56,5 @@ Related, non-arc42 documents at the repository root:
 | `CLAUDE.md` / `AGENTS.md` | Conventions for AI-assisted contributions |
 
 **Verified against:** 87 passing xUnit tests (`dotnet test CoffeeTest/`)
-and 100 passing Vitest tests (`npm --prefix coffee-dashboard run test`),
+and 102 passing Vitest tests (`npm --prefix coffee-dashboard run test`),
 branch `Gereon93/cichlid`.

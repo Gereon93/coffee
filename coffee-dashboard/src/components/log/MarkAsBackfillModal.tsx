@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { useAddMarkedDay } from '../../hooks/useMarkedDays';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface Props {
   date: string; // yyyy-MM-dd
@@ -15,7 +16,10 @@ export function MarkAsBackfillModal({ date, displayDate, open, onClose }: Readon
   const [error, setError] = useState<string | null>(null);
   const mutation = useAddMarkedDay();
 
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
   useEscapeKey(onClose, open);
+  useFocusTrap(dialogRef, open);
 
   if (!open) return null;
 
@@ -42,6 +46,7 @@ export function MarkAsBackfillModal({ date, displayDate, open, onClose }: Readon
         onClick={onClose}
       />
       <dialog
+        ref={dialogRef}
         open
         aria-modal="true"
         className="relative w-full max-w-md rounded-xl border border-stone-200 bg-white p-6 text-stone-900 shadow-xl dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100"
@@ -75,7 +80,6 @@ export function MarkAsBackfillModal({ date, displayDate, open, onClose }: Readon
               onChange={(e) => setReason(e.target.value)}
               placeholder="z.B. BSH API Ausfall, Initialimport ..."
               className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-coffee-500 focus:outline-none focus:ring-1 focus:ring-coffee-500 dark:border-stone-700 dark:bg-stone-800"
-              autoFocus
               maxLength={500}
             />
           </div>
