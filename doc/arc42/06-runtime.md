@@ -226,7 +226,7 @@ sequenceDiagram
         end
     end
     P->>DB: Database.Migrate() — apply pending only
-    P->>P: MapOpenApi, MapScalarApiReference,<br/>UseCors, UseApiKeyAuthentication,<br/>UseHttpsRedirection, MapControllers
+    P->>P: UseForwardedHeaders (if configured),<br/>MapOpenApi + MapScalarApiReference (Development only),<br/>UseCors, UseRateLimiter, UseApiKeyAuthentication,<br/>MapControllers
     P->>P: Run()
 ```
 

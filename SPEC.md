@@ -8,7 +8,8 @@ Diese Spezifikation definiert die API-Kontrakte zwischen:
 - **CoffeeApi** → **n8n-Webhook** (Power-Relay zur Home-Connect-Cloud)
 
 Die interaktive Fassung steht unter `/scalar/v1`, das OpenAPI-Dokument unter
-`/openapi/v1.json`. Bei Abweichung gilt der Code.
+`/openapi/v1.json` — beides nur, wenn die API mit `ASPNETCORE_ENVIRONMENT=Development`
+laeuft; in Produktion antworten beide mit `404`. Bei Abweichung gilt der Code.
 
 ### Zeitzonen-Parameter `tz`
 
@@ -25,7 +26,7 @@ automatisch an.
 | Environment | URL |
 |-------------|-----|
 | Development | `http://localhost:5000` — so startet `dotnet run`. Der Vite-Dev-Server proxied `/api` per Default auf `http://localhost:8089`; fuer den lokal laufenden `dotnet run` also `VITE_API_PROXY_TARGET=http://localhost:5000` setzen. |
-| Production | `http://coffee.example.local:8089` — Container-Port der API. Das Dashboard liegt auf `:8090` und proxied `/api`, `/coffee`, `/scalar` und `/openapi` per nginx an die API weiter. |
+| Production | `http://coffee.example.local:8089` — Container-Port der API. Das Dashboard liegt auf `:8090` und proxied `/api` und `/coffee` per nginx an die API weiter. |
 
 ---
 
@@ -390,7 +391,12 @@ Fehler des Dashboards.
 |--------|-----------|
 | 200 OK | Schaltbefehl an n8n uebergeben |
 | 400 Bad Request | `state` ist weder `on` noch `off` |
+| 429 Too Many Requests | Mehr als 10 Aufrufe in einem Ein-Minuten-Fenster |
 | 500 Internal Server Error | Webhook nicht konfiguriert oder nicht erreichbar |
+
+Das Limit greift vor der API-Key-Pruefung, verbraucht also auch bei
+abgelehnten Aufrufen ein Kontingent — der Aufruf reicht bis zur BSH-Cloud
+durch, und genau davor schuetzt es.
 
 Das 07:00–18:00-Fenster ist eine reine UI-Sperre im Dashboard
 (`coffeeTimeLock.ts`); die API prueft es nicht.

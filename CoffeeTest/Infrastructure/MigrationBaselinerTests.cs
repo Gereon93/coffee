@@ -1,6 +1,7 @@
 using CoffeeApi.Infrastructure;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CoffeeTest.Infrastructure;
@@ -69,6 +70,45 @@ public class MigrationBaselinerTests : IDisposable
             cmd.CommandText = "SELECT MigrationId FROM __EFMigrationsHistory LIMIT 1";
             var id = (string)cmd.ExecuteScalar()!;
             Assert.EndsWith("_Initial", id);
+        }
+    }
+
+    [Fact]
+    public void EnsureBaselined_RecordsTheRunningEfCoreVersion()
+    {
+        // Arrange: existing MachineSnapshots table but no history
+        using (var conn = new SqliteConnection(_connectionString))
+        {
+            conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = """
+                CREATE TABLE "MachineSnapshots" (
+                    "Id" INTEGER PRIMARY KEY AUTOINCREMENT,
+                    "Timestamp" TEXT NOT NULL,
+                    "MachineId" TEXT NOT NULL DEFAULT 'EQ900-DEFAULT',
+                    "OperationState" TEXT NOT NULL,
+                    "CreatedAt" TEXT NOT NULL
+                );
+            """;
+            cmd.ExecuteNonQuery();
+        }
+
+        // Act
+        using (var ctx = CreateContext())
+        {
+            MigrationBaseliner.EnsureBaselined(ctx, NullLogger.Instance);
+        }
+
+        // Assert: the version actually in use, not a hardcoded one. Both read
+        // 9.0.0 today — the assertion starts discriminating the moment the EF
+        // packages move (TD-03/TD-23), which is exactly when the old literal
+        // would have gone stale.
+        using (var conn = new SqliteConnection(_connectionString))
+        {
+            conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT ProductVersion FROM __EFMigrationsHistory LIMIT 1";
+            Assert.Equal(ProductInfo.GetVersion(), (string)cmd.ExecuteScalar()!);
         }
     }
 

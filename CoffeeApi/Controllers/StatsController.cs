@@ -14,6 +14,9 @@ public class StatsController : ControllerBase
 {
     private const string DateFormat = "yyyy-MM-dd";
 
+    /// <summary>Upper bound on the heatmap window — one year.</summary>
+    private const int MaxHeatmapWeeks = 52;
+
     private static readonly string[] PageDetails = ["page must be >= 1"];
     private static readonly string[] PageSizeDetails = ["pageSize must be >= 1"];
     private static readonly string[] DateFormatDetails = ["Use yyyy-MM-dd format"];
@@ -42,7 +45,7 @@ public class StatsController : ControllerBase
             return BadRequest(new { error = "Invalid pageSize", details = PageSizeDetails });
         }
 
-        pageSize = Math.Min(pageSize, 100);
+        pageSize = Math.Min(pageSize, SnapshotService.MaxPageSize);
 
         var (items, totalCount) = await _snapshotService.GetAllAsync(page, pageSize);
 
@@ -167,13 +170,13 @@ public class StatsController : ControllerBase
     /// <summary>
     /// Get heatmap data (hour x day of week)
     /// </summary>
-    /// <param name="weeks">Number of weeks to include (max 52)</param>
+    /// <param name="weeks">Number of weeks to include (max <see cref="MaxHeatmapWeeks"/>)</param>
     /// <param name="tz">UTC offset in minutes (e.g. 60 for CET, 120 for CEST)</param>
     [HttpGet("heatmap")]
     [ProducesResponseType(typeof(HeatmapResponseDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetHeatmap([FromQuery] int weeks = 4, [FromQuery] int tz = 0)
     {
-        weeks = Math.Min(weeks, 52); // Cap at 1 year
+        weeks = Math.Min(weeks, MaxHeatmapWeeks);
 
         var heatmapData = await _snapshotService.GetHeatmapDataAsync(weeks, tz);
 

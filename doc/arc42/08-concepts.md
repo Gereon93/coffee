@@ -161,6 +161,9 @@ ending up somewhere they were not expected.
 | Error tracking privacy | `SendDefaultPii = false` on backend and frontend | `Program.cs`, `lib/sentry.ts` |
 | Information disclosure | Controllers return generic 500 bodies; exception detail goes to logs and GlitchTip only | all controllers |
 | Network exposure | LAN-only deployment; no inbound internet path | Deployment |
+| Actuation throttling | Fixed window of 10 `POST /coffee/power` calls per minute, ahead of the API-key check; beyond it the API answers `429` | `Program.cs` |
+| API documentation exposure | Scalar and `/openapi/v1.json` are mapped in `Development` only and are not proxied by nginx | `Program.cs`, `nginx.conf.template` |
+| Caller address in the logs | `X-Forwarded-For` is honoured only from the proxy networks named in `ForwardedHeaders:KnownNetworks` | `Program.cs` |
 | Accidental actuation | UI time lock, 07:00–18:00 Europe/Berlin | `coffeeTimeLock.ts` |
 
 ### Residual risks — stated plainly
@@ -169,9 +172,9 @@ ending up somewhere they were not expected.
 |-----|---------|
 | **The dashboard origin is an unauthenticated path to the writes** | The write endpoints now require the API key, which closes direct calls to the API port. The dashboard's nginx injects the key for everyone it serves, so anything that can reach the dashboard port can still actuate the machine. That is the same reach as pressing the button in the UI, which is the intended feature — closing it needs real user authentication, not a shared secret. The 07:00–18:00 lock in `coffeeTimeLock.ts` does not help: it is client-side. |
 | **Missing `ApiKey` disables write auth** | The middleware logs a warning and forwards the request. A configuration mistake in production silently removes authentication on every protected endpoint instead of failing loudly. |
-| **API docs are public on the LAN** | Scalar and `/openapi/v1.json` are proxied by nginx without auth. |
-| **No rate limiting** | No throttling on any endpoint. |
-| **Proxy headers not honoured** | The API does not use forwarded-headers middleware, so the client IP logged on a failed API-key attempt is nginx's, not the caller's. |
+| **Read endpoints are unauthenticated** | Every `GET` is open to anything that reaches the API port. Consumption counters are the only data at stake, and the LAN-only assumption is what carries this. |
+| **Rate limiting covers actuation only** | `POST /coffee/power` is throttled; the read endpoints are not. They hit local SQLite, so the exposure is CPU, not a third-party quota. |
+| **Forwarded headers are off unless configured** | Without `ForwardedHeaders:KnownNetworks` the logged address stays the proxy's. Configuring it on a deployment where the API port is directly reachable trades one wrong address for a spoofable one — which is why it is opt-in. |
 | **User-entered text reaches the logs** | `MarkedDayService.CreateAsync` writes `Reason` verbatim into an information-level log line. It is free text up to 500 characters and can contain names. `SendDefaultPii = false` governs framework-collected data, not application-supplied log values, so it does not help here. No retention policy covers the logs. |
 
 These are consequences of the LAN-only assumption (TC-3). They become

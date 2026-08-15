@@ -63,7 +63,9 @@ distinguish "no coffee was made" from "n8n is down" — which is why
 **Context.** An interactive API surface is wanted for development and for
 debugging the n8n integration.
 
-**Decision.** `Scalar.AspNetCore` on top of `Microsoft.AspNetCore.OpenApi`.
+**Decision.** `Scalar.AspNetCore` on top of `Microsoft.AspNetCore.OpenApi`,
+mapped in `Development` only — in production nothing consumes it and it would
+hand the whole contract to anyone reaching the port.
 
 **Alternatives rejected.** Swashbuckle — heavier, and .NET's built-in OpenAPI
 document generation already covers document generation.

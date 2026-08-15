@@ -12,6 +12,12 @@ export type TimePeriod = 'week' | 'month' | 'year' | 'all';
 
 const DATE_FMT = 'yyyy-MM-dd';
 
+/**
+ * Start of the `all` period. The machine was put into service well after this
+ * date, so it is an open lower bound rather than a real boundary.
+ */
+export const ALL_TIME_START_DATE = '2020-01-01';
+
 export function getRange(period: TimePeriod, ref: Date = new Date()) {
   switch (period) {
     case 'week':
@@ -31,7 +37,7 @@ export function getRange(period: TimePeriod, ref: Date = new Date()) {
       };
     case 'all':
       return {
-        from: '2020-01-01',
+        from: ALL_TIME_START_DATE,
         to: format(endOfYear(ref), DATE_FMT),
       };
   }

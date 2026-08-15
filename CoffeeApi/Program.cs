@@ -1,7 +1,10 @@
 using System.Globalization;
+using System.Net;
 using CoffeeApi.Infrastructure;
 using CoffeeApi.Middleware;
 using CoffeeApi.Services;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 
@@ -11,6 +14,11 @@ namespace CoffeeApi
     {
         private static readonly string[] DefaultDevOrigins =
             ["http://localhost:5173", "http://localhost:8090"];
+
+        /// <summary>Rate-limiter policy guarding the relay to n8n and BSH.</summary>
+        public const string PowerRateLimitPolicy = "coffee-power";
+        private const int PowerPermitLimit = 10;
+        private static readonly TimeSpan PowerRateLimitWindow = TimeSpan.FromMinutes(1);
 
         protected Program() { }
 
@@ -74,6 +82,19 @@ namespace CoffeeApi
                 });
             });
 
+            // /coffee/power relays to n8n and from there to BSH — a fixed window
+            // caps how often the machine can be actuated, whoever asks.
+            builder.Services.AddRateLimiter(options =>
+            {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+                options.AddFixedWindowLimiter(PowerRateLimitPolicy, limiter =>
+                {
+                    limiter.PermitLimit = PowerPermitLimit;
+                    limiter.Window = PowerRateLimitWindow;
+                    limiter.QueueLimit = 0;
+                });
+            });
+
             var app = builder.Build();
 
             // Baseline pre-migration DBs, then apply pending migrations
@@ -86,29 +107,79 @@ namespace CoffeeApi
             }
 
             // Configure the HTTP request pipeline
+            ConfigureForwardedHeaders(app);
+
             if (app.Environment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+
+                // Scalar API documentation (replaces Swagger). Development only —
+                // in production the spec is readable by anyone who reaches the
+                // reverse proxy, and nothing there needs it.
+                app.MapOpenApi();
+                app.MapScalarApiReference(options =>
+                {
+                    options.Title = "Coffee Analytics Hub API";
+                    options.Theme = ScalarTheme.BluePlanet;
+                });
             }
 
-            // Scalar API Documentation (replaces Swagger)
-            app.MapOpenApi();
-            app.MapScalarApiReference(options =>
-            {
-                options.Title = "Coffee Analytics Hub API";
-                options.Theme = ScalarTheme.BluePlanet;
-            });
-
             app.UseCors();
+            app.UseRateLimiter();
 
             // API Key Authentication for protected endpoints
             app.UseApiKeyAuthentication();
 
-            app.UseHttpsRedirection();
+            // No UseHttpsRedirection: the container listens on plain HTTP
+            // (ASPNETCORE_URLS=http://+:8080); TLS terminates upstream.
             app.UseAuthorization();
             app.MapControllers();
 
             app.Run();
+        }
+
+        /// <summary>
+        /// Honour <c>X-Forwarded-For</c> from the reverse proxy so the client IP in
+        /// the logs is the caller's, not nginx's. Only enabled when the proxy
+        /// networks are configured — an unrestricted forwarder would let a direct
+        /// caller write any address it likes into the log.
+        /// </summary>
+        private static void ConfigureForwardedHeaders(WebApplication app)
+        {
+            var networks = app.Configuration
+                .GetSection("ForwardedHeaders:KnownNetworks").Get<string[]>() ?? [];
+
+            if (networks.Length == 0)
+            {
+                return;
+            }
+
+            var options = new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor
+            };
+            options.KnownIPNetworks.Clear();
+            options.KnownProxies.Clear();
+
+            foreach (var entry in networks)
+            {
+                if (System.Net.IPNetwork.TryParse(entry, out var network))
+                {
+                    options.KnownIPNetworks.Add(network);
+                }
+                else if (IPAddress.TryParse(entry, out var proxy))
+                {
+                    options.KnownProxies.Add(proxy);
+                }
+                else
+                {
+                    app.Logger.LogWarning(
+                        "ForwardedHeaders:KnownNetworks entry {Entry} is neither a CIDR nor an IP — ignored",
+                        entry);
+                }
+            }
+
+            app.UseForwardedHeaders(options);
         }
     }
 }

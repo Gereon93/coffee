@@ -55,7 +55,7 @@ graph TB
     N8N -->|"POST /api/ingest<br/>X-API-Key"| API
     API -->|"PUT / GET<br/>N8n:PowerWebhookUrl<br/>HTTP Basic"| N8N
     BROWSER -->|HTTP| DASH
-    DASH -->|"proxy_pass /api/ /coffee/<br/>/scalar/ /openapi/"| API
+    DASH -->|"proxy_pass /api/ /coffee/"| API
     API --> DB
 ```
 
@@ -66,16 +66,17 @@ graph TB
 | I-1 | Snapshot ingest | n8n → API | `POST /api/ingest`, JSON | `X-API-Key` header | `IngestController`, `ApiKeyMiddleware` |
 | I-2 | Statistics read | Dashboard → API | `GET /api/stats`, `/api/stats/daily/{date}`, `/api/stats/range`, `/api/stats/heatmap` | none (LAN) | `StatsController` |
 | I-3 | Day annotations | Dashboard → API | `GET`/`POST`/`DELETE /api/stats/marked-days` | none (LAN) | `MarkedDaysController` |
-| I-4 | Power command | Dashboard → API | `POST /coffee/power`, `{ "state": "on"\|"off" }` | none (LAN) | `PowerController` |
+| I-4 | Power command | Dashboard → API | `POST /coffee/power`, `{ "state": "on"\|"off" }`, 10 requests per minute | `X-API-Key` header | `PowerController` |
 | I-5 | Power relay | API → n8n | `PUT <N8n:PowerWebhookUrl>`, `{ "state": "on"\|"off" }` | HTTP Basic (optional) | `HomeConnectService` |
 | I-6 | Status relay | API → n8n | `GET <N8n:PowerWebhookUrl>`, 5 s timeout | HTTP Basic (optional) | `HomeConnectService` |
 | I-7 | Live status | Dashboard → API | `GET /coffee/status`, 7 s server-side cache | none (LAN) | `CoffeeStatusController` |
 | I-8 | Health | any → API | `GET /api/health` | none | `StatsController.Health` |
-| I-9 | API documentation | Browser → API | `GET /scalar/v1`, `GET /openapi/v1.json` | none | `Program.cs` (Scalar) |
+| I-9 | API documentation | Browser → API | `GET /scalar/v1`, `GET /openapi/v1.json` — `Development` only, not proxied by nginx | none | `Program.cs` (Scalar) |
 | I-10 | Error reporting | API + Dashboard → GlitchTip | Sentry protocol over HTTPS | DSN | `Program.cs`, `src/lib/sentry.ts` |
 
 The full request/response contract lives in `SPEC.md`; the OpenAPI document is
-generated at runtime and served at `/openapi/v1.json`.
+generated at runtime and served at `/openapi/v1.json` when the API runs in
+`Development`.
 
 ## 3.3 Data Flows
 
