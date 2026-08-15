@@ -42,9 +42,16 @@ public sealed class IngestWatchdog : BackgroundService
             _options.QuietFromUtcHour,
             _options.QuietToUtcHour);
 
-        using var timer = new PeriodicTimer(
-            TimeSpan.FromMinutes(_options.CheckIntervalMinutes),
-            _timeProvider);
+        var interval = _options.EffectiveCheckInterval;
+        if (interval != TimeSpan.FromMinutes(_options.CheckIntervalMinutes))
+        {
+            _logger.LogWarning(
+                "Watchdog:CheckIntervalMinutes is {ConfiguredInterval}; using {EffectiveInterval} instead",
+                _options.CheckIntervalMinutes,
+                interval);
+        }
+
+        using var timer = new PeriodicTimer(interval, _timeProvider);
 
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {

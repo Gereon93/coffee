@@ -11,6 +11,18 @@ public sealed class WatchdogOptions
     /// <summary>How often the watchdog compares the latest snapshot against the clock.</summary>
     public int CheckIntervalMinutes { get; set; } = 5;
 
+    /// <summary>Smallest interval a timer can be built from.</summary>
+    public const int MinimumCheckIntervalMinutes = 1;
+
+    /// <summary>
+    /// <see cref="CheckIntervalMinutes"/> clamped to something a timer accepts.
+    /// A non-positive period makes <c>PeriodicTimer</c> throw, and an exception
+    /// out of a <c>BackgroundService</c> stops the host by default — a mistyped
+    /// interval must not take down the API the watchdog is there to watch.
+    /// </summary>
+    public TimeSpan EffectiveCheckInterval =>
+        TimeSpan.FromMinutes(Math.Max(MinimumCheckIntervalMinutes, CheckIntervalMinutes));
+
     /// <summary>
     /// Age of the newest snapshot that still counts as healthy. n8n ingests every
     /// 15 minutes, so 60 minutes means four missed runs before the alarm fires.

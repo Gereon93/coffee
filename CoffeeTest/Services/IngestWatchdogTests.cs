@@ -31,9 +31,10 @@ public class IngestWatchdogTests
     private static IngestWatchdog CreateWatchdog(
         ServiceProvider provider,
         RecordingLogger<IngestWatchdog> logger,
-        DateTime nowUtc)
+        DateTime nowUtc,
+        WatchdogOptions? watchdogOptions = null)
     {
-        var options = Options.Create(new WatchdogOptions
+        var options = Options.Create(watchdogOptions ?? new WatchdogOptions
         {
             StaleAfterMinutes = 60,
             QuietFromUtcHour = 1,
@@ -96,6 +97,27 @@ public class IngestWatchdogTests
         var error = Assert.Single(logger.MessagesAt(LogLevel.Error));
         Assert.DoesNotContain("(null)", error);
         Assert.Contains("has ever been ingested", error);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public void NonPositiveCheckInterval_IsClampedInsteadOfCrashingTheHost(int configured)
+    {
+        // PeriodicTimer rejects a non-positive period, and an exception out of
+        // ExecuteAsync stops the host by default — the watchdog would kill the
+        // API it is watching.
+        var options = new WatchdogOptions { CheckIntervalMinutes = configured };
+
+        Assert.Equal(TimeSpan.FromMinutes(1), options.EffectiveCheckInterval);
+    }
+
+    [Fact]
+    public void ConfiguredCheckInterval_IsUsedAsIs()
+    {
+        var options = new WatchdogOptions { CheckIntervalMinutes = 15 };
+
+        Assert.Equal(TimeSpan.FromMinutes(15), options.EffectiveCheckInterval);
     }
 
     [Fact]

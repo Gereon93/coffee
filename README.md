@@ -140,7 +140,7 @@ npm run dev
 
 ```bash
 dotnet test CoffeeTest/
-# 127 Tests: Idempotenz, Cross-Day Deltas, Controller, Heatmap, Power, HomeConnect, Watchdog, Integration
+# 130 Tests: Idempotenz, Cross-Day Deltas, Controller, Heatmap, Power, HomeConnect, Watchdog, Integration
 
 cd coffee-dashboard && npm run test
 # 102 Tests: lib/api/hooks, Charts, Modals, Power-Button, Seiten
@@ -299,7 +299,7 @@ Die API erkennt Duplikate automatisch - wenn sich die Zaehler nicht geaendert ha
 
 ## Tests
 
-127 Tests decken die Kernlogik ab — Services, Controller (jeder Branch), Domain und Infrastruktur:
+130 Tests decken die Kernlogik ab — Services, Controller (jeder Branch), Domain und Infrastruktur:
 
 | Testklasse | Tests | Bereich |
 |------------|-------|---------|
@@ -317,7 +317,7 @@ Die API erkennt Duplikate automatisch - wenn sich die Zaehler nicht geaendert ha
 | MigrationBaselinerTests | 4 | EF Migration History Baselining |
 | IngestWatchdogEvaluatorTests | 11 | Schwelle, Ruhefenster (auch ueber Mitternacht), fehlender Snapshot |
 | IngestWatchdogAlertStateTests | 7 | Ein Alarm pro Ausfall, Recovery, Ruhefenster loescht keinen Alarm |
-| IngestWatchdogTests | 7 | Error-Log als Alarmkanal, Recovery, DB-Fehler alarmiert nicht |
+| IngestWatchdogTests | 10 | Error-Log als Alarmkanal, Recovery, DB-Fehler alarmiert nicht, Intervall-Clamp |
 | ApiIntegrationTests | 11 | Voller HTTP-Stack gegen echte SQLite: Health, Stats, API-Key auf allen schreibenden Endpunkten |
 | PipelineHardeningTests | 7 | Scalar/OpenAPI nur in Development, Rate-Limit auf /coffee/power, Forwarded-Header, Migrationsstand |
 
