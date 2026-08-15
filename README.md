@@ -22,6 +22,11 @@ EQ900 ──> Home Connect API ──> n8n (alle 15 Min) ──> Coffee API ─�
                                                     (React + nginx)
 ```
 
+> **Ausfuehrliche Architekturdokumentation:** [`doc/arc42/`](doc/arc42/) —
+> nach arc42 gegliedert, mit Kontext, Bausteinsicht, Laufzeitszenarien,
+> Deployment, Querschnittskonzepten, ADRs und dem aktuellen Stand an
+> technischen Schulden ([11-risks.md](doc/arc42/11-risks.md)).
+
 | Komponente | Technologie | Port |
 |------------|-------------|------|
 | Coffee API | ASP.NET Core (.NET 10), SQLite, EF Core | 8089 |
@@ -72,8 +77,6 @@ Zusaetzlich wird jeder Build mit `:sha-<short-sha>` getaggt fuer Rollbacks.
 **Docker Compose in Portainer deployen:**
 
 ```yaml
-version: "3.8"
-
 services:
   coffee-api:
     image: ghcr.io/gereon93/coffee-api:latest
@@ -87,6 +90,12 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Default: "Data Source=/app/data/coffee.db"
       ApiKey: <dein-api-key>
+      # Ohne PowerWebhookUrl antworten /coffee/status und /coffee/power mit 500
+      N8n__PowerWebhookUrl: "https://n8n.example.local/webhook/coffee-power"
+      N8n__BasicAuthUser: <optional>
+      N8n__BasicAuthPassword: <optional>
+      SENTRY_DSN: <optional, leer = Error-Tracking aus>
+      SENTRY_ENVIRONMENT: production
 
   coffee-dashboard:
     image: ghcr.io/gereon93/coffee-dashboard:latest
@@ -122,11 +131,16 @@ npm run dev
 # (ueberschreibbar via VITE_API_PROXY_TARGET, konfiguriert in vite.config.ts)
 ```
 
+> **Bekannte Einschraenkung:** Der Dev-Proxy deckt nur `/api` ab. `/coffee/status`
+> und `/coffee/power` laufen unter `npm run dev` ins Leere — Power-Button und
+> Live-Status funktionieren lokal daher nicht ohne Zusatzkonfiguration.
+> Siehe [TD-10](doc/arc42/11-risks.md#correctness).
+
 **Tests:**
 
 ```bash
 dotnet test CoffeeTest/
-# 77 Tests: Idempotenz, Cross-Day Deltas, Controller, Heatmap, Power, HomeConnect
+# 81 Tests: Idempotenz, Cross-Day Deltas, Controller, Heatmap, Power, HomeConnect, Integration
 ```
 
 ## API Endpoints
@@ -134,30 +148,49 @@ dotnet test CoffeeTest/
 | Method | Endpoint | Beschreibung | Auth |
 |--------|----------|--------------|------|
 | POST | `/api/ingest` | Snapshot von n8n entgegennehmen | API-Key |
-| GET | `/api/stats` | Alle Snapshots (paginiert) | - |
-| GET | `/api/stats/daily/{date}` | Tagesstatistik mit Snapshots | - |
-| GET | `/api/stats/range?from=&to=` | Zeitraum-Aggregation | - |
-| GET | `/api/stats/heatmap?weeks=4` | Heatmap-Daten (Wochentag x Stunde) | - |
-| GET | `/api/health` | Health Check | - |
+| GET | `/api/stats?page=&pageSize=` | Alle Snapshots (paginiert, pageSize max. 100) | - |
+| GET | `/api/stats/daily/{date}?tz=` | Tagesstatistik inkl. Baseline-Snapshot des Vortags | - |
+| GET | `/api/stats/range?from=&to=&tz=` | Zeitraum-Aggregation pro lokalem Tag | - |
+| GET | `/api/stats/heatmap?weeks=&tz=` | Heatmap-Daten (Wochentag x Stunde), weeks max. 52 | - |
+| GET | `/api/stats/marked-days?kind=` | Markierte Tage, optional gefiltert nach `mass-import` / `event` | - |
+| POST | `/api/stats/marked-days` | Tag markieren (`mass-import` oder `event`) | - |
+| DELETE | `/api/stats/marked-days/{date}` | Markierung aufheben | - |
+| GET | `/coffee/status` | Live-Status der Maschine (7s Server-Cache) | - |
+| POST | `/coffee/power` | Maschine ein-/ausschalten (`{"state":"on"\|"off"}`) | - |
+| GET | `/api/health` | Health Check inkl. `lastSnapshot` | - |
 | GET | `/scalar/v1` | Interaktive API-Dokumentation | - |
-| GET | `/api/stats/excluded-days` | Tage, die als Massenimport markiert sind | - |
-| POST | `/api/stats/excluded-days` | Tag als Massenimport markieren | - |
-| DELETE | `/api/stats/excluded-days/{date}` | Markierung aufheben | - |
+
+Der `tz`-Parameter ist der UTC-Offset des Clients **in Minuten** (60 = CET,
+120 = CEST). Das Frontend haengt ihn automatisch an. Ohne Angabe wird UTC
+verwendet. Vollstaendiger Contract: [`SPEC.md`](SPEC.md).
+
+> **Hinweis zur Absicherung:** Nur `/api/ingest` ist per API-Key geschuetzt.
+> Die schreibenden Endpunkte `/coffee/power` und `/api/stats/marked-days`
+> sind offen und CORS steht auf `AllowAnyOrigin` — tragbar nur unter der
+> LAN-only-Annahme. Siehe [TD-01](doc/arc42/11-risks.md#security).
 
 ### Authentifizierung
 
-Der Ingest-Endpoint ist per API-Key geschuetzt. Der Key wird als `ApiKey` Environment-Variable im Container gesetzt und muss als `X-Api-Key` Header mitgeschickt werden:
+Der Ingest-Endpoint ist per API-Key geschuetzt. Der Key wird als `ApiKey` Environment-Variable im Container gesetzt und muss als `X-API-Key` Header mitgeschickt werden (Vergleich erfolgt konstantzeitig):
 
 ```bash
 curl -X POST http://coffee.example.local:8089/api/ingest \
   -H "Content-Type: application/json" \
-  -H "X-Api-Key: <dein-key>" \
+  -H "X-API-Key: <dein-key>" \
   -d '{"data":{"status":[{"key":"ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee","value":42}]}}'
 ```
 
 ### Idempotenz
 
-Der Ingest-Endpoint ist idempotent: Wenn ein Snapshot mit identischen Zaehlern bereits existiert, wird kein Duplikat angelegt (HTTP 200 statt 201). So kann n8n bedenkenlos alle 15 Minuten senden.
+Der Ingest-Endpoint ist idempotent: Wenn sich seit dem letzten Snapshot kein Zaehler erhoeht hat, wird kein Duplikat angelegt (HTTP 200 statt 201, mit der ID des bestehenden Snapshots). So kann n8n bedenkenlos alle 15 Minuten senden.
+
+Konkret: gespeichert wird nur, wenn mindestens einer der Getraenke-Zaehler
+(Kaffee, Kaffee+Milch, Milch, Heisswasser-Tassen) **groesser** ist als im
+letzten Snapshot. Reine Status-Aenderungen landen nicht in der DB — der
+Live-Zustand kommt stattdessen von `/coffee/status`.
+
+Ist der `ApiKey` nicht gesetzt, laesst die Middleware die Anfrage mit einer
+Warnung im Log durch. In Produktion also zwingend setzen.
 
 ## Dashboard Features
 
@@ -174,38 +207,62 @@ Der Ingest-Endpoint ist idempotent: Wenn ein Snapshot mit identischen Zaehlern b
 | Heatmap | Wochentag x Stunde Matrix |
 | Anomalie-Erkennung | Z-Score basiert, markiert ungewoehnliche Tage |
 | Dark Mode | Automatisch nach System Preference |
-| Massenimport-Markierung | Tage ueber Log-Tab als Backfill markieren, grau mit Label im Chart, aus Statistik ausgeschlossen |
+| Massenimport-Markierung | Tage ueber Log-Tab als Backfill markieren, grau mit Label im Chart, aus Heatmap und Anomalie-Erkennung ausgeschlossen |
+| Event-Markierung | Tage mit Anlass annotieren (Geburtstag, Besuch, Party, krank, Urlaub, sonstiges) — bleiben voll in der Statistik |
+| Power-Steuerung | Maschine aus dem Dashboard ein-/ausschalten, gesperrt ausserhalb 07:00-18:00 (Europe/Berlin) |
+| Live-Status | Aktueller Maschinenzustand, degradiert zu "Offline" statt zu einem Fehler |
 
 ## Projektstruktur
 
 ```
 coffee/
 ├── CoffeeApi/              # ASP.NET Core Backend
-│   ├── Controllers/        #   API Endpoints (Ingest, Stats)
-│   ├── Domain/             #   MachineSnapshot Entity
-│   ├── DTOs/               #   Request/Response Objekte
-│   ├── Infrastructure/     #   AppDbContext (EF Core + SQLite)
-│   ├── Middleware/          #   API-Key Authentication
-│   ├── Services/           #   SnapshotService (Geschaeftslogik)
+│   ├── Controllers/        #   Ingest, Stats, MarkedDays, Power, CoffeeStatus
+│   ├── Domain/             #   MachineSnapshot, MarkedDay
+│   ├── DTOs/               #   Request/Response Objekte (Entities bleiben intern)
+│   ├── Infrastructure/     #   AppDbContext, MigrationBaseliner
+│   ├── Middleware/         #   API-Key Authentication
+│   ├── Migrations/         #   EF Core Migrations
+│   ├── Services/           #   SnapshotService, MarkedDayService, HomeConnectService
 │   └── Dockerfile
 ├── coffee-dashboard/       # React Frontend
 │   ├── src/
-│   │   ├── api/            #   API Client + Fetch-Funktionen
-│   │   ├── components/     #   Charts, Cards, Controls, Layout
-│   │   ├── hooks/          #   React Query Hooks
-│   │   ├── lib/            #   Utilities (Datum, Formatierung)
-│   │   └── pages/          #   Dashboard + Heatmap Page
+│   │   ├── api/            #   API Client + Fetch-Funktionen + Typen
+│   │   ├── components/     #   Charts, Cards, Controls, Layout, Modals
+│   │   ├── hooks/          #   TanStack-Query-Hooks pro Endpunkt
+│   │   ├── lib/            #   Pure Utilities (Datum, Anomalien, Time-Lock, Sentry)
+│   │   └── pages/          #   Dashboard, Heatmap, Log
 │   ├── nginx.conf          #   SPA Routing + API Proxy
 │   └── Dockerfile
-├── CoffeeTest/             # Unit + Integration Tests
-│   ├── Controllers/        #   Ingest + Stats Controller Tests
-│   ├── Domain/             #   MachineSnapshot Tests
-│   ├── Helpers/            #   TestDbContextFactory, SnapshotBuilder
-│   └── Services/           #   SnapshotService Tests
-├── build.sh                # Docker Build + Push Script
+├── CoffeeTest/             # 81 Unit-, Controller- und Integrationstests
+│   ├── Controllers/        #   Alle fuenf Controller, jeder Branch
+│   ├── Domain/             #   MachineSnapshot
+│   ├── Helpers/            #   TestDbContextFactory, SnapshotBuilder, StubHttpMessageHandler
+│   ├── Infrastructure/     #   MigrationBaseliner gegen echte SQLite-Dateien
+│   ├── Integration/        #   WebApplicationFactory, voller HTTP-Stack
+│   └── Services/           #   SnapshotService, HomeConnectService
+├── doc/arc42/              # Architekturdokumentation nach arc42
+├── .github/workflows/      # ci, docker-publish, sonar, review
+├── build.sh                # Docker Build + Push Script (Podman/Docker)
 ├── Coffee.sln              # .NET Solution
+├── SPEC.md                 # API-Contract
+├── DESIGN.md               # Visuelle Designsprache des Dashboards
 └── PROJECT_STATE.md        # Projektstatus + Aenderungshistorie
 ```
+
+## CI/CD
+
+| Workflow | Trigger | Zweck |
+|----------|---------|-------|
+| `ci.yml` | Push auf `main`/`dev`, jeder PR | `dotnet restore` + `build -c Release` + `dotnet test` |
+| `review.yml` | Jeder PR | Automatisiertes LLM-Review, Gate failt ab Severity `high` |
+| `sonar.yml` | Push auf `main` | SonarQube-Scan (No-Op ohne `SONAR_*`-Secrets) |
+| `docker-publish.yml` | Push auf `main`, manuell | Baut beide Images und pusht nach GHCR |
+
+> **Luecke:** Kein Workflow baut, typ-prueft oder lintet das Frontend
+> (`npm ci`, `tsc -b`, `npm run lint`). Frontend-Aenderungen inklusive
+> automatischer Dependency-Bumps erreichen `main` ungeprueft.
+> Siehe [TD-20](doc/arc42/11-risks.md#quality-gates-and-tooling).
 
 ## n8n Workflow
 
@@ -218,7 +275,7 @@ Die API erkennt Duplikate automatisch - wenn sich die Zaehler nicht geaendert ha
 
 ## Tests
 
-77 Tests decken die Kernlogik ab — Services, Controller (jeder Branch), Domain und Infrastruktur:
+81 Tests decken die Kernlogik ab — Services, Controller (jeder Branch), Domain und Infrastruktur:
 
 | Testklasse | Tests | Bereich |
 |------------|-------|---------|
@@ -230,10 +287,11 @@ Die API erkennt Duplikate automatisch - wenn sich die Zaehler nicht geaendert ha
 | IngestControllerTests | 4 | Null/Empty Validation, 201 Created, 200 Duplicate |
 | StatsControllerTests | 7 | Range Aggregation, Health, Heatmap Cap |
 | MarkedDaysControllerTests | 15 | CRUD, Validierung, Event-Typen, Edge-Cases |
-| PowerControllerTests | 7 | On/Off, ungueltiger State (400), Service-Fehler (500) |
+| PowerControllerTests | 7 | On/Off, ungueltiger State (400, 4 Faelle), Service-Fehler (500) |
 | CoffeeStatusControllerTests | 3 | Payload, Caching (TTL), Unreachable-Passthrough |
 | MachineSnapshotTests | 3 | TotalBeverages, Default Values |
 | MigrationBaselinerTests | 3 | EF Migration History Baselining |
+| ApiIntegrationTests | 4 | Voller HTTP-Stack gegen echte SQLite: Health, Stats, API-Key 401/200 |
 
 ```bash
 dotnet test CoffeeTest/

@@ -1,121 +1,272 @@
 # 5. Building Block View
 
-## 5.1 Level 1: System Decomposition
+## 5.1 Level 1 — System Decomposition
 
+```mermaid
+graph TB
+    subgraph repo["Repository: coffee"]
+        API["<b>CoffeeApi</b><br/>ASP.NET Core 10<br/>~1 200 LOC"]
+        TEST["<b>CoffeeTest</b><br/>xUnit, 81 tests<br/>~1 650 LOC"]
+        DASH["<b>coffee-dashboard</b><br/>React 19 + Vite<br/>~2 300 LOC"]
+        CI["<b>.github/workflows</b><br/>ci · docker-publish<br/>sonar · review"]
+        BUILD["<b>build.sh</b><br/>local image build/push"]
+        DOC["<b>doc/arc42</b> + root docs"]
+    end
+
+    TEST -->|tests| API
+    DASH -->|HTTP| API
+    CI -->|builds| API
+    CI -->|builds| DASH
+    BUILD -.->|manual alternative| CI
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                        Coffee Analytics Hub                          │
-│                                                                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │
-│  │  CoffeeApi   │  │  CoffeeTest  │  │ coffee-      │              │
-│  │  (ASP.NET)   │  │  (xUnit)     │  │ dashboard    │              │
-│  │              │  │              │  │ (React/Vite) │              │
-│  └──────────────┘  └──────────────┘  └──────────────┘              │
-│                                                                      │
-│  ┌──────────────┐  ┌──────────────┐                                 │
-│  │  build.sh    │  │  .github/    │                                 │
-│  │  (Docker)    │  │  (CI/CD)     │                                 │
-│  └──────────────┘  └──────────────┘                                 │
-└──────────────────────────────────────────────────────────────────────┘
-```
 
-| Building Block | Responsibility |
-|----------------|----------------|
-| **CoffeeApi** | ASP.NET Core Web API; ingest, statistics, power control, health check |
-| **CoffeeTest** | xUnit test suite; unit tests, integration tests, service tests |
-| **coffee-dashboard** | React SPA; charts, KPI cards, heatmap, log view, power toggle |
-| **build.sh** | Local Docker build and push script (Podman/Docker) |
-| **.github/** | GitHub Actions workflows for CI and Docker image publishing |
+| Building block | Responsibility | Key interfaces |
+|----------------|----------------|----------------|
+| **CoffeeApi** | Ingest, persistence, statistics, day annotations, power relay, health | HTTP (see [03.2](03-context.md#interface-catalogue)) |
+| **CoffeeTest** | Unit, controller, and integration tests | References `CoffeeApi` |
+| **coffee-dashboard** | Visualisation and user interaction | Consumes the API; served by nginx |
+| **.github/workflows** | Build, test, image publish, static analysis, PR review | GitHub Actions |
+| **build.sh** | Manual Podman/Docker build + push to GHCR | Local operator tooling |
+| **doc/** + root markdown | Architecture, API contract, design language, conventions | — |
 
-## 5.2 Level 2: CoffeeApi Internal Structure
+## 5.2 Level 2 — CoffeeApi
 
 ```
 CoffeeApi/
+├── Program.cs                       # composition root: Sentry, DI, CORS, pipeline, migrate
 ├── Controllers/
-│   ├── IngestController.cs         # POST /api/ingest
-│   ├── StatsController.cs          # GET /api/stats/*
-│   ├── MarkedDaysController.cs     # CRUD /api/stats/marked-days
-│   ├── PowerController.cs          # POST /coffee/power
-│   └── CoffeeStatusController.cs   # GET /coffee/status
-├── Domain/
-│   ├── MachineSnapshot.cs          # Core entity: machine state at a point in time
-│   └── MarkedDay.cs                # Annotation entity: mass-import or event
-├── DTOs/
-│   ├── IngestPayloadDto.cs         # n8n input payload
-│   ├── SnapshotResponseDto.cs      # Snapshot API output + pagination wrappers
-│   ├── MarkedDayDto.cs             # MarkedDay API output + creation input
-│   ├── PowerRequestDto.cs          # Power on/off request
-│   └── CoffeeStatusDto.cs          # Live machine status output
-├── Infrastructure/
-│   ├── AppDbContext.cs             # EF Core DbContext, model configuration
-│   └── MigrationBaseliner.cs       # Pre-migration DB compatibility
-├── Middleware/
-│   └── ApiKeyMiddleware.cs         # API key authentication for /api/ingest
+│   ├── IngestController.cs          # POST   /api/ingest
+│   ├── StatsController.cs           # GET    /api/stats, /daily/{date}, /range, /heatmap, /api/health
+│   ├── MarkedDaysController.cs      # GET/POST/DELETE /api/stats/marked-days
+│   ├── PowerController.cs           # POST   /coffee/power
+│   └── CoffeeStatusController.cs    # GET    /coffee/status
 ├── Services/
-│   ├── ISnapshotService.cs         # Snapshot service interface
-│   ├── SnapshotService.cs          # Idempotency, queries, aggregation
-│   ├── IHomeConnectService.cs      # Home Connect relay interface
-│   └── HomeConnectService.cs       # n8n webhook communication
-├── Migrations/                     # EF Core migration files
-├── Program.cs                      # Application entry point, DI, middleware
-└── appsettings.json                # Configuration
+│   ├── ISnapshotService.cs / SnapshotService.cs      # ingest + all read aggregation
+│   ├── IMarkedDayService.cs / MarkedDayService.cs    # annotation rules + persistence
+│   └── IHomeConnectService.cs / HomeConnectService.cs# n8n webhook client
+├── Domain/
+│   ├── MachineSnapshot.cs           # counters + status at a point in time
+│   └── MarkedDay.cs                 # per-date annotation
+├── DTOs/                            # request/response contracts, no entities on the wire
+├── Infrastructure/
+│   ├── AppDbContext.cs              # EF Core model, indexes, UTC value converter
+│   └── MigrationBaseliner.cs        # pre-migration DB compatibility
+├── Middleware/
+│   └── ApiKeyMiddleware.cs          # X-API-Key on /api/ingest
+└── Migrations/                      # 3 migrations: Initial, AddExcludedDays, RenameExcludedDaysToMarkedDays
 ```
 
-### White Box: Key Components
+### 5.2.1 Layer dependencies
 
-**IngestController** — Validates incoming payloads, delegates to
-`SnapshotService.ProcessIngestAsync()`. Returns 201 for new snapshots,
-200 for duplicates, 400 for invalid payloads.
+```mermaid
+graph TD
+    C["Controllers"] --> S["Services"]
+    C --> D["DTOs"]
+    S --> D
+    S --> DOM["Domain"]
+    S --> I["Infrastructure<br/>(AppDbContext)"]
+    I --> DOM
+    M["Middleware"] -.->|pipeline| C
+    C -.->|"deviation:<br/>StatsController → AppDbContext"| I
 
-**StatsController** — Read-only endpoints for statistics. Delegates to
-`SnapshotService` for queries. Directly accesses `AppDbContext` for
-baseline snapshot lookups (cross-day delta support).
+    style C fill:#e8d5b7
+    style S fill:#d4a55a
+    style I fill:#8b5e1a,color:#fff
+```
 
-**SnapshotService** — Core business logic. Handles idempotency checks
-(counter comparison), timezone-aware day boundary computation, daily
-summaries with peak hour detection, heatmap aggregation with mass-import
-exclusion, and Home Connect key-to-entity mapping.
+The dashed edge is a known deviation from the documented layering, not an
+intended design. See [11 — Risks and Technical Debt](11-risks.md).
 
-**MarkedDaysController** — CRUD for day annotations. Bypasses the service
-layer and accesses `AppDbContext` directly. Supports two kinds:
-`mass-import` (excluded from statistics) and `event` (annotated but
-included in statistics).
+### 5.2.2 White box: `SnapshotService`
 
-**HomeConnectService** — Communicates with n8n webhooks for power control
-(HTTP PUT) and live status retrieval. Handles timeouts and network errors
-gracefully, returning an "unreachable" status instead of throwing.
+The largest and most important class in the system (307 LOC,
+`CoffeeApi/Services/SnapshotService.cs`). It carries five distinct groups of
+responsibility:
 
-**ApiKeyMiddleware** — Protects `/api/ingest` with a shared secret
-(`X-API-Key` header). Falls through to an open endpoint when no key is
-configured (development mode).
+| Group | Members | Notes |
+|-------|---------|-------|
+| **Ingest** | `ProcessIngestAsync`, `HasCounterIncreased` | Idempotency gate; returns `(Created, Snapshot)` |
+| **Payload translation** | `MapToEntity`, `ExtractOperationState`, `ConvertToBool`, `ConvertToInt` | Maps Home Connect key strings to entity properties; tolerates `JsonElement`, boxed primitives, and strings |
+| **Plain queries** | `GetLatestAsync`, `GetAllAsync`, `GetByDateAsync`, `GetByDateRangeAsync`, `GetLastSnapshotBeforeAsync` | `GetAllAsync` caps `pageSize` at 100 |
+| **Aggregation** | `GetDailySummaryAsync`, `GetHeatmapDataAsync` | Delta computation, peak-hour detection, mass-import exclusion |
+| **Time** | `GetLocalDayBoundsUtc` | Local date + offset → half-open UTC interval |
 
-**MigrationBaseliner** — Detects pre-migration databases and seeds the
-EF Core migration history table so that `Database.Migrate()` does not
-attempt to re-create existing tables.
+`GetDailySummaryAsync` in detail:
 
-## 5.3 Level 2: coffee-dashboard Internal Structure
+1. Load the day's snapshots (timezone-aware bounds).
+2. Empty → return a zeroed `DailySummaryDto`.
+3. Load the last snapshot strictly before the day → `baseline`
+   (fallback: the day's own first snapshot).
+4. `coffeeToday = last.Coffee − baseline.Coffee`;
+   `milkDrinksToday = Δ(CoffeeAndMilk) + Δ(Milk)`. All results clamped at ≥ 0.
+5. Walk the sequence `[baseline?] + daySnapshots` pairwise; the largest
+   positive `ΔTotalBeverages` determines `PeakHour`, reported in the caller's
+   local time.
+
+`GetHeatmapDataAsync` in detail:
+
+1. Load all snapshots newer than `UtcNow − 7·weeks` days.
+2. Load the set of `mass-import` dates.
+3. Walk pairwise; for each positive delta, shift the *later* timestamp into
+   client-local time, skip it when its local date is a mass-import day, and
+   accumulate into a `(dayOfWeek, hour)` bucket.
+4. `DayOfWeek` is emitted ISO-8601 style — Monday = 1 … Sunday = 7.
+
+> The heatmap window is a rolling `weeks × 7` days measured from *now* in UTC,
+> not aligned to local week boundaries.
+
+### 5.2.3 White box: other API components
+
+**`IngestController`** — Rejects payloads whose `data.status` is null or
+empty (400). Delegates to `SnapshotService`. `201 Created` with a `Location`
+of `/api/stats/{id}` when a row was written, `200 OK` when the payload carried
+no counter increase. Unexpected exceptions are logged and answered with a
+generic 500 body.
+
+**`StatsController`** — Read-only endpoints plus `/api/health`. Validates
+`page ≥ 1` and `pageSize ≥ 1`, then caps `pageSize` at 100. `GetDaily`
+prepends the previous day's last snapshot to the returned snapshot list so the
+frontend can compute the first hourly delta. `GetRange` performs the daily
+aggregation *in the controller*, grouping by client-local date and rolling the
+baseline forward across days. `GetHeatmap` caps `weeks` at 52.
+
+**`MarkedDaysController`** — Thin. All validation lives in `MarkedDayService`,
+which returns a `MarkedDayError` enum; the controller maps that enum to status
+codes (400 / 404 / 409). `IsValidKind` is exposed on the service purely so the
+`GET` filter parameter can be validated with the same vocabulary.
+
+**`MarkedDayService`** — Owns the domain rules: date must parse as
+`yyyy-MM-dd`; `kind ∈ {mass-import, event}` (defaults to `mass-import`);
+`event` requires an `eventType` from a fixed set; `mass-import` requires a
+non-empty reason; one annotation per date (conflict otherwise).
+
+**`PowerController`** — Validates the state literal, delegates, maps
+exceptions to a generic 500. No authentication, no server-side time window.
+
+**`CoffeeStatusController`** — `IMemoryCache` in front of
+`HomeConnectService.GetStatusAsync` with a 7-second TTL, sized to protect the
+BSH quota against a user clicking refresh.
+
+**`HomeConnectService`** — Typed `HttpClient`. Reads `N8n:PowerWebhookUrl` at
+construction and throws if it is missing (fail fast at startup rather than at
+first use). Attaches HTTP Basic credentials when configured. `SetPowerStateAsync`
+propagates failures via `EnsureSuccessStatusCode`; `GetStatusAsync` swallows
+every failure and returns an `Unreachable(...)` DTO instead.
+
+**`ApiKeyMiddleware`** — Path-prefix allowlist (`/api/ingest`). With no
+configured key it logs a warning and lets the request through — deliberate
+development affordance, and a production risk if the key is ever unset.
+Comparison uses `CryptographicOperations.FixedTimeEquals`.
+
+**`AppDbContext`** — Model configuration, four indexes (timestamp, machine id,
+a composite idempotency index, plus the primary keys), `DateOnly ↔ string`
+conversion for `MarkedDay.Date`, and the global UTC `DateTime` converter.
+
+**`MigrationBaseliner`** — See [04.6](04-solution.md#46-migration-strategy).
+
+### 5.2.4 Persistence model
+
+```mermaid
+erDiagram
+    MachineSnapshot {
+        int Id PK
+        DateTime Timestamp "UTC, indexed"
+        string MachineId "max 50, default EQ900-DEFAULT, indexed"
+        int BeverageCounterCoffee
+        int BeverageCounterCoffeeAndMilk
+        int BeverageCounterMilk
+        int BeverageCounterHotWaterCups
+        int BeverageCounterHotWater "ml"
+        string OperationState "max 100"
+        bool RemoteControlAllowed
+        bool LocalControlActive
+        bool InteriorIlluminationActive
+        DateTime CreatedAt "UTC"
+    }
+    MarkedDay {
+        string Date PK "yyyy-MM-dd"
+        string Kind "max 20: mass-import | event"
+        string EventType "max 20, nullable"
+        string Reason "max 500"
+        DateTime CreatedAt "UTC"
+    }
+```
+
+The two tables have **no foreign key**. `MarkedDay` is joined to snapshots by
+local date at query time, computed from the caller's `tz` offset. That is
+deliberate: the same snapshot belongs to different local dates for different
+callers, so a stored relation would be wrong for all but one of them.
+
+`TotalBeverages` is a computed property, explicitly `Ignore`d by EF Core and
+recomputed on read.
+
+## 5.3 Level 2 — coffee-dashboard
 
 ```
 coffee-dashboard/src/
+├── main.tsx                 # Sentry init, React root
+├── App.tsx                  # QueryClient (retry 1, no refetch-on-focus) + router
 ├── api/
-│   ├── client.ts          # Generic fetch wrapper with error handling
-│   ├── coffee.ts          # Power control + status API calls
-│   ├── stats.ts           # Statistics API calls (daily, range, heatmap, etc.)
-│   └── types.ts           # TypeScript types mirroring backend DTOs
+│   ├── client.ts            # fetchJson<T>, ApiError, VITE_API_BASE_URL
+│   ├── stats.ts             # statistics + marked-days calls, tz injection
+│   ├── coffee.ts            # status + power calls
+│   └── types.ts             # TypeScript mirror of the backend DTOs
+├── hooks/                   # one TanStack Query hook per endpoint
+│   ├── useDailyStats · useStatsRange · useHeatmap · useSnapshots
+│   ├── useLatestSnapshot · useMarkedDays (+ mutations) · useCoffeeStatus
+│   ├── useTimePeriod        # period ⇄ from/to range
+│   └── useAnomalyDetection  # memoised z-score pass
+├── lib/
+│   ├── dateUtils.ts         # period ranges, display formatting (date-fns)
+│   ├── anomalyUtils.ts      # detectAnomalies, z-score threshold 1.5
+│   ├── markedDayUtils.ts    # marked-day lookup maps
+│   ├── coffeeTimeLock.ts    # 07:00–18:00 Europe/Berlin UI lock
+│   ├── formatters.ts · eventTypeMeta.ts
+│   └── sentry.ts
 ├── components/
-│   ├── anomaly/           # AnomalyBadge
-│   ├── cards/             # KpiCard, KpiCardGrid
-│   ├── charts/            # DailyBarChart, TrendLineChart, ConsumptionPieChart,
-│   │                      # HourlyPeaksChart, HeatmapGrid, WeekdayComparisonChart
-│   ├── controls/          # TimePeriodSelector
-│   ├── dashboard/         # MarkDayEventModal
-│   ├── layout/            # AppShell, NavBar, CoffeePowerButton
-│   ├── log/               # MarkAsBackfillModal
-│   └── shared/            # ErrorMessage, LoadingSpinner
-├── hooks/                 # TanStack React Query hooks for each API endpoint
-├── lib/                   # Utilities: date, formatters, anomaly detection, sentry
+│   ├── layout/    AppShell · NavBar · CoffeePowerButton
+│   ├── cards/     KpiCard · KpiCardGrid
+│   ├── charts/    DailyBarChart · TrendLineChart · ConsumptionPieChart
+│   │              HourlyPeaksChart · HeatmapGrid · WeekdayComparisonChart
+│   ├── controls/  TimePeriodSelector
+│   ├── anomaly/   AnomalyBadge
+│   ├── dashboard/ MarkDayEventModal
+│   ├── log/       MarkAsBackfillModal
+│   └── shared/    LoadingSpinner · ErrorMessage
 └── pages/
-    ├── DashboardPage.tsx  # Main dashboard with all charts
-    ├── HeatmapPage.tsx    # Full-page heatmap with week selector
-    └── LogPage.tsx        # Paginated snapshot table with annotation controls
+    ├── DashboardPage.tsx    # KPIs, hourly peaks, bar/trend/pie, weekday comparison
+    ├── HeatmapPage.tsx      # full-page heatmap, 4/8/12/26/52-week selector
+    └── LogPage.tsx          # paginated snapshot table with per-row deltas
 ```
+
+### 5.3.1 Frontend data flow
+
+```mermaid
+graph LR
+    P["Page"] --> H["Hook<br/>(TanStack Query)"]
+    H --> A["api/*.ts"]
+    A --> F["fetchJson<br/>client.ts"]
+    F -->|HTTP| API["CoffeeApi"]
+    P --> L["lib/*<br/>(pure functions)"]
+    P --> C["Components<br/>(presentational)"]
+```
+
+Pages own composition and local UI state (selected period, open modal, current
+page). Hooks own server state. `lib/` holds pure, framework-free functions —
+which also makes them the natural first candidates for unit tests the project
+does not yet have.
+
+> Note: `addMarkedDay`, `removeMarkedDay`, and `setCoffeePower` call `fetch`
+> directly with hardcoded relative paths instead of going through
+> `fetchJson`/`BASE_URL`. Recorded in [11](11-risks.md).
+
+## 5.4 Level 2 — CoffeeTest
+
+| Directory | Scope |
+|-----------|-------|
+| `Controllers/` | Every action and every branch of all five controllers |
+| `Services/` | `SnapshotService` split by concern (idempotency, queries, daily summary, heatmap) and `HomeConnectService` against a stubbed handler |
+| `Domain/` | `MachineSnapshot.TotalBeverages` |
+| `Infrastructure/` | `MigrationBaseliner` against real temporary SQLite files |
+| `Integration/` | `WebApplicationFactory` — real pipeline, real SQLite, API-key middleware |
+| `Helpers/` | `SnapshotBuilder`, `StubHttpMessageHandler`, `TestDbContextFactory` |
