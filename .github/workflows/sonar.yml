@@ -32,6 +32,16 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           dotnet tool install --global dotnet-sonarscanner
-          dotnet sonarscanner begin /k:"coffee" /d:sonar.host.url="$SONAR_HOST_URL" /d:sonar.token="$SONAR_TOKEN"
+          dotnet sonarscanner begin /k:"coffee" \
+            /d:sonar.host.url="$SONAR_HOST_URL" \
+            /d:sonar.token="$SONAR_TOKEN" \
+            /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml"
           dotnet build Coffee.sln
+          # Tests muessen zwischen begin und end laufen; ein Testfehler darf die
+          # Analyse nicht verschlucken, deshalb Exit-Code merken und am Ende setzen.
+          test_exit=0
+          dotnet test CoffeeTest/CoffeeTest.csproj --no-build \
+            --collect:"XPlat Code Coverage;Format=opencover" \
+            --results-directory TestResults || test_exit=$?
           dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+          exit $test_exit
