@@ -55,7 +55,8 @@ generic CVSS-style score.
 
 | Risk | Probability | Impact | Exposure | Mitigation / status |
 |------|-------------|--------|----------|---------------------|
-| **n8n stops and nobody notices** | Medium | High | The API looks perfectly healthy; the dashboard just shows a flat line that could be real. | `/api/health` exposes `lastSnapshot`, but nothing alerts on it. An alert on snapshot staleness is the highest-value missing safeguard. |
+| **n8n stops and nobody notices** | Medium | High | The flat line in the dashboard is no longer the only signal. | Covered by `IngestWatchdog`: an `Error` log — and therefore a GlitchTip event — once the newest snapshot is older than `Watchdog:StaleAfterMinutes` (60 by default), suppressed during the nightly window without a scheduled ingest. |
+| **The API or the NAS dies and nobody notices** | Low | High | No alarm at all: the watchdog runs *inside* the API, so it is silent exactly when the process is not running. | Uncovered by design — closing it needs a probe outside the API (a heartbeat the ingest pings, or a monitor inside the LAN polling `/api/health`). |
 | **Drive-by actuation of the machine** | Very low | Medium | CORS is restricted to configured origins and the write endpoints require `X-API-Key`, so neither a hostile page nor a direct LAN client can actuate the machine. | Closed by TD-01. A caller that reaches the dashboard proxy is still served the key — that residual needs user authentication. |
 | **Counter reset corrupts statistics** | Low | Medium | Silent: numbers stay plausible while being wrong. | Unhandled (TD-07). |
 | **Frontend regression reaches production** | Low | Medium | A dependency bump now passes lint, type-check, unit tests and a production build before it can reach `main`. | Covered by the `dashboard` job in `ci.yml`. |

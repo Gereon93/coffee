@@ -6,7 +6,7 @@
 graph TB
     subgraph repo["Repository: coffee"]
         API["<b>CoffeeApi</b><br/>ASP.NET Core 10<br/>~1 200 LOC"]
-        TEST["<b>CoffeeTest</b><br/>xUnit, 87 tests<br/>~1 700 LOC"]
+        TEST["<b>CoffeeTest</b><br/>xUnit, 127 tests<br/>~1 700 LOC"]
         DASH["<b>coffee-dashboard</b><br/>React 19 + Vite<br/>~2 300 LOC"]
         CI["<b>.github/workflows</b><br/>ci · docker-publish<br/>sonar"]
         BUILD["<b>build.sh</b><br/>local image build/push"]
@@ -43,7 +43,8 @@ CoffeeApi/
 ├── Services/
 │   ├── ISnapshotService.cs / SnapshotService.cs      # ingest + all read aggregation
 │   ├── IMarkedDayService.cs / MarkedDayService.cs    # annotation rules + persistence
-│   └── IHomeConnectService.cs / HomeConnectService.cs# n8n webhook client
+│   ├── IHomeConnectService.cs / HomeConnectService.cs# n8n webhook client
+│   └── IngestWatchdog.cs                             # alarms when the ingest stops
 ├── Domain/
 │   ├── MachineSnapshot.cs           # counters + status at a point in time
 │   └── MarkedDay.cs                 # per-date annotation
@@ -154,6 +155,16 @@ per request, that throw happens when a `/coffee/*` action is first activated,
 power request fails with 500. Attaches HTTP Basic credentials when configured. `SetPowerStateAsync`
 propagates failures via `EnsureSuccessStatusCode`; `GetStatusAsync` swallows
 every failure and returns an `Unreachable(...)` DTO instead.
+
+**`IngestWatchdog`** — `BackgroundService`. Every `Watchdog:CheckIntervalMinutes`
+it reads the newest snapshot and compares its age against
+`Watchdog:StaleAfterMinutes`. The staleness rule itself is a pure function
+(`IngestWatchdogEvaluator`), and the one-alarm-per-outage edge detection is a
+separate state machine (`IngestWatchdogAlertState`) — both testable without a
+clock or a database. The alarm channel is an `Error`-level log entry, which the
+Sentry integration turns into a GlitchTip event; there is no second alerting
+path to configure. A failing snapshot read logs a warning instead and does not
+alarm: a broken database is not an ingest outage.
 
 **`ApiKeyMiddleware`** — Path-prefix allowlist, method-aware: `/api/ingest` (all methods), `POST /coffee/power`, `POST` and `DELETE /api/stats/marked-days`. Reads on those paths are deliberately left open. With no
 configured key it logs a warning and lets the request through — deliberate

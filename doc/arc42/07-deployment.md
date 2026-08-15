@@ -64,6 +64,10 @@ underscore maps to the configuration separator: `ConnectionStrings__Default`.
 | `ForwardedHeaders__KnownNetworks__0` | CIDR (or plain IP) of the reverse proxy, e.g. `172.16.0.0/12` for the Docker bridge. Enables `X-Forwarded-For`, so a rejected request logs the caller's address instead of the proxy's | The forwarded-headers middleware is not registered; logs show the proxy address |
 | `N8n__PowerWebhookUrl` | Power/status webhook | `HomeConnectService` throws on construction → 500 on the first `/coffee/*` request |
 | `N8n__BasicAuthUser` / `N8n__BasicAuthPassword` | Webhook credentials | No `Authorization` header is sent |
+| `Watchdog__Enabled` | Ingest watchdog on/off | `true` |
+| `Watchdog__StaleAfterMinutes` | Age of the newest snapshot that still counts as healthy | `60` — four missed 15-minute runs |
+| `Watchdog__CheckIntervalMinutes` | How often the watchdog looks | `5` |
+| `Watchdog__QuietFromUtcHour` / `Watchdog__QuietToUtcHour` | Daily window without a scheduled ingest, in **UTC** | `1` / `6` — Berlin 03:00–06:59 plus a DST margin |
 | `SENTRY_DSN` | Error tracking endpoint | Sentry is not initialised at all |
 | `SENTRY_ENVIRONMENT` | Environment tag | Falls back to `ASPNETCORE_ENVIRONMENT` |
 | `SENTRY_RELEASE` | Release tag | `"dev"` |
@@ -128,7 +132,7 @@ host's clock rendered in Berlin time.
 
 ```bash
 dotnet build Coffee.sln -c Release   # build everything
-dotnet test CoffeeTest/              # 87 tests
+dotnet test CoffeeTest/              # 127 tests
 cd CoffeeApi && dotnet run           # API + Scalar UI at /scalar/v1
 cd coffee-dashboard && npm run dev    # dashboard on :5173
 ```
@@ -190,6 +194,7 @@ built image points at a commit. A working tree with uncommitted changes yields
 | **Backup** | Stop the API container (SQLite is single-writer), copy `coffee.db` from the volume, restart. |
 | **Restore** | Replace the file and restart; `MigrationBaseliner` handles a pre-migration file. |
 | **Health check** | `curl http://<NAS-IP>:8089/api/health` — `lastSnapshot` far in the past means the n8n workflow, not the API, is broken. |
+| **Ingest alarm** | `IngestWatchdog` raises a GlitchTip event (`n8n ingest stalled: …`) once per outage and logs an `Information` line on recovery. Configured under `Watchdog` — see the table in [7.2](#configuration). |
 | **Log inspection** | `docker logs coffee-api` — structured logs including skipped-snapshot debug lines and API-key warnings. |
 | **Error triage** | GlitchTip, tagged `service=coffee-api` / `service=coffee-dashboard`. |
 | **API exploration** | `SPEC.md`, or `http://localhost:5000/scalar/v1` against a locally running API. |
