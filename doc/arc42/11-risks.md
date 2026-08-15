@@ -13,7 +13,7 @@ generic CVSS-style score.
 
 | ID | Item | Severity | Detail |
 |----|------|----------|--------|
-| TD-01 | **Write endpoints unauthenticated** | Medium | `ApiKeyMiddleware.ProtectedPaths` still covers only `/api/ingest`; `POST /coffee/power` and `POST` / `DELETE /api/stats/marked-days` remain open to anyone on the LAN. The cross-origin half is closed: CORS now allows only the origins in `Cors:AllowedOrigins` (default: the dev and dashboard origins), so a hostile page can no longer drive these endpoints from a LAN browser. The 07:00–18:00 lock in `coffeeTimeLock.ts` is client-side and protects nothing. |
+| TD-01 | **Write endpoints unauthenticated** | ~~Medium~~ **Resolved** | `ApiKeyMiddleware` now protects `POST /coffee/power` and `POST` / `DELETE /api/stats/marked-days` alongside `/api/ingest`; the route table is method-aware, so the reads on those paths stay open. The dashboard's nginx injects the key from the `API_KEY` container variable, keeping it out of the browser bundle. Residual: anything that reaches the dashboard port is served the key by that proxy — the same reach as pressing the button in the UI. Closing that needs user authentication, not a shared secret. See [8.4](08-concepts.md#84-security). |
 | TD-02 | **Missing `ApiKey` silently disables ingest authentication** | Medium | `ApiKeyMiddleware` logs a warning and forwards the request when no key is configured. A configuration mistake in production removes authentication instead of failing loudly. Failing closed in `Production` and open only in `Development` would match the intent. |
 | TD-03 | **Known-vulnerable transitive dependency** | Medium | `dotnet restore` emits `NU1903: Package 'SQLitePCLRaw.lib.e_sqlite3' 2.1.10 has a known high severity vulnerability` (GHSA-2m69-gcr7-jv3q), pulled in by `Microsoft.EntityFrameworkCore.Sqlite` 9.0.0. It is a warning; nothing fails. `<TreatWarningsAsErrors>` for `NU1903`, or `NuGetAudit` set to error, would gate it. |
 | TD-04 | **No forwarded-headers handling** | Low | The API sits behind nginx but does not use `UseForwardedHeaders`. The remote address logged on a failed API-key attempt is the proxy's, making that log line useless for its purpose. |
@@ -56,7 +56,7 @@ generic CVSS-style score.
 | Risk | Probability | Impact | Exposure | Mitigation / status |
 |------|-------------|--------|----------|---------------------|
 | **n8n stops and nobody notices** | Medium | High | The API looks perfectly healthy; the dashboard just shows a flat line that could be real. | `/api/health` exposes `lastSnapshot`, but nothing alerts on it. An alert on snapshot staleness is the highest-value missing safeguard. |
-| **Drive-by actuation of the machine** | Very low | Medium | CORS is restricted to configured origins, so a hostile page can no longer drive the write endpoints; a direct LAN client still can. | Put the write endpoints behind the API key (TD-01). |
+| **Drive-by actuation of the machine** | Very low | Medium | CORS is restricted to configured origins and the write endpoints require `X-API-Key`, so neither a hostile page nor a direct LAN client can actuate the machine. | Closed by TD-01. A caller that reaches the dashboard proxy is still served the key — that residual needs user authentication. |
 | **Counter reset corrupts statistics** | Low | Medium | Silent: numbers stay plausible while being wrong. | Unhandled (TD-07). |
 | **Frontend regression reaches production** | Low | Medium | A dependency bump now passes lint, type-check, unit tests and a production build before it can reach `main`. | Covered by the `dashboard` job in `ci.yml`. |
 | **SQLite file corruption or NAS failure** | Low | High | Total data loss; the history cannot be reconstructed, since the machine only knows lifetime totals. | Backup is a file copy — but there is no scheduled backup documented or automated. |
@@ -69,9 +69,8 @@ generic CVSS-style score.
 
 Ranked by risk removed per unit of effort, not by severity alone.
 
-1. **TD-01** — API key on the write endpoints. Small diff, and it closes the remaining half of the only risk in this list with a physical effect.
-2. **TD-03 / TD-23** — bump EF Core and OpenAPI packages to the .NET 10 line; clears the vulnerability warning as a side effect.
-3. **TD-09 / TD-10 / TD-27** — route frontend writes through `fetchJson`, extend the dev proxy to `/coffee`, and make the health probe survive a broken database. All three are small and each removes a case where the system misreports its own state.
-4. **TD-12 / TD-14** — move the range aggregation into `SnapshotService` and delete the duplicated day-bounds method. One behaviour, one home.
-5. **TD-22** — an error boundary around the routes, so a render-time exception in a chart cannot blank the page.
-6. **TD-02, TD-07, TD-13** — deeper changes with real design questions attached; worth their own discussion rather than a drive-by fix.
+1. **TD-03 / TD-23** — bump EF Core and OpenAPI packages to the .NET 10 line; clears the vulnerability warning as a side effect.
+2. **TD-09 / TD-10 / TD-27** — route frontend writes through `fetchJson`, extend the dev proxy to `/coffee`, and make the health probe survive a broken database. All three are small and each removes a case where the system misreports its own state.
+3. **TD-12 / TD-14** — move the range aggregation into `SnapshotService` and delete the duplicated day-bounds method. One behaviour, one home.
+4. **TD-22** — an error boundary around the routes, so a render-time exception in a chart cannot blank the page.
+5. **TD-02, TD-07, TD-13** — deeper changes with real design questions attached; worth their own discussion rather than a drive-by fix.

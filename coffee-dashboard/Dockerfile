@@ -20,6 +20,16 @@ RUN npm run build
 # Serve with nginx
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# The entrypoint renders /etc/nginx/templates/*.template with envsubst at start.
+# The filter limits substitution to API_KEY so nginx's own $host / $remote_addr
+# survive untouched.
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+ENV NGINX_ENVSUBST_FILTER="^API_KEY$"
+
+# Shared secret the API expects on its write endpoints. Empty => the API
+# answers 401 on writes; reads are unaffected.
+ENV API_KEY=""
+
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

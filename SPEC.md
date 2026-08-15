@@ -310,6 +310,8 @@ Statistik und sind nur von der Anomalie-Erkennung ausgenommen.
 
 **Zweck:** Tag markieren
 
+**Auth:** `X-API-Key` erforderlich.
+
 #### Request
 
 ```json
@@ -337,6 +339,8 @@ Statistik und sind nur von der Anomalie-Erkennung ausgenommen.
 ### 8. DELETE /api/stats/marked-days/{date}
 
 **Zweck:** Markierung aufheben
+
+**Auth:** `X-API-Key` erforderlich.
 
 | Status | Bedingung |
 |--------|-----------|
@@ -373,6 +377,8 @@ Fehler des Dashboards.
 ### 10. POST /coffee/power
 
 **Zweck:** Maschine ein-/ausschalten (Relay ueber n8n)
+
+**Auth:** `X-API-Key` erforderlich.
 
 #### Request
 

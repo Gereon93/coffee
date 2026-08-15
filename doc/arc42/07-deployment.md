@@ -58,7 +58,7 @@ underscore maps to the configuration separator: `ConnectionStrings__Default`.
 | Key / variable | Purpose | Behaviour when unset |
 |----------------|---------|----------------------|
 | `ConnectionStrings__Default` | SQLite path | Falls back to `Data Source=coffee.db` in the working directory. The Dockerfile sets `/app/data/coffee.db`. |
-| `ApiKey` | Shared secret for `POST /api/ingest` | **Ingest becomes unauthenticated**; a warning is logged per request |
+| `ApiKey` | Shared secret for the protected endpoints: `POST /api/ingest`, `POST /coffee/power`, `POST` and `DELETE /api/stats/marked-days` | **Those endpoints become unauthenticated**; a warning is logged per request |
 | `N8n__PowerWebhookUrl` | Power/status webhook | `HomeConnectService` throws on construction → 500 on the first `/coffee/*` request |
 | `N8n__BasicAuthUser` / `N8n__BasicAuthPassword` | Webhook credentials | No `Authorization` header is sent |
 | `SENTRY_DSN` | Error tracking endpoint | Sentry is not initialised at all |
@@ -80,11 +80,28 @@ underscore maps to the configuration separator: `ConnectionStrings__Default`.
 | Listen | `:80`, published on host `:8090` |
 | SPA routing | `try_files $uri $uri/ /index.html` |
 | Reverse proxy | `/api/`, `/coffee/`, `/scalar/`, `/openapi/` → `http://coffee-api:8080` |
+| Config rendering | `nginx.conf.template` → `/etc/nginx/templates/default.conf.template`, rendered by the entrypoint with `envsubst` (`NGINX_ENVSUBST_FILTER=^API_KEY$`) |
 | Static caching | `/assets/` → `expires 1y`, `Cache-Control: public, immutable` |
 
 Because the dashboard proxies the API under the same origin, the browser never
 performs a cross-origin request in production and `VITE_API_BASE_URL` stays
 empty.
+
+### Runtime variable
+
+| Variable | Effect |
+|----------|--------|
+| `API_KEY` | Injected as the `X-API-Key` request header on the `/api/` and `/coffee/` proxy locations. Must equal the API's `ApiKey`. Unset or empty means the API answers `401` on every write; reads are unaffected. |
+
+This is a **runtime** variable, not a build arg: it is read by nginx inside the
+running container and never reaches the browser bundle. It is the reason the
+write endpoints can require a key while the dashboard keeps working without
+shipping that key to the client.
+
+> **Any reverse proxy that fronts `coffee-api` must inject this header.** When
+> the dashboard container is retired in favour of a shared frontend, that
+> frontend's proxy takes over the injection — otherwise its write calls get
+> `401`. Reads, `/scalar/` and `/openapi/` need no key.
 
 ### Build-time variables
 
