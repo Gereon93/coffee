@@ -172,10 +172,14 @@ verwendet. Vollstaendiger Contract: [`SPEC.md`](SPEC.md).
 > sind offen — tragbar nur unter der LAN-only-Annahme.
 > Siehe [TD-01](doc/arc42/11-risks.md#security).
 >
-> CORS erlaubt nur die Origins aus `Cors:AllowedOrigins` (Environment:
-> `Cors__AllowedOrigins__0`). Ohne Konfiguration gelten `http://localhost:5173`
-> und `http://localhost:8090`, damit Dev-Server und Dashboard-Container ohne
-> Zusatzschritt funktionieren.
+> CORS erlaubt nur die Origins aus `Cors:AllowedOrigins` (Umgebungsvariable
+> `Cors__AllowedOrigins__0`). In `Development` gelten ohne Konfiguration
+> `http://localhost:5173` und `http://localhost:8090`; in `Production` ist die
+> Liste ohne Konfiguration leer und Cross-Origin-Zugriff damit komplett
+> gesperrt. Das Dashboard braucht das nicht — es ruft `/api` relativ ueber den
+> nginx-Proxy auf, also same-origin. Nur wer die API direkt von einer anderen
+> Origin anspricht, setzt `Cors__AllowedOrigins__0` (exakte Origin, ohne Pfad
+> und ohne Slash am Ende).
 
 ### Authentifizierung
 

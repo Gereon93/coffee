@@ -59,11 +59,10 @@ namespace CoffeeApi
             builder.Services.AddHttpClient<IHomeConnectService, HomeConnectService>();
             builder.Services.AddMemoryCache();
 
-            var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
-            if (allowedOrigins is null || allowedOrigins.Length == 0)
-            {
-                allowedOrigins = DefaultDevOrigins;
-            }
+            var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+            var allowedOrigins = configuredOrigins is { Length: > 0 }
+                ? configuredOrigins
+                : builder.Environment.IsDevelopment() ? DefaultDevOrigins : [];
 
             builder.Services.AddCors(options =>
             {

@@ -15,7 +15,7 @@ interface Props {
 const COLORS = ['#d97706', '#3b82f6'];
 
 function legendFormatter(value: string) {
-  return <span className="!text-sm !text-stone-600 dark:!text-stone-400">{value}</span>;
+  return <span className="text-sm! text-stone-600! dark:text-stone-400!">{value}</span>;
 }
 
 export function ConsumptionPieChart({ data }: Readonly<Props>) {
