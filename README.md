@@ -242,7 +242,7 @@ coffee/
 │   ├── Integration/        #   WebApplicationFactory, voller HTTP-Stack
 │   └── Services/           #   SnapshotService, HomeConnectService
 ├── doc/arc42/              # Architekturdokumentation nach arc42
-├── .github/workflows/      # ci, docker-publish, sonar, review
+├── .github/workflows/      # ci, docker-publish, sonar
 ├── build.sh                # Docker Build + Push Script (Podman/Docker)
 ├── Coffee.sln              # .NET Solution
 ├── SPEC.md                 # API-Contract
@@ -255,7 +255,6 @@ coffee/
 | Workflow | Trigger | Zweck |
 |----------|---------|-------|
 | `ci.yml` | Push auf `main`/`dev`, jeder PR | `dotnet restore` + `build -c Release` + `dotnet test` |
-| `review.yml` | Jeder PR | Automatisiertes LLM-Review, Gate failt ab Severity `high` |
 | `sonar.yml` | Push auf `main` | SonarQube-Scan (No-Op ohne `SONAR_*`-Secrets) |
 | `docker-publish.yml` | Push auf `main`, manuell | Baut beide Images und pusht nach GHCR |
 

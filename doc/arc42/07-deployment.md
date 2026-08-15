@@ -125,7 +125,6 @@ The Vite dev server proxies `/api` to `http://localhost:8089`, overridable via
 ```mermaid
 graph LR
     PR["Pull request"] --> CI1["ci.yml<br/>restore · build · test<br/>.NET 10"]
-    PR --> REV["review.yml<br/>automated LLM review<br/>gate: fails on critical/high"]
     MAIN["push to main"] --> CI1
     MAIN --> SON["sonar.yml<br/>SonarQube scan<br/>(skipped without secrets)"]
     MAIN --> PUB["docker-publish.yml<br/>build + push both images"]
@@ -136,7 +135,6 @@ graph LR
 | Workflow | Trigger | Does |
 |----------|---------|------|
 | `ci.yml` | push to `main`/`dev`, every PR | `dotnet restore` → `build -c Release` → `dotnet test` |
-| `review.yml` | every PR | Automated review; a `critical`/`high` finding fails the job. No-ops without `OPENCODE_API_KEY` |
 | `sonar.yml` | push to `main` | SonarQube scan. No-ops without `SONAR_HOST_URL` + `SONAR_TOKEN` |
 | `docker-publish.yml` | push to `main`, manual | Matrix build of both images, push to GHCR with GitHub Actions layer cache |
 

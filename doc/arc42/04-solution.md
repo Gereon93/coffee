@@ -126,7 +126,7 @@ fresh databases. See [ADR-007](09-design.md#adr-007-migration-baseliner).
 | Controller | Every branch of every controller action, including error paths |
 | Integration | `WebApplicationFactory` against a real temporary SQLite file — exercises the full HTTP pipeline, middleware, and migrations |
 | CI | `.github/workflows/ci.yml` — restore, build, test on every push and PR |
-| Static analysis | SonarQube scan on `main` (`sonar.yml`), automated LLM review on PRs with a critical/high severity gate (`review.yml`) |
+| Static analysis | SonarQube scan on `main` (`sonar.yml`). Automated LLM review on PRs is currently disabled |
 
 Current state: **81 tests, all passing.** The frontend has no automated tests —
 a gap recorded in [11](11-risks.md).
