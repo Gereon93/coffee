@@ -63,6 +63,11 @@ namespace CoffeeApi
             builder.Services.AddScoped<ISnapshotService, SnapshotService>();
             builder.Services.AddScoped<IMarkedDayService, MarkedDayService>();
 
+            // ===== Ingest Watchdog (alarms via Sentry/GlitchTip when n8n stops) =====
+            builder.Services.Configure<WatchdogOptions>(builder.Configuration.GetSection("Watchdog"));
+            builder.Services.AddSingleton(TimeProvider.System);
+            builder.Services.AddHostedService<IngestWatchdog>();
+
             // ===== n8n Webhook Service (HomeConnect) =====
             builder.Services.AddHttpClient<IHomeConnectService, HomeConnectService>();
             builder.Services.AddMemoryCache();

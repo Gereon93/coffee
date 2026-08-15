@@ -140,7 +140,7 @@ npm run dev
 
 ```bash
 dotnet test CoffeeTest/
-# 87 Tests: Idempotenz, Cross-Day Deltas, Controller, Heatmap, Power, HomeConnect, Integration
+# 130 Tests: Idempotenz, Cross-Day Deltas, Controller, Heatmap, Power, HomeConnect, Watchdog, Integration
 
 cd coffee-dashboard && npm run test
 # 102 Tests: lib/api/hooks, Charts, Modals, Power-Button, Seiten
@@ -299,7 +299,7 @@ Die API erkennt Duplikate automatisch - wenn sich die Zaehler nicht geaendert ha
 
 ## Tests
 
-87 Tests decken die Kernlogik ab — Services, Controller (jeder Branch), Domain und Infrastruktur:
+130 Tests decken die Kernlogik ab — Services, Controller (jeder Branch), Domain und Infrastruktur:
 
 | Testklasse | Tests | Bereich |
 |------------|-------|---------|
@@ -314,8 +314,12 @@ Die API erkennt Duplikate automatisch - wenn sich die Zaehler nicht geaendert ha
 | PowerControllerTests | 7 | On/Off, ungueltiger State (400, 4 Faelle), Service-Fehler (500) |
 | CoffeeStatusControllerTests | 3 | Payload, Caching (TTL), Unreachable-Passthrough |
 | MachineSnapshotTests | 3 | TotalBeverages, Default Values |
-| MigrationBaselinerTests | 3 | EF Migration History Baselining |
-| ApiIntegrationTests | 4 | Voller HTTP-Stack gegen echte SQLite: Health, Stats, API-Key 401/200 |
+| MigrationBaselinerTests | 4 | EF Migration History Baselining |
+| IngestWatchdogEvaluatorTests | 11 | Schwelle, Ruhefenster (auch ueber Mitternacht), fehlender Snapshot |
+| IngestWatchdogAlertStateTests | 7 | Ein Alarm pro Ausfall, Recovery, Ruhefenster loescht keinen Alarm |
+| IngestWatchdogTests | 10 | Error-Log als Alarmkanal, Recovery, DB-Fehler alarmiert nicht, Intervall-Clamp |
+| ApiIntegrationTests | 11 | Voller HTTP-Stack gegen echte SQLite: Health, Stats, API-Key auf allen schreibenden Endpunkten |
+| PipelineHardeningTests | 7 | Scalar/OpenAPI nur in Development, Rate-Limit auf /coffee/power, Forwarded-Header, Migrationsstand |
 
 ```bash
 dotnet test CoffeeTest/
@@ -339,6 +343,27 @@ Errors gehen an https://glitchtip.example.com (self-hosted GlitchTip, Sentry-API
 - Frontend: `coffee-dashboard/.env` enthaelt `VITE_SENTRY_DSN`, `VITE_SENTRY_ENVIRONMENT`, `VITE_SENTRY_RELEASE`, `VITE_SENTRY_TRACES_SAMPLE_RATE`. Build-Time-Variablen — also vor `npm run build` setzen.
 
 Leerer DSN = Sentry komplett deaktiviert, kein Netzwerk-Call. Damit kann lokal ohne Anbindung entwickelt werden, ohne dass Test-Errors die Live-Instanz fluten.
+
+### Ingest-Alarm
+
+Bleibt der n8n-Ingest aus, sieht die API weiterhin gesund aus — das Dashboard
+zeigt nur eine flache Linie. Der `IngestWatchdog` prueft deshalb im Hintergrund
+das Alter des neuesten Snapshots und loggt bei Ueberschreitung **einmal pro
+Ausfall** auf `Error`-Level; ueber die Sentry-Anbindung wird daraus ein
+GlitchTip-Event (`n8n ingest stalled: ...`). Kommt der Ingest zurueck, folgt eine
+`Information`-Zeile. Ein leerer DSN deaktiviert also auch diesen Alarm — das Log
+bleibt.
+
+| Einstellung (Sektion `Watchdog`) | Default | Bedeutung |
+|---|---|---|
+| `Enabled` | `true` | Watchdog komplett abschalten |
+| `StaleAfterMinutes` | `60` | Alter des neuesten Snapshots, das noch als gesund gilt (vier verpasste 15-Minuten-Laeufe) |
+| `CheckIntervalMinutes` | `5` | Pruefintervall |
+| `QuietFromUtcHour` / `QuietToUtcHour` | `1` / `6` | Fenster ohne geplanten Ingest, in **UTC**. Der n8n-Cron `*/15 7-2 * * *` pausiert 03:00–06:59 Berliner Zeit; das UTC-Fenster deckt sowohl CET als auch CEST ab, damit die Zeitumstellung keinen Fehlalarm ausloest. |
+
+Der Watchdog laeuft **in** der API und schweigt daher genau dann, wenn die API
+selbst steht. Ein Ausfall von Container oder NAS braucht eine Probe von aussen —
+siehe `doc/arc42/11-risks.md`.
 
 ## Schema-Migrationen
 
