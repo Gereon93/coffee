@@ -1,6 +1,6 @@
 # Coffee Dashboard
 
-React-Frontend fuer den Coffee Analytics Hub. Zeigt Verbrauchsdaten der Philips EQ900 als interaktive Charts und KPIs.
+React-Frontend fuer den Coffee Analytics Hub. Zeigt Verbrauchsdaten der Siemens EQ900 als interaktive Charts und KPIs.
 
 ## Entwicklung
 
@@ -9,6 +9,8 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build    # Production Build
 npm run lint     # ESLint
+npm run test     # Vitest
+npm run test:coverage  # Vitest + lcov-Report nach coverage/
 ```
 
 Der Vite Dev-Server proxied `/api/*` Requests an `http://localhost:8089` (konfiguriert in `vite.config.ts`, ueberschreibbar via `VITE_API_PROXY_TARGET`).

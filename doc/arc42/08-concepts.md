@@ -259,5 +259,3 @@ healthy.
 | Anomalies | Z-score over the selected range, threshold 1.5 σ, mass-import days excluded before the statistics are computed |
 | Interaction | Click a bar to annotate that day; annotate or un-annotate directly from the log table |
 | Safety | Power button disabled outside 07:00–18:00 Europe/Berlin |
-
-The visual design language is documented separately in `DESIGN.md`.

@@ -141,6 +141,9 @@ npm run dev
 ```bash
 dotnet test CoffeeTest/
 # 81 Tests: Idempotenz, Cross-Day Deltas, Controller, Heatmap, Power, HomeConnect, Integration
+
+cd coffee-dashboard && npm run test
+# 97 Tests: lib/api/hooks, Charts, Modals, Power-Button, Seiten
 ```
 
 ## API Endpoints
@@ -245,23 +248,20 @@ coffee/
 ├── .github/workflows/      # ci, docker-publish, sonar
 ├── build.sh                # Docker Build + Push Script (Podman/Docker)
 ├── Coffee.sln              # .NET Solution
-├── SPEC.md                 # API-Contract
-├── DESIGN.md               # Visuelle Designsprache des Dashboards
-└── PROJECT_STATE.md        # Projektstatus + Aenderungshistorie
+└── SPEC.md                 # API-Contract
 ```
 
 ## CI/CD
 
 | Workflow | Trigger | Zweck |
 |----------|---------|-------|
-| `ci.yml` | Push auf `main`/`dev`, jeder PR | `dotnet restore` + `build -c Release` + `dotnet test` |
-| `sonar.yml` | Push auf `main` | SonarQube-Scan (No-Op ohne `SONAR_*`-Secrets) |
+| `ci.yml` | Push auf `main`/`dev`, jeder PR | Job `test`: `dotnet restore` + `build -c Release` + `dotnet test`. Job `dashboard`: `npm ci` + `lint` + `test` + `build` |
+| `sonar.yml` | Push auf `main` | SonarQube-Scan inkl. Coverage (No-Op ohne `SONAR_*`-Secrets) |
 | `docker-publish.yml` | Push auf `main`, manuell | Baut beide Images und pusht nach GHCR |
 
-> **Luecke:** Kein Workflow baut, typ-prueft oder lintet das Frontend
-> (`npm ci`, `tsc -b`, `npm run lint`). Frontend-Aenderungen inklusive
-> automatischer Dependency-Bumps erreichen `main` ungeprueft.
-> Siehe [TD-20](doc/arc42/11-risks.md#quality-gates-and-tooling).
+Der Sonar-Job sammelt beide Coverage-Reports ein und meldet sie an SonarQube:
+OpenCover fuer `CoffeeApi` (`sonar.cs.opencover.reportsPaths`) und lcov fuer
+`coffee-dashboard` (`sonar.javascript.lcov.reportPaths`).
 
 ## n8n Workflow
 
