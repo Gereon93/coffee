@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { useAddMarkedDay, useRemoveMarkedDay } from '../../hooks/useMarkedDays';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import type { EventType, MarkedDay } from '../../api/types';
 import { EVENT_TYPE_META } from '../../lib/eventTypeMeta';
 
@@ -22,6 +23,8 @@ export function MarkDayEventModal({ date, displayDate, existing, open, onClose }
 
   const addMutation = useAddMarkedDay();
   const removeMutation = useRemoveMarkedDay();
+
+  useEscapeKey(onClose, open);
 
   if (!open) return null;
 

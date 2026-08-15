@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useAddMarkedDay } from '../../hooks/useMarkedDays';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface Props {
   date: string; // yyyy-MM-dd
@@ -13,6 +14,8 @@ export function MarkAsBackfillModal({ date, displayDate, open, onClose }: Readon
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const mutation = useAddMarkedDay();
+
+  useEscapeKey(onClose, open);
 
   if (!open) return null;
 

@@ -91,6 +91,28 @@ describe('MarkAsBackfillModal', () => {
 
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('closes on Escape', async () => {
+    const onClose = vi.fn();
+    renderWithQuery(
+      <MarkAsBackfillModal date="2026-08-15" displayDate="15.08.2026" open onClose={onClose} />,
+    );
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('ignores Escape while closed', async () => {
+    const onClose = vi.fn();
+    renderWithQuery(
+      <MarkAsBackfillModal date="2026-08-15" displayDate="15.08.2026" open={false} onClose={onClose} />,
+    );
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });
 
 describe('MarkDayEventModal', () => {
@@ -178,6 +200,17 @@ describe('MarkDayEventModal', () => {
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(statsApi.removeMarkedDay).toHaveBeenCalledWith('2026-08-15');
+  });
+
+  it('closes on Escape', async () => {
+    const onClose = vi.fn();
+    renderWithQuery(
+      <MarkDayEventModal date="2026-08-15" displayDate="Sa 15.08.2026" existing={null} open onClose={onClose} />,
+    );
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(onClose).toHaveBeenCalled();
   });
 
   it('surfaces a failed removal', async () => {

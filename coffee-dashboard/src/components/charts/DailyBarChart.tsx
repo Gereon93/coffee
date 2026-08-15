@@ -67,20 +67,22 @@ interface Props {
 export function DailyBarChart({
   data, anomalies, excludedSet, eventByDate, onBarClick,
 }: Readonly<Props>) {
-  const anomalyDates = new Set(
-    anomalies.filter((a) => a.isAnomaly).map((a) => a.date),
-  );
+  const chartData: ChartEntry[] = useMemo(() => {
+    const anomalyDates = new Set(
+      anomalies.filter((a) => a.isAnomaly).map((a) => a.date),
+    );
 
-  const chartData: ChartEntry[] = data.map((d) => {
-    const event = eventByDate.get(d.date);
-    return {
-      ...d,
-      label: formatDate(d.date),
-      isAnomaly: anomalyDates.has(d.date),
-      isExcluded: excludedSet.has(d.date),
-      event: event?.kind === 'event' ? event : null,
-    };
-  });
+    return data.map((d) => {
+      const event = eventByDate.get(d.date);
+      return {
+        ...d,
+        label: formatDate(d.date),
+        isAnomaly: anomalyDates.has(d.date),
+        isExcluded: excludedSet.has(d.date),
+        event: event?.kind === 'event' ? event : null,
+      };
+    });
+  }, [data, anomalies, excludedSet, eventByDate]);
 
   type Entry = ChartEntry;
 
