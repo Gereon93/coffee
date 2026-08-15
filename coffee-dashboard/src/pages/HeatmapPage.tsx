@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { HeatmapGrid } from '../components/charts/HeatmapGrid';
-import { LoadingSpinner } from '../components/shared/LoadingSpinner';
-import { ErrorMessage } from '../components/shared/ErrorMessage';
+import { QueryBoundary } from '../components/shared/QueryBoundary';
 import { useHeatmap } from '../hooks/useHeatmap';
 
 const weekOptions = [4, 8, 12, 26, 52] as const;
@@ -37,24 +36,22 @@ export function HeatmapPage() {
           Stunde (X) x Wochentag (Y) — letzte {weeks} Wochen. Farbintensitaet = Anzahl Getraenke.
         </p>
 
-        {isLoading ? (
-          <LoadingSpinner />
-        ) : isError ? (
-          <ErrorMessage />
-        ) : data ? (
-          <>
-            <HeatmapGrid data={data.heatmap} />
-            <div className="mt-4 flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400">
-              <span>Wenig</span>
-              <span className="inline-block h-4 w-4 rounded bg-[#f5f0e8]" />
-              <span className="inline-block h-4 w-4 rounded bg-[#e8c98f]" />
-              <span className="inline-block h-4 w-4 rounded bg-[#d4a55a]" />
-              <span className="inline-block h-4 w-4 rounded bg-[#8b5e1a]" />
-              <span className="inline-block h-4 w-4 rounded bg-[#4a320d]" />
-              <span>Viel</span>
-            </div>
-          </>
-        ) : null}
+        <QueryBoundary isLoading={isLoading} isError={isError}>
+          {data && (
+            <>
+              <HeatmapGrid data={data.heatmap} />
+              <div className="mt-4 flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400">
+                <span>Wenig</span>
+                <span className="inline-block h-4 w-4 rounded bg-[#f5f0e8]" />
+                <span className="inline-block h-4 w-4 rounded bg-[#e8c98f]" />
+                <span className="inline-block h-4 w-4 rounded bg-[#d4a55a]" />
+                <span className="inline-block h-4 w-4 rounded bg-[#8b5e1a]" />
+                <span className="inline-block h-4 w-4 rounded bg-[#4a320d]" />
+                <span>Viel</span>
+              </div>
+            </>
+          )}
+        </QueryBoundary>
       </div>
     </div>
   );

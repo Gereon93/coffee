@@ -140,7 +140,10 @@ npm run dev
 
 ```bash
 dotnet test CoffeeTest/
-# 81 Tests: Idempotenz, Cross-Day Deltas, Controller, Heatmap, Power, HomeConnect, Integration
+# 87 Tests: Idempotenz, Cross-Day Deltas, Controller, Heatmap, Power, HomeConnect, Integration
+
+cd coffee-dashboard && npm run test
+# 102 Tests: lib/api/hooks, Charts, Modals, Power-Button, Seiten
 ```
 
 ## API Endpoints
@@ -166,8 +169,17 @@ verwendet. Vollstaendiger Contract: [`SPEC.md`](SPEC.md).
 
 > **Hinweis zur Absicherung:** Nur `/api/ingest` ist per API-Key geschuetzt.
 > Die schreibenden Endpunkte `/coffee/power` und `/api/stats/marked-days`
-> sind offen und CORS steht auf `AllowAnyOrigin` — tragbar nur unter der
-> LAN-only-Annahme. Siehe [TD-01](doc/arc42/11-risks.md#security).
+> sind offen — tragbar nur unter der LAN-only-Annahme.
+> Siehe [TD-01](doc/arc42/11-risks.md#security).
+>
+> CORS erlaubt nur die Origins aus `Cors:AllowedOrigins` (Umgebungsvariable
+> `Cors__AllowedOrigins__0`). In `Development` gelten ohne Konfiguration
+> `http://localhost:5173` und `http://localhost:8090`; in `Production` ist die
+> Liste ohne Konfiguration leer und Cross-Origin-Zugriff damit komplett
+> gesperrt. Das Dashboard braucht das nicht — es ruft `/api` relativ ueber den
+> nginx-Proxy auf, also same-origin. Nur wer die API direkt von einer anderen
+> Origin anspricht, setzt `Cors__AllowedOrigins__0` (exakte Origin, ohne Pfad
+> und ohne Slash am Ende).
 
 ### Authentifizierung
 
@@ -234,7 +246,7 @@ coffee/
 │   │   └── pages/          #   Dashboard, Heatmap, Log
 │   ├── nginx.conf          #   SPA Routing + API Proxy
 │   └── Dockerfile
-├── CoffeeTest/             # 81 Unit-, Controller- und Integrationstests
+├── CoffeeTest/             # 87 Unit-, Controller- und Integrationstests
 │   ├── Controllers/        #   Alle fuenf Controller, jeder Branch
 │   ├── Domain/             #   MachineSnapshot
 │   ├── Helpers/            #   TestDbContextFactory, SnapshotBuilder, StubHttpMessageHandler
@@ -245,23 +257,20 @@ coffee/
 ├── .github/workflows/      # ci, docker-publish, sonar
 ├── build.sh                # Docker Build + Push Script (Podman/Docker)
 ├── Coffee.sln              # .NET Solution
-├── SPEC.md                 # API-Contract
-├── DESIGN.md               # Visuelle Designsprache des Dashboards
-└── PROJECT_STATE.md        # Projektstatus + Aenderungshistorie
+└── SPEC.md                 # API-Contract
 ```
 
 ## CI/CD
 
 | Workflow | Trigger | Zweck |
 |----------|---------|-------|
-| `ci.yml` | Push auf `main`/`dev`, jeder PR | `dotnet restore` + `build -c Release` + `dotnet test` |
-| `sonar.yml` | Push auf `main` | SonarQube-Scan (No-Op ohne `SONAR_*`-Secrets) |
+| `ci.yml` | Push auf `main`/`dev`, jeder PR | Job `test`: `dotnet restore` + `build -c Release` + `dotnet test`. Job `dashboard`: `npm ci` + `lint` + `test` + `build` |
+| `sonar.yml` | Push auf `main` | SonarQube-Scan inkl. Coverage (No-Op ohne `SONAR_*`-Secrets) |
 | `docker-publish.yml` | Push auf `main`, manuell | Baut beide Images und pusht nach GHCR |
 
-> **Luecke:** Kein Workflow baut, typ-prueft oder lintet das Frontend
-> (`npm ci`, `tsc -b`, `npm run lint`). Frontend-Aenderungen inklusive
-> automatischer Dependency-Bumps erreichen `main` ungeprueft.
-> Siehe [TD-20](doc/arc42/11-risks.md#quality-gates-and-tooling).
+Der Sonar-Job sammelt beide Coverage-Reports ein und meldet sie an SonarQube:
+OpenCover fuer `CoffeeApi` (`sonar.cs.opencover.reportsPaths`) und lcov fuer
+`coffee-dashboard` (`sonar.javascript.lcov.reportPaths`).
 
 ## n8n Workflow
 
@@ -274,7 +283,7 @@ Die API erkennt Duplikate automatisch - wenn sich die Zaehler nicht geaendert ha
 
 ## Tests
 
-81 Tests decken die Kernlogik ab — Services, Controller (jeder Branch), Domain und Infrastruktur:
+87 Tests decken die Kernlogik ab — Services, Controller (jeder Branch), Domain und Infrastruktur:
 
 | Testklasse | Tests | Bereich |
 |------------|-------|---------|
@@ -284,7 +293,7 @@ Die API erkennt Duplikate automatisch - wenn sich die Zaehler nicht geaendert ha
 | SnapshotServiceHeatmapTests | 5 | DayOfWeek Grouping, Sunday=7 (ISO-8601) |
 | HomeConnectServiceTests | 11 | Power-Webhook, Status-Parsing, Timeout/Netzwerkfehler, Basic-Auth |
 | IngestControllerTests | 4 | Null/Empty Validation, 201 Created, 200 Duplicate |
-| StatsControllerTests | 7 | Range Aggregation, Health, Heatmap Cap |
+| StatsControllerTests | 13 | Range Aggregation, Health, Heatmap Cap, Datumsformat |
 | MarkedDaysControllerTests | 15 | CRUD, Validierung, Event-Typen, Edge-Cases |
 | PowerControllerTests | 7 | On/Off, ungueltiger State (400, 4 Faelle), Service-Fehler (500) |
 | CoffeeStatusControllerTests | 3 | Payload, Caching (TTL), Unreachable-Passthrough |

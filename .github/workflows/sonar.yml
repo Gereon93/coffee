@@ -21,10 +21,17 @@ jobs:
         if: env.SONAR_ENABLED == 'true'
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         if: env.SONAR_ENABLED == 'true'
         with:
           dotnet-version: '10.0.x'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        if: env.SONAR_ENABLED == 'true'
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: coffee-dashboard/package-lock.json
       - name: SonarQube-Analyse (No-Op ohne Sonar-Secrets)
         if: env.SONAR_ENABLED == 'true'
         env:
@@ -32,6 +39,23 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           dotnet tool install --global dotnet-sonarscanner
-          dotnet sonarscanner begin /k:"coffee" /d:sonar.host.url="$SONAR_HOST_URL" /d:sonar.token="$SONAR_TOKEN"
+          npm --prefix coffee-dashboard ci
+          dotnet sonarscanner begin /k:"coffee" \
+            /d:sonar.host.url="$SONAR_HOST_URL" \
+            /d:sonar.token="$SONAR_TOKEN" \
+            /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml" \
+            /d:sonar.javascript.lcov.reportPaths="coffee-dashboard/coverage/lcov.info" \
+            /d:sonar.exclusions="CoffeeApi/Migrations/**" \
+            /d:sonar.coverage.exclusions="CoffeeApi/Program.cs,CoffeeApi/Migrations/**,coffee-dashboard/src/main.tsx,coffee-dashboard/src/lib/sentry.ts,coffee-dashboard/vite.config.ts,coffee-dashboard/eslint.config.js"
           dotnet build Coffee.sln
-          dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+          api_tests=0
+          dotnet test CoffeeTest/CoffeeTest.csproj --no-build \
+            --collect:"XPlat Code Coverage;Format=opencover" \
+            --results-directory TestResults || api_tests=$?
+          web_tests=0
+          npm --prefix coffee-dashboard run test:coverage || web_tests=$?
+          analysis=0
+          dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN" || analysis=$?
+          if [ "$analysis" -ne 0 ]; then exit "$analysis"; fi
+          if [ "$api_tests" -ne 0 ]; then exit "$api_tests"; fi
+          exit "$web_tests"

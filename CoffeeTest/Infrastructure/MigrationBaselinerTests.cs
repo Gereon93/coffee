@@ -20,6 +20,7 @@ public class MigrationBaselinerTests : IDisposable
     {
         SqliteConnection.ClearAllPools();
         if (File.Exists(_dbPath)) File.Delete(_dbPath);
+        GC.SuppressFinalize(this);
     }
 
     private AppDbContext CreateContext()

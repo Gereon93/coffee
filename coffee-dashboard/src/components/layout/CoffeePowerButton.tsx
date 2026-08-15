@@ -26,7 +26,7 @@ function deriveState(status: CoffeeStatus | undefined, isMutating: boolean): But
   if (!coffeeAllowed()) {
     return { label: 'Gesperrt', disabled: true, className: `${BASE} ${GREY}`, icon: Coffee, nextAction: null, title: 'Coffee-Hours: 07:00–18:00' };
   }
-  if (!status || !status.reachable) {
+  if (!status?.reachable) {
     return { label: 'Offline', disabled: true, className: `${BASE} ${GREY}`, icon: PowerOff, nextAction: null, title: status?.message ?? 'Maschine nicht erreichbar' };
   }
   if (status.powerState === 'on' && status.operationState === 'run') {
@@ -46,7 +46,7 @@ export function CoffeePowerButton() {
   // When status is unreachable but coffee-hours allow operation, the user knows
   // the actual state of the machine — give them manual An/Aus buttons.
   const isUnreachableInteractive =
-    !mutation.isPending && coffeeAllowed() && (!status || !status.reachable);
+    !mutation.isPending && coffeeAllowed() && !status?.reachable;
 
   if (isUnreachableInteractive) {
     return (

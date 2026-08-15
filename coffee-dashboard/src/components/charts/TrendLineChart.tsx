@@ -13,7 +13,7 @@ interface Props {
   data: DailyAggregate[];
 }
 
-export function TrendLineChart({ data }: Props) {
+export function TrendLineChart({ data }: Readonly<Props>) {
   const chartData = data.map((d) => ({
     label: formatDate(d.date),
     total: d.total,

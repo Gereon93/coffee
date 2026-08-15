@@ -28,7 +28,7 @@ function getTextColor(count: number, max: number): string {
   return ratio >= 0.5 ? '#fdf8f0' : '#44403c';
 }
 
-export function HeatmapGrid({ data }: Props) {
+export function HeatmapGrid({ data }: Readonly<Props>) {
   const lookup = new Map<string, number>();
   let max = 0;
   for (const dp of data) {

@@ -41,7 +41,7 @@ function buildWeekdayData(heatmap: HeatmapDataPoint[]): WeekdayBucket[] {
   return buckets;
 }
 
-export function WeekdayComparisonChart({ heatmap }: Props) {
+export function WeekdayComparisonChart({ heatmap }: Readonly<Props>) {
   const data = buildWeekdayData(heatmap);
   const hasData = data.some((d) => d.avg > 0);
 

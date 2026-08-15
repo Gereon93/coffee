@@ -37,7 +37,7 @@ graph LR
 
     M --> M1["Controller → Service → EF"]
     M --> M2["DTOs at the boundary"]
-    M --> M3["81 tests, all green"]
+    M --> M3["87 + 102 tests, all green"]
 
     U --> U1["Mobile-first, dark mode"]
     U --> U2["German labels"]
@@ -87,7 +87,7 @@ that pins the behaviour, or states that it is unverified.
 | Q-17 | `POST /api/ingest` with a wrong key | `401`; comparison is constant-time | `ApiIntegrationTests` |
 | Q-18 | An unexpected exception occurs in a controller | The response body contains no exception message, stack trace, or internal path | controller tests |
 | Q-19 | `ApiKey` is not configured | **Known deviation:** the request is forwarded with a warning; ingest is effectively unauthenticated | [11](11-risks.md) |
-| Q-20 | A third-party website open in a LAN browser posts to `/coffee/power` | **Known deviation:** `AllowAnyOrigin()` permits it; the machine switches on | [11](11-risks.md) |
+| Q-20 | A third-party website open in a LAN browser posts to `/coffee/power` | The request is rejected by CORS: only the origins in `Cors:AllowedOrigins` are allowed. A direct (non-browser) LAN client still succeeds — the endpoint itself is unauthenticated | [11](11-risks.md) |
 
 ### Performance
 
@@ -108,7 +108,7 @@ targets are comfortable, and the honest statement is that they are unmeasured.
 |---|----------|------------------|--------|
 | Q-25 | A new behaviour is added to a service | It ships with unit tests in the same change | Convention (`CLAUDE.md`), review-enforced |
 | Q-26 | A behaviour crosses a boundary (DB, HTTP) | It ships with an integration test as well | Convention (`AGENTS.md`) |
-| Q-27 | The full suite is run | 81 tests pass in under a second | Verified |
+| Q-27 | The full suite is run | 87 backend tests pass in under a second; the 102 dashboard tests in a few seconds | Verified |
 | Q-28 | A frontend change is pushed | **Gap:** no CI job builds, type-checks, or lints the frontend | [11](11-risks.md) |
 | Q-29 | A dependency with a known vulnerability enters the graph | **Gap:** `NU1903` is emitted as a warning; nothing fails the build | [11](11-risks.md) |
 

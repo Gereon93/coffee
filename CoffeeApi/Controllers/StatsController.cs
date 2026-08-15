@@ -1,8 +1,7 @@
+using System.Globalization;
 using CoffeeApi.DTOs;
-using CoffeeApi.Infrastructure;
 using CoffeeApi.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace CoffeeApi.Controllers;
 
@@ -13,15 +12,18 @@ namespace CoffeeApi.Controllers;
 [Route("api/[controller]")]
 public class StatsController : ControllerBase
 {
-    private readonly ISnapshotService _snapshotService;
-    private readonly AppDbContext _context;
-    private readonly ILogger<StatsController> _logger;
+    private const string DateFormat = "yyyy-MM-dd";
 
-    public StatsController(ISnapshotService snapshotService, AppDbContext context, ILogger<StatsController> logger)
+    private static readonly string[] PageDetails = ["page must be >= 1"];
+    private static readonly string[] PageSizeDetails = ["pageSize must be >= 1"];
+    private static readonly string[] DateFormatDetails = ["Use yyyy-MM-dd format"];
+    private static readonly string[] RangeFormatDetails = ["Use yyyy-MM-dd format for both from and to"];
+
+    private readonly ISnapshotService _snapshotService;
+
+    public StatsController(ISnapshotService snapshotService)
     {
         _snapshotService = snapshotService;
-        _context = context;
-        _logger = logger;
     }
 
     /// <summary>
@@ -33,11 +35,11 @@ public class StatsController : ControllerBase
     {
         if (page < 1)
         {
-            return BadRequest(new { error = "Invalid page", details = new[] { "page must be >= 1" } });
+            return BadRequest(new { error = "Invalid page", details = PageDetails });
         }
         if (pageSize < 1)
         {
-            return BadRequest(new { error = "Invalid pageSize", details = new[] { "pageSize must be >= 1" } });
+            return BadRequest(new { error = "Invalid pageSize", details = PageSizeDetails });
         }
 
         pageSize = Math.Min(pageSize, 100);
@@ -69,9 +71,9 @@ public class StatsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetDaily(string date, [FromQuery] int tz = 0)
     {
-        if (!DateOnly.TryParse(date, out var parsedDate))
+        if (!DateOnly.TryParseExact(date, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
         {
-            return BadRequest(new { error = "Invalid date format", details = new[] { "Use yyyy-MM-dd format" } });
+            return BadRequest(new { error = "Invalid date format", details = DateFormatDetails });
         }
 
         var snapshots = await _snapshotService.GetByDateAsync(parsedDate, tz);
@@ -112,9 +114,10 @@ public class StatsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetRange([FromQuery] string from, [FromQuery] string to, [FromQuery] int tz = 0)
     {
-        if (!DateOnly.TryParse(from, out var fromDate) || !DateOnly.TryParse(to, out var toDate))
+        if (!DateOnly.TryParseExact(from, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var fromDate)
+            || !DateOnly.TryParseExact(to, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var toDate))
         {
-            return BadRequest(new { error = "Invalid date format", details = new[] { "Use yyyy-MM-dd format for both from and to" } });
+            return BadRequest(new { error = "Invalid date format", details = RangeFormatDetails });
         }
 
         var snapshots = await _snapshotService.GetByDateRangeAsync(fromDate, toDate, tz);
@@ -135,8 +138,8 @@ public class StatsController : ControllerBase
         foreach (var g in groups)
         {
             var daySnapshots = g.OrderBy(s => s.Timestamp).ToList();
-            var baseline = lastPrevious ?? daySnapshots.First();
-            var last = daySnapshots.Last();
+            var baseline = lastPrevious ?? daySnapshots[0];
+            var last = daySnapshots[^1];
 
             dailyData.Add(new DailyAggregateDto
             {
@@ -196,7 +199,7 @@ public class StatsController : ControllerBase
         {
             Status = "healthy",
             Timestamp = DateTime.UtcNow,
-            Database = await _context.Database.CanConnectAsync() ? "connected" : "disconnected",
+            Database = await _snapshotService.IsDatabaseReachableAsync() ? "connected" : "disconnected",
             LastSnapshot = lastSnapshot?.Timestamp
         };
 

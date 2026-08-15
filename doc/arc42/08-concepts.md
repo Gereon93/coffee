@@ -167,7 +167,7 @@ ending up somewhere they were not expected.
 | Gap | Reality |
 |-----|---------|
 | **Write endpoints are unauthenticated** | Only `/api/ingest` is protected. `POST /coffee/power`, `POST` and `DELETE /api/stats/marked-days` are open to anyone who can reach the port. |
-| **CORS allows any origin** | With `AllowAnyOrigin()`, any website open in a LAN browser can `POST /coffee/power` cross-origin. The UI time lock does not apply — it is client-side. Turning on an espresso machine is a physical, not merely logical, effect. |
+| **Write endpoints are unauthenticated** | `POST /coffee/power` and the marked-day writes require no API key; any direct LAN client can switch the machine on. CORS is restricted to `Cors:AllowedOrigins` (fallback: the dev and dashboard origins), so the browser-driven variant is closed. The UI time lock does not apply — it is client-side. Turning on an espresso machine is a physical, not merely logical, effect. |
 | **Missing `ApiKey` disables ingest auth** | The middleware logs a warning and forwards the request. A configuration mistake in production silently removes authentication instead of failing loudly. |
 | **API docs are public on the LAN** | Scalar and `/openapi/v1.json` are proxied by nginx without auth. |
 | **No rate limiting** | No throttling on any endpoint. |
@@ -222,7 +222,7 @@ revisiting only if the dataset grew by orders of magnitude.
 | Integration | `WebApplicationFactory` + real SQLite | Full HTTP pipeline: routing, middleware, API-key enforcement, migrations |
 | Frontend | ESLint + `tsc -b` | Compile-time only |
 
-**Current state: 81 tests, all passing.**
+**Current state: 87 backend tests and 102 dashboard tests, all passing.**
 
 Test data is constructed via `SnapshotBuilder` so tests state only the values
 they care about.
@@ -259,5 +259,3 @@ healthy.
 | Anomalies | Z-score over the selected range, threshold 1.5 σ, mass-import days excluded before the statistics are computed |
 | Interaction | Click a bar to annotate that day; annotate or un-annotate directly from the log table |
 | Safety | Power button disabled outside 07:00–18:00 Europe/Berlin |
-
-The visual design language is documented separately in `DESIGN.md`.

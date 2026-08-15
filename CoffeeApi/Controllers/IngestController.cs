@@ -11,6 +11,8 @@ namespace CoffeeApi.Controllers;
 [Route("api/[controller]")]
 public class IngestController : ControllerBase
 {
+    private static readonly string[] PayloadDetails = ["data.status is required"];
+
     private readonly ISnapshotService _snapshotService;
     private readonly ILogger<IngestController> _logger;
 
@@ -35,7 +37,7 @@ public class IngestController : ControllerBase
         if (payload?.Data?.Status == null || payload.Data.Status.Count == 0)
         {
             _logger.LogWarning("Invalid ingest payload: data.status is required");
-            return BadRequest(new { error = "Invalid payload", details = new[] { "data.status is required" } });
+            return BadRequest(new { error = "Invalid payload", details = PayloadDetails });
         }
 
         try

@@ -22,10 +22,10 @@ public class ApiKeyMiddleware
 
     public async Task InvokeAsync(HttpContext context, IConfiguration configuration)
     {
-        var path = context.Request.Path.Value?.ToLower() ?? "";
+        var path = context.Request.Path.Value ?? "";
 
         // Check if this is a protected endpoint
-        if (!ProtectedPaths.Any(p => path.StartsWith(p.ToLower())))
+        if (!ProtectedPaths.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
         {
             await _next(context);
             return;
@@ -42,8 +42,7 @@ public class ApiKeyMiddleware
         }
 
         // Check for API key in header
-        if (!context.Request.Headers.TryGetValue(ApiKeyHeaderName, out var providedApiKeyValues)
-            || providedApiKeyValues.ToString() is not string providedApiKey)
+        if (!context.Request.Headers.TryGetValue(ApiKeyHeaderName, out var providedApiKeyValues))
         {
             _logger.LogWarning("API request without API key from {IP}", context.Connection.RemoteIpAddress);
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
@@ -57,7 +56,7 @@ public class ApiKeyMiddleware
 
         if (!CryptographicOperations.FixedTimeEquals(
             System.Text.Encoding.UTF8.GetBytes(configuredApiKey),
-            System.Text.Encoding.UTF8.GetBytes(providedApiKey)))
+            System.Text.Encoding.UTF8.GetBytes(providedApiKeyValues.ToString())))
         {
             _logger.LogWarning("Invalid API key attempt from {IP}", context.Connection.RemoteIpAddress);
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;

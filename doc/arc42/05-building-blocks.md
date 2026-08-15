@@ -6,7 +6,7 @@
 graph TB
     subgraph repo["Repository: coffee"]
         API["<b>CoffeeApi</b><br/>ASP.NET Core 10<br/>~1 200 LOC"]
-        TEST["<b>CoffeeTest</b><br/>xUnit, 81 tests<br/>~1 650 LOC"]
+        TEST["<b>CoffeeTest</b><br/>xUnit, 87 tests<br/>~1 700 LOC"]
         DASH["<b>coffee-dashboard</b><br/>React 19 + Vite<br/>~2 300 LOC"]
         CI["<b>.github/workflows</b><br/>ci · docker-publish<br/>sonar"]
         BUILD["<b>build.sh</b><br/>local image build/push"]

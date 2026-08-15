@@ -50,4 +50,9 @@ public interface ISnapshotService
     /// Get the last snapshot before a given timestamp
     /// </summary>
     Task<MachineSnapshot?> GetLastSnapshotBeforeAsync(DateTime timestamp);
+
+    /// <summary>
+    /// Probe whether the database is reachable
+    /// </summary>
+    Task<bool> IsDatabaseReachableAsync();
 }

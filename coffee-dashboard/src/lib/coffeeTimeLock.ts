@@ -6,7 +6,7 @@
  * accidental switches outside coffee hours.
  */
 export function coffeeAllowed(now: Date = new Date()): boolean {
-  const berlinHour = parseInt(
+  const berlinHour = Number.parseInt(
     new Intl.DateTimeFormat('en-GB', {
       hour: '2-digit',
       hour12: false,

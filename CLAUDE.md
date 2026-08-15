@@ -9,7 +9,7 @@ Siemens EQ900 espresso machine. Counter readings are pulled from the BSH
 Home Connect API by an n8n workflow every 15 minutes, POSTed to the ASP.NET
 Core API, stored in SQLite, and visualised in a React dashboard.
 
-See `ARCHITECTURE.md` for the system design and `SPEC.md` for the API contract.
+See [`doc/arc42/`](doc/arc42/) for the system design and `SPEC.md` for the API contract.
 
 ## Stack
 

@@ -674,3 +674,7 @@ CoffeeApi/.dockerignore
 .repowise/
 .vscode/
 .claude/settings.local.json
+
+# Test-Coverage-Artefakte
+coffee-dashboard/coverage/
+TestResults/

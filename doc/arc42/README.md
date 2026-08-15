@@ -51,12 +51,10 @@ Related, non-arc42 documents at the repository root:
 
 | Document | Purpose |
 |----------|---------|
-| `ARCHITECTURE.md` | Condensed C4-flavoured overview (German), predates this folder |
+| `README.md` | Setup, deployment, endpoint overview |
 | `SPEC.md` | HTTP API contract |
-| `DESIGN.md` | Visual/UI design language of the dashboard |
-| `VISION.md` | Product intent |
-| `PROJECT_STATE.md` | Running status log |
 | `CLAUDE.md` / `AGENTS.md` | Conventions for AI-assisted contributions |
 
-**Verified against:** 81 passing xUnit tests (`dotnet test CoffeeTest/`),
+**Verified against:** 87 passing xUnit tests (`dotnet test CoffeeTest/`)
+and 102 passing Vitest tests (`npm --prefix coffee-dashboard run test`),
 branch `Gereon93/cichlid`.

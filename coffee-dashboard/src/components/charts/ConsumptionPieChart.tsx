@@ -14,7 +14,11 @@ interface Props {
 
 const COLORS = ['#d97706', '#3b82f6'];
 
-export function ConsumptionPieChart({ data }: Props) {
+function legendFormatter(value: string) {
+  return <span className="text-sm! text-stone-600! dark:text-stone-400!">{value}</span>;
+}
+
+export function ConsumptionPieChart({ data }: Readonly<Props>) {
   const totalCoffee = data.reduce((s, d) => s + d.coffeeCount, 0);
   const totalMilk = data.reduce((s, d) => s + d.milkCount, 0);
 
@@ -50,8 +54,8 @@ export function ConsumptionPieChart({ data }: Props) {
             paddingAngle={4}
             dataKey="value"
           >
-            {pieData.map((_, i) => (
-              <Cell key={i} fill={COLORS[i]} />
+            {pieData.map((slice, i) => (
+              <Cell key={slice.name} fill={COLORS[i]} />
             ))}
           </Pie>
           <Tooltip
@@ -64,11 +68,7 @@ export function ConsumptionPieChart({ data }: Props) {
             }}
             itemStyle={{ color: '#e7e5e4' }}
           />
-          <Legend
-            formatter={(value) => (
-              <span className="!text-sm !text-stone-600 dark:!text-stone-400">{value}</span>
-            )}
-          />
+          <Legend formatter={legendFormatter} />
         </PieChart>
       </ResponsiveContainer>
     </div>

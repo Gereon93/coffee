@@ -125,8 +125,7 @@ fresh databases. See [ADR-007](09-design.md#adr-007-migration-baseliner).
 | Unit | xUnit over `Services/` and domain logic, EF Core InMemory provider |
 | Controller | Every branch of every controller action, including error paths |
 | Integration | `WebApplicationFactory` against a real temporary SQLite file — exercises the full HTTP pipeline, middleware, and migrations |
-| CI | `.github/workflows/ci.yml` — restore, build, test on every push and PR |
-| Static analysis | SonarQube scan on `main` (`sonar.yml`). Automated LLM review on PRs is currently disabled |
+| CI | `.github/workflows/ci.yml` — restore, build, test for the API; install, lint, test, build for the dashboard; on every push and PR |
+| Static analysis | SonarQube scan on `main` (`sonar.yml`), including coverage from both test suites. Automated LLM review on PRs is currently disabled |
 
-Current state: **81 tests, all passing.** The frontend has no automated tests —
-a gap recorded in [11](11-risks.md).
+Current state: **87 backend tests and 102 dashboard tests, all passing.**

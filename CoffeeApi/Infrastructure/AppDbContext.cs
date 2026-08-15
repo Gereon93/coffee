@@ -1,3 +1,4 @@
+using System.Globalization;
 using CoffeeApi.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -66,8 +67,8 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Date)
                 .IsRequired()
                 .HasConversion(
-                    v => v.ToString("yyyy-MM-dd"),
-                    v => DateOnly.Parse(v));
+                    v => v.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                    v => DateOnly.ParseExact(v, "yyyy-MM-dd", CultureInfo.InvariantCulture));
 
             entity.Property(e => e.Kind)
                 .IsRequired()

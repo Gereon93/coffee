@@ -4,7 +4,19 @@
 
 Diese Spezifikation definiert die API-Kontrakte zwischen:
 - **n8n** (Data Fetcher) → **CoffeeApi** (Ingest)
-- **React Frontend** → **CoffeeApi** (Read)
+- **React Frontend** → **CoffeeApi** (Read, Markierungen, Power-Steuerung)
+- **CoffeeApi** → **n8n-Webhook** (Power-Relay zur Home-Connect-Cloud)
+
+Die interaktive Fassung steht unter `/scalar/v1`, das OpenAPI-Dokument unter
+`/openapi/v1.json`. Bei Abweichung gilt der Code.
+
+### Zeitzonen-Parameter `tz`
+
+Alle Statistik-Endpunkte, die nach lokalen Tagen gruppieren
+(`/api/stats/daily/{date}`, `/api/stats/range`, `/api/stats/heatmap`),
+akzeptieren `tz` — den UTC-Offset des Clients **in Minuten** (60 = CET,
+120 = CEST). Ohne Angabe wird UTC verwendet. Das Frontend haengt den Wert
+automatisch an.
 
 ---
 
@@ -12,8 +24,8 @@ Diese Spezifikation definiert die API-Kontrakte zwischen:
 
 | Environment | URL |
 |-------------|-----|
-| Development | `http://localhost:5000` |
-| Production | `https://coffee.local` (TBD) |
+| Development | `http://localhost:5000` — so startet `dotnet run`. Der Vite-Dev-Server proxied `/api` per Default auf `http://localhost:8089`; fuer den lokal laufenden `dotnet run` also `VITE_API_PROXY_TARGET=http://localhost:5000` setzen. |
+| Production | `http://coffee.example.local:8089` — Container-Port der API. Das Dashboard liegt auf `:8090` und proxied `/api`, `/coffee`, `/scalar` und `/openapi` per nginx an die API weiter. |
 
 ---
 
@@ -138,6 +150,15 @@ GET /api/stats/daily/2025-01-25 HTTP/1.1
 |-----------|------|--------|--------------|
 | date | string | yyyy-MM-dd | Datum |
 
+#### Query Parameters
+
+| Parameter | Type | Default | Beschreibung |
+|-----------|------|---------|--------------|
+| tz | int | 0 | UTC-Offset des Clients in Minuten |
+
+Die Antwort enthaelt als ersten Eintrag in `snapshots` den letzten Snapshot des
+Vortags als Baseline, damit das erste Stunden-Delta korrekt berechenbar ist.
+
 #### Response (200 OK)
 
 ```json
@@ -182,6 +203,9 @@ GET /api/stats/range?from=2025-01-20&to=2025-01-25 HTTP/1.1
 |-----------|------|--------|----------|--------------|
 | from | string | yyyy-MM-dd | Ja | Startdatum |
 | to | string | yyyy-MM-dd | Ja | Enddatum |
+| tz | int | - | Nein | UTC-Offset des Clients in Minuten (Default 0) |
+
+Tage ohne Snapshots fehlen in `data[]` — sie erscheinen nicht mit Nullwerten.
 
 #### Response (200 OK)
 
@@ -222,7 +246,8 @@ GET /api/stats/heatmap?weeks=4 HTTP/1.1
 
 | Parameter | Type | Default | Beschreibung |
 |-----------|------|---------|--------------|
-| weeks | int | 4 | Anzahl Wochen zurück |
+| weeks | int | 4 | Anzahl Wochen zurück, gedeckelt auf 52 |
+| tz | int | 0 | UTC-Offset des Clients in Minuten |
 
 #### Response (200 OK)
 
@@ -242,7 +267,131 @@ GET /api/stats/heatmap?weeks=4 HTTP/1.1
 
 ---
 
-### 6. GET /api/health
+### 6. GET /api/stats/marked-days
+
+**Zweck:** Manuell markierte Tage lesen
+
+#### Query Parameters
+
+| Parameter | Type | Required | Beschreibung |
+|-----------|------|----------|--------------|
+| kind | string | Nein | Filter: `mass-import` oder `event` |
+
+#### Response (200 OK)
+
+```json
+[
+  {
+    "date": "2026-04-18",
+    "kind": "mass-import",
+    "eventType": null,
+    "reason": "BSH API Ausfall",
+    "createdAt": "2026-04-19T08:12:00Z"
+  },
+  {
+    "date": "2026-04-22",
+    "kind": "event",
+    "eventType": "birthday",
+    "reason": "Geburtstag",
+    "createdAt": "2026-04-22T06:30:00Z"
+  }
+]
+```
+
+`kind` bestimmt die Semantik: `mass-import`-Tage werden aus Aggregaten,
+Heatmap und Anomalie-Erkennung ausgeschlossen; `event`-Tage bleiben in der
+Statistik und sind nur von der Anomalie-Erkennung ausgenommen.
+`eventType` ist bei `kind=event` Pflicht und einer von
+`birthday` | `visitors` | `party` | `sick` | `vacation` | `other`.
+
+---
+
+### 7. POST /api/stats/marked-days
+
+**Zweck:** Tag markieren
+
+#### Request
+
+```json
+{
+  "date": "2026-04-22",
+  "kind": "event",
+  "eventType": "birthday",
+  "reason": "Geburtstag"
+}
+```
+
+`reason` ist bei `kind=mass-import` Pflicht (max. 500 Zeichen), bei
+`kind=event` optional. Fehlt `kind`, gilt `mass-import`.
+
+#### Responses
+
+| Status | Bedingung |
+|--------|-----------|
+| 201 Created | Markierung angelegt, Body = markierter Tag |
+| 400 Bad Request | Ungueltiges Datum, `kind`, `eventType` oder fehlender Grund |
+| 409 Conflict | Tag ist bereits markiert |
+
+---
+
+### 8. DELETE /api/stats/marked-days/{date}
+
+**Zweck:** Markierung aufheben
+
+| Status | Bedingung |
+|--------|-----------|
+| 204 No Content | Markierung entfernt |
+| 400 Bad Request | Datum nicht im Format `yyyy-MM-dd` |
+| 404 Not Found | Tag ist nicht markiert |
+
+---
+
+### 9. GET /coffee/status
+
+**Zweck:** Live-Zustand der Maschine (Server-Cache 7 s)
+
+#### Response (200 OK)
+
+```json
+{
+  "status": "ok",
+  "reachable": true,
+  "powerState": "on",
+  "operationState": "ready",
+  "label": "Bereit",
+  "lastUpdated": "2026-04-25T09:12:00Z"
+}
+```
+
+Die API fragt dafuer den n8n-Webhook (`N8n:PowerWebhookUrl`). Ist er nicht
+erreichbar oder antwortet er nicht binnen 5 s, bleibt der Status `200 OK` mit
+`reachable: false` und einer `message` — ein Ausfall des Relays ist kein
+Fehler des Dashboards.
+
+---
+
+### 10. POST /coffee/power
+
+**Zweck:** Maschine ein-/ausschalten (Relay ueber n8n)
+
+#### Request
+
+```json
+{ "state": "on" }
+```
+
+| Status | Bedingung |
+|--------|-----------|
+| 200 OK | Schaltbefehl an n8n uebergeben |
+| 400 Bad Request | `state` ist weder `on` noch `off` |
+| 500 Internal Server Error | Webhook nicht konfiguriert oder nicht erreichbar |
+
+Das 07:00–18:00-Fenster ist eine reine UI-Sperre im Dashboard
+(`coffeeTimeLock.ts`); die API prueft es nicht.
+
+---
+
+### 11. GET /api/health
 
 **Zweck:** Healthcheck für Monitoring
 
