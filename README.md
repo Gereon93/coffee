@@ -183,7 +183,16 @@ verwendet. Vollstaendiger Contract: [`SPEC.md`](SPEC.md).
 
 ### Authentifizierung
 
-Der Ingest-Endpoint ist per API-Key geschuetzt. Der Key wird als `ApiKey` Environment-Variable im Container gesetzt und muss als `X-API-Key` Header mitgeschickt werden (Vergleich erfolgt konstantzeitig):
+Die schreibenden Endpunkte sind per API-Key geschuetzt:
+
+| Endpunkt | Key noetig |
+|----------|-----------|
+| `POST /api/ingest` | ja |
+| `POST /coffee/power` | ja |
+| `POST` / `DELETE /api/stats/marked-days` | ja |
+| alle GETs (inkl. `/coffee/status`, `GET /api/stats/marked-days`) | nein |
+
+Der Key wird als `ApiKey` Environment-Variable im API-Container gesetzt und muss als `X-API-Key` Header mitgeschickt werden (Vergleich erfolgt konstantzeitig):
 
 ```bash
 curl -X POST http://coffee.example.local:8089/api/ingest \
@@ -203,6 +212,12 @@ Live-Zustand kommt stattdessen von `/coffee/status`.
 
 Ist der `ApiKey` nicht gesetzt, laesst die Middleware die Anfrage mit einer
 Warnung im Log durch. In Produktion also zwingend setzen.
+
+**Das Dashboard schickt den Key nicht selbst.** Sein nginx injiziert ihn aus der
+Container-Variable `API_KEY` auf den Proxy-Pfaden `/api/` und `/coffee/` — so
+landet das Secret nie im Browser-Bundle. `API_KEY` muss denselben Wert haben wie
+`ApiKey` am API-Container, sonst antworten die Writes mit `401`. Das gilt fuer
+jeden Reverse-Proxy, der `coffee-api` frontet.
 
 ## Dashboard Features
 

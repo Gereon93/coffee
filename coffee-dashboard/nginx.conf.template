@@ -1,3 +1,9 @@
+# Rendered by the nginx entrypoint (envsubst) at container start.
+# ${API_KEY} must match the API's `ApiKey` setting — the write endpoints
+# (/coffee/power, POST+DELETE /api/stats/marked-days, /api/ingest) reject
+# requests without it. Nginx injects it so the key never enters the browser
+# bundle. Unset => empty header => the API answers 401.
+
 server {
     listen 80;
     root /usr/share/nginx/html;
@@ -13,6 +19,7 @@ server {
         proxy_pass http://coffee-api:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-API-Key "${API_KEY}";
     }
 
     # Proxy coffee machine control endpoints
@@ -20,6 +27,7 @@ server {
         proxy_pass http://coffee-api:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-API-Key "${API_KEY}";
     }
 
     # Proxy Scalar API docs and OpenAPI spec

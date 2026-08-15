@@ -52,7 +52,7 @@ CoffeeApi/
 │   ├── AppDbContext.cs              # EF Core model, indexes, UTC value converter
 │   └── MigrationBaseliner.cs        # pre-migration DB compatibility
 ├── Middleware/
-│   └── ApiKeyMiddleware.cs          # X-API-Key on /api/ingest
+│   └── ApiKeyMiddleware.cs          # X-API-Key on ingest + writes
 └── Migrations/                      # 3 migrations: Initial, AddExcludedDays, RenameExcludedDaysToMarkedDays
 ```
 
@@ -155,7 +155,7 @@ power request fails with 500. Attaches HTTP Basic credentials when configured. `
 propagates failures via `EnsureSuccessStatusCode`; `GetStatusAsync` swallows
 every failure and returns an `Unreachable(...)` DTO instead.
 
-**`ApiKeyMiddleware`** — Path-prefix allowlist (`/api/ingest`). With no
+**`ApiKeyMiddleware`** — Path-prefix allowlist, method-aware: `/api/ingest` (all methods), `POST /coffee/power`, `POST` and `DELETE /api/stats/marked-days`. Reads on those paths are deliberately left open. With no
 configured key it logs a warning and lets the request through — deliberate
 development affordance, and a production risk if the key is ever unset.
 Comparison uses `CryptographicOperations.FixedTimeEquals`.

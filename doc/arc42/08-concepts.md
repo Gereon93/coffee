@@ -154,7 +154,8 @@ ending up somewhere they were not expected.
 
 | Concern | Control | Where |
 |---------|---------|-------|
-| Ingest authentication | `X-API-Key` header, compared with `CryptographicOperations.FixedTimeEquals` | `ApiKeyMiddleware` |
+| Write authentication | `X-API-Key` header on `/api/ingest`, `POST /coffee/power` and `POST` / `DELETE /api/stats/marked-days`, compared with `CryptographicOperations.FixedTimeEquals`. The route table is method-aware, so reads on `/api/stats/marked-days` and `/coffee/status` stay open | `ApiKeyMiddleware` |
+| Key delivery to the dashboard | The dashboard's nginx injects `X-API-Key` from the `API_KEY` container variable, so the secret never enters the browser bundle | `nginx.conf.template` |
 | Outbound webhook auth | Optional HTTP Basic on the n8n webhook | `HomeConnectService` |
 | Secret handling | `appsettings.Secrets.json` (gitignored) and environment variables; no secrets in source | `Program.cs` |
 | Error tracking privacy | `SendDefaultPii = false` on backend and frontend | `Program.cs`, `lib/sentry.ts` |
@@ -166,9 +167,8 @@ ending up somewhere they were not expected.
 
 | Gap | Reality |
 |-----|---------|
-| **Write endpoints are unauthenticated** | Only `/api/ingest` is protected. `POST /coffee/power`, `POST` and `DELETE /api/stats/marked-days` are open to anyone who can reach the port. |
-| **Write endpoints are unauthenticated** | `POST /coffee/power` and the marked-day writes require no API key; any direct LAN client can switch the machine on. CORS is restricted to `Cors:AllowedOrigins` (fallback: the dev and dashboard origins), so the browser-driven variant is closed. The UI time lock does not apply — it is client-side. Turning on an espresso machine is a physical, not merely logical, effect. |
-| **Missing `ApiKey` disables ingest auth** | The middleware logs a warning and forwards the request. A configuration mistake in production silently removes authentication instead of failing loudly. |
+| **The dashboard origin is an unauthenticated path to the writes** | The write endpoints now require the API key, which closes direct calls to the API port. The dashboard's nginx injects the key for everyone it serves, so anything that can reach the dashboard port can still actuate the machine. That is the same reach as pressing the button in the UI, which is the intended feature — closing it needs real user authentication, not a shared secret. The 07:00–18:00 lock in `coffeeTimeLock.ts` does not help: it is client-side. |
+| **Missing `ApiKey` disables write auth** | The middleware logs a warning and forwards the request. A configuration mistake in production silently removes authentication on every protected endpoint instead of failing loudly. |
 | **API docs are public on the LAN** | Scalar and `/openapi/v1.json` are proxied by nginx without auth. |
 | **No rate limiting** | No throttling on any endpoint. |
 | **Proxy headers not honoured** | The API does not use forwarded-headers middleware, so the client IP logged on a failed API-key attempt is nginx's, not the caller's. |

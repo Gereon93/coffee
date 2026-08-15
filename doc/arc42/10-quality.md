@@ -86,7 +86,8 @@ that pins the behaviour, or states that it is unverified.
 | Q-16 | `POST /api/ingest` without `X-API-Key`, with a key configured | `401`; the attempt is logged with the remote address | `ApiIntegrationTests` |
 | Q-17 | `POST /api/ingest` with a wrong key | `401`; comparison is constant-time | `ApiIntegrationTests` |
 | Q-18 | An unexpected exception occurs in a controller | The response body contains no exception message, stack trace, or internal path | controller tests |
-| Q-19 | `ApiKey` is not configured | **Known deviation:** the request is forwarded with a warning; ingest is effectively unauthenticated | [11](11-risks.md) |
+| Q-16a | `POST /coffee/power` and the marked-day writes without `X-API-Key` | `401`; `GET /coffee/status` and `GET /api/stats/marked-days` stay reachable | `ApiIntegrationTests` |
+| Q-19 | `ApiKey` is not configured | **Known deviation:** the request is forwarded with a warning; the protected endpoints are effectively unauthenticated | [11](11-risks.md) |
 | Q-20 | A third-party website open in a LAN browser posts to `/coffee/power` | The request is rejected by CORS: only the origins in `Cors:AllowedOrigins` are allowed. A direct (non-browser) LAN client still succeeds — the endpoint itself is unauthenticated | [11](11-risks.md) |
 
 ### Performance

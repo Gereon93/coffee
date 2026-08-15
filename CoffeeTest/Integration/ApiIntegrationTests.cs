@@ -95,4 +95,107 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
         var body = await statsResponse.Content.ReadAsStringAsync();
         Assert.Contains("42", body);
     }
+
+    [Fact]
+    public async Task Power_WithoutApiKey_Returns401()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PostAsync(
+            "/coffee/power",
+            new StringContent("""{"state":"on"}""", Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Power_WithValidApiKey_PassesAuthentication()
+    {
+        var client = _factory.CreateClient();
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/coffee/power")
+        {
+            Content = new StringContent("""{"state":"nonsense"}""", Encoding.UTF8, "application/json"),
+        };
+        request.Headers.Add("X-API-Key", ApiKey);
+
+        var response = await client.SendAsync(request);
+
+        // An invalid state reaches the action and is rejected there, which proves
+        // the request got past the API key middleware. Asserting on 400 rather
+        // than 200 keeps the test from actuating the n8n webhook.
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CoffeeStatus_WithoutApiKey_IsNotBlocked()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/coffee/status");
+
+        // Reads stay open — only /coffee/power is protected.
+        Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateMarkedDay_WithoutApiKey_Returns401()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PostAsync(
+            "/api/stats/marked-days",
+            new StringContent(
+                """{"date":"2026-01-05","kind":"mass-import","reason":"holiday"}""",
+                Encoding.UTF8,
+                "application/json"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteMarkedDay_WithoutApiKey_Returns401()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.DeleteAsync("/api/stats/marked-days/2026-01-05");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMarkedDays_WithoutApiKey_ReturnsOk()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/api/stats/marked-days");
+
+        // Same path as the protected writes — the read must stay open.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateMarkedDay_WithValidApiKey_IsCreatedAndDeletable()
+    {
+        var client = _factory.CreateClient();
+        const string date = "2026-01-06";
+
+        var create = new HttpRequestMessage(HttpMethod.Post, "/api/stats/marked-days")
+        {
+            Content = new StringContent(
+                $$"""{"date":"{{date}}","kind":"mass-import","reason":"integration test"}""",
+                Encoding.UTF8,
+                "application/json"),
+        };
+        create.Headers.Add("X-API-Key", ApiKey);
+
+        var createResponse = await client.SendAsync(create);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+
+        var delete = new HttpRequestMessage(HttpMethod.Delete, $"/api/stats/marked-days/{date}");
+        delete.Headers.Add("X-API-Key", ApiKey);
+
+        var deleteResponse = await client.SendAsync(delete);
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+    }
 }
