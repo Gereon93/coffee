@@ -24,7 +24,7 @@ decisions — decisions are in [04](04-solution.md) and [09](09-design.md).
 | OC-1 | **Solo developer** | Complexity has a direct maintenance cost with no team to absorb it. Simplicity outranks flexibility (`CLAUDE.md`, global guardrails §2). |
 | OC-2 | **Self-hosted only** | No cloud SaaS for core services. Error tracking is a self-hosted GlitchTip, not Sentry SaaS. Code review tooling and CI run on GitHub Actions — the one accepted exception. |
 | OC-3 | **Tests ship with behaviour** | Repository convention (`CLAUDE.md`): business logic in `Services/` and every controller branch is covered, in the same change as the behaviour. |
-| OC-4 | **AI-assisted contributions** | `CLAUDE.md` and `AGENTS.md` define conventions that automated contributors are expected to follow; PRs are reviewed by an automated reviewer with a severity gate (`.github/workflows/review.yml`). |
+| OC-4 | **AI-assisted contributions** | `CLAUDE.md` and `AGENTS.md` define conventions that automated contributors are expected to follow. Automated PR review is currently disabled — the opencode-based reviewer was removed when its endpoint was shut down, and this repository is public, so no replacement runs on `pull_request`. |
 | OC-5 | **Merges are performed by the repository owner** | No agent or automation merges to `main`. |
 
 ## 2.3 Conventions
