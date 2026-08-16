@@ -40,12 +40,16 @@ jobs:
         run: |
           dotnet tool install --global dotnet-sonarscanner
           npm --prefix coffee-dashboard ci
+          # Der .NET-Scanner setzt sonar.sources/sonar.tests selbst aus der
+          # Projektstruktur; CoffeeTest erkennt er dadurch als Testprojekt. Die
+          # Vitest-Dateien des Dashboards liegen in keinem MSBuild-Projekt und
+          # zaehlten deshalb als Quellcode mit -- LoC zu hoch, Coverage zu niedrig.
           dotnet sonarscanner begin /k:"coffee" \
             /d:sonar.host.url="$SONAR_HOST_URL" \
             /d:sonar.token="$SONAR_TOKEN" \
             /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml" \
             /d:sonar.javascript.lcov.reportPaths="coffee-dashboard/coverage/lcov.info" \
-            /d:sonar.exclusions="CoffeeApi/Migrations/**" \
+            /d:sonar.exclusions="CoffeeApi/Migrations/**,coffee-dashboard/src/**/*.test.ts,coffee-dashboard/src/**/*.test.tsx,coffee-dashboard/src/test/**" \
             /d:sonar.coverage.exclusions="CoffeeApi/Program.cs,CoffeeApi/Migrations/**,coffee-dashboard/src/main.tsx,coffee-dashboard/src/lib/sentry.ts,coffee-dashboard/vite.config.ts,coffee-dashboard/eslint.config.js"
           dotnet build Coffee.sln
           api_tests=0
