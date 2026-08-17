@@ -8,3 +8,6 @@ profile:
   name: qodana.recommended
 include:
   - name: CheckDependencyLicenses
+dotnet:
+  solution: Coffee.sln
+  configuration: Release
