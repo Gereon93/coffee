@@ -9,16 +9,14 @@ namespace CoffeeTest.Controllers;
 
 public class IngestControllerTests
 {
-    private static IngestController CreateController(ISnapshotService service)
+    private static IngestController CreateController(ISnapshotIngestService service)
     {
         return new IngestController(service, NullLogger<IngestController>.Instance);
     }
 
-    private static SnapshotService CreateService(string? dbName = null)
+    private static SnapshotIngestService CreateService(string? dbName = null)
     {
-        return new SnapshotService(
-            TestDbContextFactory.Create(dbName),
-            NullLogger<SnapshotService>.Instance);
+        return SnapshotServices.Ingest(TestDbContextFactory.Create(dbName));
     }
 
     [Fact]
@@ -89,10 +87,7 @@ public class IngestControllerTests
         await controller.Ingest(payload);
 
         // Same payload again - need new service with same DB
-        var service2 = new SnapshotService(
-            TestDbContextFactory.Create(dbName),
-            NullLogger<SnapshotService>.Instance);
-        var controller2 = CreateController(service2);
+        var controller2 = CreateController(CreateService(dbName));
         var result = await controller2.Ingest(payload);
 
         var ok = Assert.IsType<OkObjectResult>(result);

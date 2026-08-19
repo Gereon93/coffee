@@ -92,7 +92,7 @@ generated at runtime and served at `/openapi/v1.json` when the API runs in
    when it shares the Docker network) with the `X-API-Key` header.
 4. `ApiKeyMiddleware` validates the key in constant time.
 5. `IngestController` rejects a payload without `data.status` entries (400).
-6. `SnapshotService.MapToEntity` translates Home Connect keys
+6. `SnapshotPayloadMapper.Map` translates Home Connect keys
    (`ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee`, …) into
    entity properties and stamps `Timestamp = DateTime.UtcNow`.
 7. The idempotency check compares the new counters against the latest stored

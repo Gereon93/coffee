@@ -1,16 +1,14 @@
-using CoffeeApi.Services;
 using CoffeeTest.Helpers;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CoffeeTest.Services;
 
-public class SnapshotServiceDailySummaryTests
+public class SnapshotStatisticsDailySummaryTests
 {
     [Fact]
     public async Task GetDailySummary_NoSnapshots_ReturnsZeros()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Statistics(db);
 
         var result = await service.GetDailySummaryAsync(new DateOnly(2026, 2, 7));
 
@@ -24,7 +22,7 @@ public class SnapshotServiceDailySummaryTests
     public async Task GetDailySummary_MultipleSnapshots_CalculatesDeltas()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Statistics(db);
 
         db.MachineSnapshots.AddRange(
             new SnapshotBuilder().At(new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(100).Build(),
@@ -44,7 +42,7 @@ public class SnapshotServiceDailySummaryTests
     public async Task GetDailySummary_SingleSnapshot_UsesYesterdayAsBaseline()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Statistics(db);
 
         // Yesterday's last snapshot
         db.MachineSnapshots.Add(
@@ -66,7 +64,7 @@ public class SnapshotServiceDailySummaryTests
     public async Task GetDailySummary_FindsPeakHour_Utc()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Statistics(db);
 
         db.MachineSnapshots.AddRange(
             new SnapshotBuilder().At(new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(100).Build(),
@@ -85,7 +83,7 @@ public class SnapshotServiceDailySummaryTests
     public async Task GetDailySummary_FindsPeakHour_WithTimezone()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Statistics(db);
 
         db.MachineSnapshots.AddRange(
             new SnapshotBuilder().At(new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(100).Build(),
@@ -104,7 +102,7 @@ public class SnapshotServiceDailySummaryTests
     public async Task GetDailySummary_NoPreviousSnapshot_UsesFirstOfDay()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Statistics(db);
 
         // No yesterday data - only today
         db.MachineSnapshots.AddRange(
@@ -122,7 +120,7 @@ public class SnapshotServiceDailySummaryTests
     public async Task GetDailySummary_TimezoneShiftsDayBoundary()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Statistics(db);
 
         // Snapshot at 23:30 UTC = 00:30 CET on Feb 8 (belongs to Feb 8 in CET)
         db.MachineSnapshots.AddRange(

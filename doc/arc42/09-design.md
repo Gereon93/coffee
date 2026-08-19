@@ -202,7 +202,7 @@ The frontend derives its lookup maps from a single fetch (`markedDayUtils.ts`).
 **Status:** accepted
 
 **Context.** The Home Connect payload contains its own timestamps.
-`SnapshotService.MapToEntity` ignores them and stamps
+`SnapshotPayloadMapper` ignores them; `SnapshotIngestService` stamps
 `Timestamp = DateTime.UtcNow`.
 
 **Decision.** The API's receive time is authoritative for a snapshot.
@@ -262,3 +262,47 @@ would walk to a cold machine.
 that endpoint measures the API rather than the integration — `reachable` is
 the field that matters. The asymmetry is intentional and is worth preserving
 when the service is modified.
+
+---
+
+## ADR-012: Snapshot Services Split by Responsibility
+
+**Status:** accepted
+
+**Context.** `SnapshotService` had grown to 320 LOC behind a 9-member
+interface and carried five unrelated concerns: ingest and idempotency, Home
+Connect payload translation, plain queries, statistical aggregation, and
+day-boundary arithmetic (TD-13). The range aggregation for `/api/stats/range`
+lived in `StatsController` instead, next to a verbatim copy of the private
+day-bounds method (TD-12, TD-14) — the same delta rule in two layers.
+
+**Decision.** One type per concern, cut along the reason to change:
+
+| Type | Concern |
+|------|---------|
+| `LocalDay` (Domain, static) | Local date + UTC offset → half-open UTC interval, and the reverse |
+| `SnapshotPayloadMapper` (static) | Home Connect keys and `JsonElement` values → `MachineSnapshot` |
+| `ISnapshotQueryService` | Which rows? No aggregation, no writes |
+| `ISnapshotIngestService` | Idempotency gate and persistence |
+| `ISnapshotStatisticsService` | Daily summary, range aggregation, heatmap |
+
+`ISnapshotService` is gone; each caller depends on the interface it actually
+uses. `StatsController` takes the query and statistics services, `IngestController`
+the ingest service, `IngestWatchdog` the query service.
+
+**Rationale.** The five groups changed for entirely different reasons — a new
+Home Connect key touches the mapper, a new chart touches statistics, neither
+should recompile or retest the other. Splitting also gave the range
+aggregation a home in the service layer, which removed both the layering
+violation and the duplicated day-bounds method: one behaviour, one definition.
+
+**Alternatives rejected.** Keeping `ISnapshotService` as a delegating facade
+would have preserved every call site, but the 9-member interface — the actual
+finding — would have survived untouched. A coarser ingest/read split would
+have left `JsonElement` parsing and heatmap bucketing in neighbouring types.
+
+**Consequences.** Three DI registrations instead of one, and statistics depends
+on the query service rather than on `AppDbContext` — except for the
+`mass-import` lookup, which still reads `MarkedDays` directly. Test doubles get
+cheaper: the watchdog's fake now implements 7 read methods instead of stubbing
+an interface that also covered ingest and statistics.

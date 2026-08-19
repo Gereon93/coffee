@@ -11,7 +11,7 @@ sequenceDiagram
     participant N as n8n
     participant MW as ApiKeyMiddleware
     participant C as IngestController
-    participant S as SnapshotService
+    participant S as SnapshotIngestService
     participant DB as SQLite
 
     N->>MW: POST /api/ingest + X-API-Key
@@ -19,7 +19,7 @@ sequenceDiagram
     MW->>C: forward
     C->>C: data.status present and non-empty?
     C->>S: ProcessIngestAsync(payload)
-    S->>S: MapToEntity — Home Connect keys → entity<br/>Timestamp = UtcNow
+    S->>S: SnapshotPayloadMapper.Map — Home Connect keys → entity<br/>Timestamp = UtcNow
     S->>DB: SELECT latest WHERE MachineId ORDER BY Timestamp DESC
     DB-->>S: lastSnapshot
     S->>S: HasCounterIncreased(last, new) → true
@@ -38,7 +38,7 @@ sequenceDiagram
     autonumber
     participant N as n8n
     participant C as IngestController
-    participant S as SnapshotService
+    participant S as SnapshotIngestService
     participant DB as SQLite
 
     N->>C: POST /api/ingest (identical counters)
@@ -65,25 +65,27 @@ sequenceDiagram
     autonumber
     participant D as Dashboard
     participant C as StatsController
-    participant S as SnapshotService
+    participant Q as SnapshotQueryService
+    participant S as SnapshotStatisticsService
     participant DB as SQLite
 
     D->>C: GET /api/stats/daily/2026-08-15?tz=120
     C->>C: DateOnly.TryParse
-    C->>S: GetByDateAsync(2026-08-15, 120)
-    S->>S: bounds = [2026-08-14T22:00Z, 2026-08-15T22:00Z)
-    S->>DB: SELECT WHERE Timestamp >= start AND < end
-    DB-->>S: day snapshots (ordered)
-    S-->>C: List<MachineSnapshot>
+    C->>Q: GetByDateAsync(2026-08-15, 120)
+    Q->>Q: LocalDay.BoundsUtc = [2026-08-14T22:00Z, 2026-08-15T22:00Z)
+    Q->>DB: SELECT WHERE Timestamp >= start AND < end
+    DB-->>Q: day snapshots (ordered)
+    Q-->>C: List<MachineSnapshot>
 
     C->>S: GetDailySummaryAsync(2026-08-15, 120)
-    S->>DB: SELECT last WHERE Timestamp < 2026-08-14T22:00Z
+    S->>Q: GetLastSnapshotBeforeAsync(2026-08-14T22:00Z)
+    Q->>DB: SELECT last WHERE Timestamp < 2026-08-14T22:00Z
     DB-->>S: baseline (previous day's last sample)
     S->>S: coffee = last.Coffee − baseline.Coffee (clamped ≥ 0)<br/>milk = Δ(CoffeeAndMilk) + Δ(Milk)<br/>peak hour = max positive ΔTotal, in local time
     S-->>C: DailySummaryDto
 
-    C->>S: GetLastSnapshotBeforeAsync(2026-08-14T22:00Z)
-    S-->>C: baseline
+    C->>Q: GetLastSnapshotBeforeAsync(2026-08-14T22:00Z)
+    Q-->>C: baseline
     C->>C: prepend baseline to the snapshot list
     C-->>D: 200 OK { date, snapshots[], summary }
 ```
@@ -105,21 +107,25 @@ sequenceDiagram
     autonumber
     participant D as Dashboard
     participant C as StatsController
-    participant S as SnapshotService
+    participant Q as SnapshotQueryService
+    participant S as SnapshotStatisticsService
     participant DB as SQLite
 
     D->>C: GET /api/stats/range?from&to&tz=120
-    C->>S: GetByDateRangeAsync(from, to, 120)
-    S->>DB: SELECT WHERE Timestamp in [startOf(from), endOf(to))
-    DB-->>S: all snapshots in range
-    C->>S: GetLastSnapshotBeforeAsync(startOf(from))
-    S-->>C: previousSnapshot (may be null)
+    C->>S: GetRangeAggregateAsync(from, to, 120)
+    S->>Q: GetByDateRangeAsync(from, to, 120)
+    Q->>DB: SELECT WHERE Timestamp in [startOf(from), endOf(to))
+    DB-->>Q: all snapshots in range
+    Q-->>S: List<MachineSnapshot>
+    S->>Q: GetLastSnapshotBeforeAsync(startOf(from))
+    Q-->>S: previousSnapshot (may be null)
 
     loop for each local date, ascending
-        C->>C: baseline = lastPrevious ?? day's first snapshot
-        C->>C: coffee/milk/total = last − baseline, clamped ≥ 0
-        C->>C: lastPrevious = day's last snapshot
+        S->>S: baseline = previous day's last ?? day's first snapshot
+        S->>S: coffee/milk/total = last − baseline, clamped ≥ 0
     end
+
+    S-->>C: List<DailyAggregateDto>
 
     C-->>D: 200 OK { from, to, data[] }
 ```
@@ -128,9 +134,9 @@ Two consequences worth knowing:
 
 - **Days without any snapshot do not appear in `data[]`.** They are absent,
   not zero. The frontend must not assume a contiguous series.
-- The aggregation loop runs **in the controller**, not in a service. It is a
-  documented deviation from the layering ([11](11-risks.md)) and it duplicates
-  the delta arithmetic that already exists in `GetDailySummaryAsync`.
+- The aggregation runs in `SnapshotStatisticsService`, next to
+  `GetDailySummaryAsync`, and both share the same delta helper. The controller
+  only validates the two dates and returns the result ([ADR-012](09-design.md#adr-012-snapshot-services-split-by-responsibility)).
 
 ## 6.5 Power control and status refresh
 

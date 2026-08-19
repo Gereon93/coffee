@@ -246,12 +246,12 @@ jeden Reverse-Proxy, der `coffee-api` frontet.
 coffee/
 ├── CoffeeApi/              # ASP.NET Core Backend
 │   ├── Controllers/        #   Ingest, Stats, MarkedDays, Power, CoffeeStatus
-│   ├── Domain/             #   MachineSnapshot, MarkedDay
+│   ├── Domain/             #   MachineSnapshot, MarkedDay, LocalDay
 │   ├── DTOs/               #   Request/Response Objekte (Entities bleiben intern)
 │   ├── Infrastructure/     #   AppDbContext, MigrationBaseliner
 │   ├── Middleware/         #   API-Key Authentication
 │   ├── Migrations/         #   EF Core Migrations
-│   ├── Services/           #   SnapshotService, MarkedDayService, HomeConnectService
+│   ├── Services/           #   Snapshot-Query/-Ingest/-Statistics, MarkedDayService, HomeConnectService
 │   └── Dockerfile
 ├── coffee-dashboard/       # React Frontend
 │   ├── src/
@@ -262,13 +262,13 @@ coffee/
 │   │   └── pages/          #   Dashboard, Heatmap, Log
 │   ├── nginx.conf          #   SPA Routing + API Proxy
 │   └── Dockerfile
-├── CoffeeTest/             # 87 Unit-, Controller- und Integrationstests
+├── CoffeeTest/             # 153 Unit-, Controller- und Integrationstests
 │   ├── Controllers/        #   Alle fuenf Controller, jeder Branch
-│   ├── Domain/             #   MachineSnapshot
-│   ├── Helpers/            #   TestDbContextFactory, SnapshotBuilder, StubHttpMessageHandler
+│   ├── Domain/             #   MachineSnapshot, LocalDay
+│   ├── Helpers/            #   TestDbContextFactory, SnapshotBuilder, SnapshotServices, StubHttpMessageHandler
 │   ├── Infrastructure/     #   MigrationBaseliner gegen echte SQLite-Dateien
 │   ├── Integration/        #   WebApplicationFactory, voller HTTP-Stack
-│   └── Services/           #   SnapshotService, HomeConnectService
+│   └── Services/           #   Snapshot-Services, PayloadMapper, HomeConnectService
 ├── doc/arc42/              # Architekturdokumentation nach arc42
 ├── .github/workflows/      # ci, docker-publish, sonar
 ├── build.sh                # Docker Build + Push Script (Podman/Docker)
@@ -299,14 +299,17 @@ Die API erkennt Duplikate automatisch - wenn sich die Zaehler nicht geaendert ha
 
 ## Tests
 
-130 Tests decken die Kernlogik ab — Services, Controller (jeder Branch), Domain und Infrastruktur:
+153 Tests decken die Kernlogik ab — Services, Controller (jeder Branch), Domain und Infrastruktur:
 
 | Testklasse | Tests | Bereich |
 |------------|-------|---------|
-| SnapshotServiceIdempotencyTests | 5 | First Snapshot, Duplicate Skip, Counter Increase |
-| SnapshotServiceDailySummaryTests | 7 | Cross-Day Delta, Peak Hour, Baseline |
-| SnapshotServiceQueryTests | 7 | GetLatest, Pagination, GetByDate/Range |
-| SnapshotServiceHeatmapTests | 5 | DayOfWeek Grouping, Sunday=7 (ISO-8601) |
+| SnapshotIngestServiceTests | 5 | First Snapshot, Duplicate Skip, Counter Increase |
+| SnapshotPayloadMapperTests | 12 | Home-Connect-Keys, JsonElement/String/Zahl, OperationState |
+| SnapshotQueryServiceTests | 7 | GetLatest, Pagination, GetByDate/Range |
+| SnapshotStatisticsDailySummaryTests | 7 | Cross-Day Delta, Peak Hour, Baseline |
+| SnapshotStatisticsRangeTests | 6 | Rollende Baseline, Zeitzonen-Gruppierung, Clamping |
+| SnapshotStatisticsHeatmapTests | 5 | DayOfWeek Grouping, Sunday=7 (ISO-8601) |
+| LocalDayTests | 5 | Tagesgrenzen in UTC, Offset-Umrechnung |
 | HomeConnectServiceTests | 11 | Power-Webhook, Status-Parsing, Timeout/Netzwerkfehler, Basic-Auth |
 | IngestControllerTests | 4 | Null/Empty Validation, 201 Created, 200 Duplicate |
 | StatsControllerTests | 13 | Range Aggregation, Health, Heatmap Cap, Datumsformat |

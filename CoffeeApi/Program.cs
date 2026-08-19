@@ -60,7 +60,9 @@ namespace CoffeeApi
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlite(connectionString));
 
-            builder.Services.AddScoped<ISnapshotService, SnapshotService>();
+            builder.Services.AddScoped<ISnapshotQueryService, SnapshotQueryService>();
+            builder.Services.AddScoped<ISnapshotIngestService, SnapshotIngestService>();
+            builder.Services.AddScoped<ISnapshotStatisticsService, SnapshotStatisticsService>();
             builder.Services.AddScoped<IMarkedDayService, MarkedDayService>();
 
             // ===== Ingest Watchdog (alarms via Sentry/GlitchTip when n8n stops) =====

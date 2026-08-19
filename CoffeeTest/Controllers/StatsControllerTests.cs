@@ -1,20 +1,18 @@
 using CoffeeApi.Controllers;
 using CoffeeApi.DTOs;
-using CoffeeApi.Services;
+using CoffeeApi.Infrastructure;
 using CoffeeTest.Helpers;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CoffeeTest.Controllers;
 
 public class StatsControllerTests
 {
-    private static (StatsController Controller, SnapshotService Service) Create(string? dbName = null)
+    private static (StatsController Controller, AppDbContext Db) Create(string? dbName = null)
     {
         var db = TestDbContextFactory.Create(dbName);
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
-        var controller = new StatsController(service);
-        return (controller, service);
+        var controller = new StatsController(SnapshotServices.Query(db), SnapshotServices.Statistics(db));
+        return (controller, db);
     }
 
     [Fact]
@@ -102,9 +100,7 @@ public class StatsControllerTests
     [Fact]
     public async Task GetRange_CrossDayDelta_CalculatesCorrectly()
     {
-        var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
-        var controller = new StatsController(service);
+        var (controller, db) = Create();
 
         // Day before range (baseline)
         db.MachineSnapshots.Add(

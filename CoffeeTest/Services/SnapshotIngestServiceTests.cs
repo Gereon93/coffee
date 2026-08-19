@@ -1,11 +1,9 @@
 using CoffeeApi.DTOs;
-using CoffeeApi.Services;
 using CoffeeTest.Helpers;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CoffeeTest.Services;
 
-public class SnapshotServiceIdempotencyTests
+public class SnapshotIngestServiceTests
 {
     private static IngestPayloadDto MakePayload(int coffee, int coffeeAndMilk = 0, int milk = 0)
     {
@@ -28,7 +26,7 @@ public class SnapshotServiceIdempotencyTests
     public async Task ProcessIngest_FirstSnapshot_IsAlwaysCreated()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Ingest(db);
 
         var (created, snapshot) = await service.ProcessIngestAsync(MakePayload(10));
 
@@ -40,7 +38,7 @@ public class SnapshotServiceIdempotencyTests
     public async Task ProcessIngest_SameCounters_SkipsDuplicate()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Ingest(db);
 
         await service.ProcessIngestAsync(MakePayload(10));
         var (created, _) = await service.ProcessIngestAsync(MakePayload(10));
@@ -53,7 +51,7 @@ public class SnapshotServiceIdempotencyTests
     public async Task ProcessIngest_IncreasedCoffee_CreatesNew()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Ingest(db);
 
         await service.ProcessIngestAsync(MakePayload(10));
         var (created, _) = await service.ProcessIngestAsync(MakePayload(11));
@@ -66,7 +64,7 @@ public class SnapshotServiceIdempotencyTests
     public async Task ProcessIngest_IncreasedMilk_CreatesNew()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Ingest(db);
 
         await service.ProcessIngestAsync(MakePayload(10, milk: 5));
         var (created, _) = await service.ProcessIngestAsync(MakePayload(10, milk: 6));
@@ -78,7 +76,7 @@ public class SnapshotServiceIdempotencyTests
     public async Task ProcessIngest_ExtractsOperationState()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Ingest(db);
 
         var (_, snapshot) = await service.ProcessIngestAsync(MakePayload(1));
 

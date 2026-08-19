@@ -45,7 +45,7 @@ stored in SQLite, and visualised in a React dashboard.
 This documentation describes the code in this repository. Where the two
 disagree, the code wins and the documentation is a defect. Sections that
 depend on implementation detail carry file references (e.g.
-`CoffeeApi/Services/SnapshotService.cs:120`) so the claim can be checked.
+`CoffeeApi/Services/SnapshotStatisticsService.cs:23`) so the claim can be checked.
 
 Related, non-arc42 documents at the repository root:
 

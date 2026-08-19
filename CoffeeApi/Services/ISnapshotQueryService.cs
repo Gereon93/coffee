@@ -1,19 +1,13 @@
 using CoffeeApi.Domain;
-using CoffeeApi.DTOs;
 
 namespace CoffeeApi.Services;
 
 /// <summary>
-/// Service interface for snapshot operations
+/// Reads stored snapshots. No aggregation, no ingest — every method answers
+/// "which rows?" and nothing else.
 /// </summary>
-public interface ISnapshotService
+public interface ISnapshotQueryService
 {
-    /// <summary>
-    /// Process incoming ingest payload with idempotency check
-    /// </summary>
-    /// <returns>Tuple of (Created: true if new snapshot, Snapshot: the snapshot entity)</returns>
-    Task<(bool Created, MachineSnapshot Snapshot)> ProcessIngestAsync(IngestPayloadDto payload);
-
     /// <summary>
     /// Get the latest snapshot for a machine
     /// </summary>
@@ -25,31 +19,26 @@ public interface ISnapshotService
     Task<(List<MachineSnapshot> Items, int TotalCount)> GetAllAsync(int page = 1, int pageSize = 50);
 
     /// <summary>
-    /// Get snapshots for a specific date (timezone-aware)
+    /// Get snapshots for a specific local date
     /// </summary>
     /// <param name="date">The local date</param>
     /// <param name="tzOffsetMinutes">UTC offset in minutes (e.g. 60 for CET)</param>
     Task<List<MachineSnapshot>> GetByDateAsync(DateOnly date, int tzOffsetMinutes = 0);
 
     /// <summary>
-    /// Get snapshots within a date range (timezone-aware)
+    /// Get snapshots within a local date range, both bounds inclusive
     /// </summary>
     Task<List<MachineSnapshot>> GetByDateRangeAsync(DateOnly from, DateOnly to, int tzOffsetMinutes = 0);
 
     /// <summary>
-    /// Get daily statistics summary (timezone-aware)
+    /// Get all snapshots taken at or after a UTC timestamp, oldest first
     /// </summary>
-    Task<DailySummaryDto> GetDailySummaryAsync(DateOnly date, int tzOffsetMinutes = 0);
+    Task<List<MachineSnapshot>> GetSinceAsync(DateTime fromUtc);
 
     /// <summary>
-    /// Get aggregated data for heatmap (timezone-aware)
+    /// Get the last snapshot before a given UTC timestamp
     /// </summary>
-    Task<List<HeatmapDataPointDto>> GetHeatmapDataAsync(int weeks = 4, int tzOffsetMinutes = 0);
-
-    /// <summary>
-    /// Get the last snapshot before a given timestamp
-    /// </summary>
-    Task<MachineSnapshot?> GetLastSnapshotBeforeAsync(DateTime timestamp);
+    Task<MachineSnapshot?> GetLastSnapshotBeforeAsync(DateTime timestampUtc);
 
     /// <summary>
     /// Probe whether the database is reachable

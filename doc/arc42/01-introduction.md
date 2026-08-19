@@ -33,10 +33,10 @@ reset is a hard problem (see [ADR-005](09-design.md#adr-005-counter-based-idempo
 | ID | Requirement | Realised by |
 |----|-------------|-------------|
 | FR-1 | Accept counter snapshots from n8n over HTTP | `IngestController` |
-| FR-2 | Never store two consecutive snapshots with unchanged counters | `SnapshotService.HasCounterIncreased` |
+| FR-2 | Never store two consecutive snapshots with unchanged counters | `SnapshotIngestService.HasCounterIncreased` |
 | FR-3 | Report consumption per calendar day in the *user's* local timezone | `tz` query parameter, `GetLocalDayBoundsUtc` |
 | FR-4 | Count beverages brewed before the first sample of a day against that day | Cross-day baseline (previous day's last snapshot) |
-| FR-5 | Aggregate consumption into a weekday × hour heatmap | `SnapshotService.GetHeatmapDataAsync` |
+| FR-5 | Aggregate consumption into a weekday × hour heatmap | `SnapshotStatisticsService.GetHeatmapDataAsync` |
 | FR-6 | Exclude backfilled days from heatmap and anomaly detection | `MarkedDay` with `Kind = "mass-import"` |
 | FR-7 | Annotate days with an explanation without excluding them | `MarkedDay` with `Kind = "event"` |
 | FR-8 | Switch the machine on/off from the dashboard | `PowerController` → `HomeConnectService` → n8n |

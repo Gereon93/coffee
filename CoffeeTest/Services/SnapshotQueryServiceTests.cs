@@ -1,16 +1,14 @@
-using CoffeeApi.Services;
 using CoffeeTest.Helpers;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CoffeeTest.Services;
 
-public class SnapshotServiceQueryTests
+public class SnapshotQueryServiceTests
 {
     [Fact]
     public async Task GetLatest_EmptyDb_ReturnsNull()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Query(db);
 
         var result = await service.GetLatestAsync();
 
@@ -21,7 +19,7 @@ public class SnapshotServiceQueryTests
     public async Task GetLatest_ReturnsNewest()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Query(db);
 
         db.MachineSnapshots.AddRange(
             new SnapshotBuilder().At(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)).WithCoffee(10).Build(),
@@ -39,7 +37,7 @@ public class SnapshotServiceQueryTests
     public async Task GetAll_CapsPageSizeAt100()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Query(db);
 
         // Add 5 snapshots
         for (int i = 0; i < 5; i++)
@@ -60,7 +58,7 @@ public class SnapshotServiceQueryTests
     public async Task GetAll_PaginatesCorrectly()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Query(db);
 
         for (int i = 0; i < 5; i++)
         {
@@ -80,7 +78,7 @@ public class SnapshotServiceQueryTests
     public async Task GetByDate_ReturnsOnlyThatDay()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Query(db);
 
         db.MachineSnapshots.AddRange(
             new SnapshotBuilder().At(new DateTime(2026, 2, 6, 23, 0, 0, DateTimeKind.Utc)).WithCoffee(10).Build(),
@@ -100,7 +98,7 @@ public class SnapshotServiceQueryTests
     public async Task GetByDate_WithTimezoneOffset_ShiftsBoundary()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Query(db);
 
         db.MachineSnapshots.AddRange(
             // 22:30 UTC = 23:30 CET on Feb 6 → in Feb 6 CET
@@ -126,7 +124,7 @@ public class SnapshotServiceQueryTests
     public async Task GetByDateRange_ReturnsCorrectRange()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Query(db);
 
         db.MachineSnapshots.AddRange(
             new SnapshotBuilder().At(new DateTime(2026, 2, 5, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(10).Build(),
