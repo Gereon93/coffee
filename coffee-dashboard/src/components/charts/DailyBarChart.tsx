@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Customized,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Rectangle,
 } from 'recharts';
+import type { BarShapeProps } from 'recharts';
 import type { DailyAggregate, MarkedDay } from '../../api/types';
 import type { AnomalyResult } from '../../lib/anomalyUtils';
 import { formatDate } from '../../lib/dateUtils';
@@ -22,38 +23,37 @@ interface RechartsInternals {
 const DEFAULT_BAND_WIDTH = 24;
 const EMOJI_OFFSET_ABOVE_BAR = 8;
 
-function makeEventBadges(chartData: ChartEntry[]) {
-  return function EventBadges(props: unknown) {
-    const { xAxisMap, yAxisMap } = props as RechartsInternals;
-    const x = xAxisMap ? Object.values(xAxisMap)[0] : null;
-    const y = yAxisMap ? Object.values(yAxisMap)[0] : null;
-    if (!x || !y) return null;
+type EventBadgesProps = RechartsInternals & { chartData: ChartEntry[] };
 
-    const bandwidth = typeof x.bandwidth === 'function' ? x.bandwidth() : DEFAULT_BAND_WIDTH;
+function EventBadges({ chartData, xAxisMap, yAxisMap }: Readonly<EventBadgesProps>) {
+  const x = xAxisMap ? Object.values(xAxisMap)[0] : null;
+  const y = yAxisMap ? Object.values(yAxisMap)[0] : null;
+  if (!x || !y) return null;
 
-    return (
-      <g>
-        {chartData.map((entry) => {
-          if (!entry.event) return null;
-          const cx = x.scale(entry.label) + bandwidth / 2;
-          const cy = y.scale(entry.total) - EMOJI_OFFSET_ABOVE_BAR;
-          if (Number.isNaN(cx) || Number.isNaN(cy)) return null;
-          return (
-            <text
-              key={entry.date}
-              x={cx}
-              y={cy}
-              textAnchor="middle"
-              fontSize={14}
-              style={{ pointerEvents: 'none' }}
-            >
-              {emojiForEventType(entry.event.eventType ?? 'other')}
-            </text>
-          );
-        })}
-      </g>
-    );
-  };
+  const bandwidth = typeof x.bandwidth === 'function' ? x.bandwidth() : DEFAULT_BAND_WIDTH;
+
+  return (
+    <g>
+      {chartData.map((entry) => {
+        if (!entry.event) return null;
+        const cx = x.scale(entry.label) + bandwidth / 2;
+        const cy = y.scale(entry.total) - EMOJI_OFFSET_ABOVE_BAR;
+        if (Number.isNaN(cx) || Number.isNaN(cy)) return null;
+        return (
+          <text
+            key={entry.date}
+            x={cx}
+            y={cy}
+            textAnchor="middle"
+            fontSize={14}
+            style={{ pointerEvents: 'none' }}
+          >
+            {emojiForEventType(entry.event.eventType ?? 'other')}
+          </text>
+        );
+      })}
+    </g>
+  );
 }
 
 interface Props {
@@ -86,8 +86,6 @@ export function DailyBarChart({
 
   type Entry = ChartEntry;
 
-  const eventBadges = useMemo(() => makeEventBadges(chartData), [chartData]);
-
   const getCoffeeFill = (entry: Entry) => {
     if (entry.isExcluded) return '#a8a29e';
     if (entry.isAnomaly) return '#ef4444';
@@ -102,6 +100,20 @@ export function DailyBarChart({
     if (entry.isExcluded) return '#78716c';
     if (entry.isAnomaly) return '#dc2626';
     return 'none';
+  };
+
+  // Faerbt jeden Balken einzeln: recharts ruft diese shape-Funktion je Balken auf.
+  const renderBar = (fill: (entry: Entry) => string) => (props: BarShapeProps) => {
+    // recharts typisiert payload als any; das Diagramm bekommt ausschliesslich ChartEntry[].
+    const entry = props.payload as Entry;
+    return (
+      <Rectangle
+        {...props}
+        fill={fill(entry)}
+        stroke={getStroke(entry)}
+        strokeWidth={entry.isAnomaly || entry.isExcluded ? 2 : 0}
+      />
+    );
   };
 
   return (
@@ -155,16 +167,8 @@ export function DailyBarChart({
               const e = entry as Entry | undefined;
               if (onBarClick && e?.date) onBarClick(e.date);
             }}
-          >
-            {chartData.map((entry) => (
-              <Cell
-                key={entry.date}
-                fill={getCoffeeFill(entry)}
-                stroke={getStroke(entry)}
-                strokeWidth={entry.isAnomaly || entry.isExcluded ? 2 : 0}
-              />
-            ))}
-          </Bar>
+            shape={renderBar(getCoffeeFill)}
+          />
           <Bar
             dataKey="milkCount"
             stackId="a"
@@ -174,17 +178,9 @@ export function DailyBarChart({
               const e = entry as Entry | undefined;
               if (onBarClick && e?.date) onBarClick(e.date);
             }}
-          >
-            {chartData.map((entry) => (
-              <Cell
-                key={entry.date}
-                fill={getMilkFill(entry)}
-                stroke={getStroke(entry)}
-                strokeWidth={entry.isAnomaly || entry.isExcluded ? 2 : 0}
-              />
-            ))}
-          </Bar>
-          <Customized component={eventBadges} />
+            shape={renderBar(getMilkFill)}
+          />
+          <EventBadges chartData={chartData} />
         </BarChart>
       </ResponsiveContainer>
       <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-stone-500 dark:text-stone-400">

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CoffeeApi.Services;
 
-public class MarkedDayService : IMarkedDayService
+public partial class MarkedDayService : IMarkedDayService
 {
     private const string DateFormat = "yyyy-MM-dd";
 
@@ -96,7 +96,7 @@ public class MarkedDayService : IMarkedDayService
         _context.MarkedDays.Add(entity);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Day {Date} marked as {Kind} ({EventType})", dto.Date, kind, eventType);
+        LogDayMarked(dto.Date, kind, eventType);
 
         var response = new MarkedDayDto
         {
@@ -126,7 +126,19 @@ public class MarkedDayService : IMarkedDayService
         _context.MarkedDays.Remove(entity);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Day {Date} unmarked", date);
+        LogDayUnmarked(date);
         return (true, MarkedDayError.None, null);
     }
+
+    [LoggerMessage(
+        EventId = 5001,
+        Level = LogLevel.Information,
+        Message = "Day {Date} marked as {Kind} ({EventType})")]
+    private partial void LogDayMarked(string date, string kind, string? eventType);
+
+    [LoggerMessage(
+        EventId = 5002,
+        Level = LogLevel.Information,
+        Message = "Day {Date} unmarked")]
+    private partial void LogDayUnmarked(string date);
 }

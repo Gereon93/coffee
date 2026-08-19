@@ -10,7 +10,7 @@ namespace CoffeeApi.Infrastructure;
 /// tables that EnsureCreated() already produced.
 /// Safe to call on every startup — idempotent.
 /// </summary>
-public static class MigrationBaseliner
+public static partial class MigrationBaseliner
 {
     public static void EnsureBaselined(AppDbContext context, ILogger logger)
     {
@@ -45,9 +45,7 @@ public static class MigrationBaseliner
                 return;
             }
 
-            logger.LogInformation(
-                "Baseliner: detected pre-migration DB, seeding __EFMigrationsHistory with {MigrationId}",
-                initialMigrationId);
+            LogBaselining(logger, initialMigrationId);
 
             using var tx = conn.BeginTransaction();
             using (var cmd = conn.CreateCommand())
@@ -89,4 +87,10 @@ public static class MigrationBaseliner
         cmd.Parameters.Add(param);
         return cmd.ExecuteScalar() != null;
     }
+
+    [LoggerMessage(
+        EventId = 1001,
+        Level = LogLevel.Information,
+        Message = "Baseliner: detected pre-migration DB, seeding __EFMigrationsHistory with {MigrationId}")]
+    private static partial void LogBaselining(ILogger logger, string migrationId);
 }
