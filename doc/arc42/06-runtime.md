@@ -115,7 +115,8 @@ sequenceDiagram
     C->>S: GetRangeAggregateAsync(from, to, 120)
     S->>Q: GetByDateRangeAsync(from, to, 120)
     Q->>DB: SELECT WHERE Timestamp in [startOf(from), endOf(to))
-    DB-->>S: all snapshots in range
+    DB-->>Q: all snapshots in range
+    Q-->>S: List<MachineSnapshot>
     S->>Q: GetLastSnapshotBeforeAsync(startOf(from))
     Q-->>S: previousSnapshot (may be null)
 
@@ -133,9 +134,9 @@ Two consequences worth knowing:
 
 - **Days without any snapshot do not appear in `data[]`.** They are absent,
   not zero. The frontend must not assume a contiguous series.
-- The aggregation loop runs **in the controller**, not in a service. It is a
-  documented deviation from the layering ([11](11-risks.md)) and it duplicates
-  the delta arithmetic that already exists in `GetDailySummaryAsync`.
+- The aggregation runs in `SnapshotStatisticsService`, next to
+  `GetDailySummaryAsync`, and both share the same delta helper. The controller
+  only validates the two dates and returns the result ([ADR-012](09-design.md#adr-012-snapshot-services-split-by-responsibility)).
 
 ## 6.5 Power control and status refresh
 

@@ -21,7 +21,11 @@ public class SnapshotPayloadMapperTests
         };
     }
 
-    private static JsonElement Json(string raw) => JsonDocument.Parse(raw).RootElement;
+    private static JsonElement Json(string raw)
+    {
+        using var document = JsonDocument.Parse(raw);
+        return document.RootElement.Clone();
+    }
 
     [Fact]
     public void Map_StampsTheSuppliedTimestamp()
