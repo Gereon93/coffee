@@ -24,6 +24,10 @@ jobs:
         with:
           pr-mode: false
           upload-result: true
+          # Baseline: Bestandsbefunde von main werden nicht als 'new' gemeldet.
+          # Auffrischen: Lauf mit entferntem --baseline starten, das Artefakt
+          # 'qodana-report' herunterladen und dessen qodana.sarif.json hier ersetzen.
+          args: --baseline qodana.sarif.json
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN_852197924 }}
           QODANA_ENDPOINT: 'https://qodana.cloud'
