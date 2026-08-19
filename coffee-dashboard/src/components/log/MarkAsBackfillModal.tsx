@@ -23,7 +23,7 @@ export function MarkAsBackfillModal({ date, displayDate, open, onClose }: Readon
 
   if (!open) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!reason.trim()) {
       setError('Bitte gib einen Grund an.');

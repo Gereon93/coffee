@@ -1,7 +1,6 @@
 import {
   PieChart,
   Pie,
-  Cell,
   Tooltip,
   ResponsiveContainer,
   Legend,
@@ -22,9 +21,11 @@ export function ConsumptionPieChart({ data }: Readonly<Props>) {
   const totalCoffee = data.reduce((s, d) => s + d.coffeeCount, 0);
   const totalMilk = data.reduce((s, d) => s + d.milkCount, 0);
 
+  // The colour belongs on the data entry: recharts derives both the sector fill
+  // and the matching legend swatch from it.
   const pieData = [
-    { name: 'Kaffee', value: totalCoffee },
-    { name: 'Milch', value: totalMilk },
+    { name: 'Kaffee', value: totalCoffee, fill: COLORS[0] },
+    { name: 'Milch', value: totalMilk, fill: COLORS[1] },
   ];
 
   if (totalCoffee === 0 && totalMilk === 0) {
@@ -53,11 +54,7 @@ export function ConsumptionPieChart({ data }: Readonly<Props>) {
             outerRadius={90}
             paddingAngle={4}
             dataKey="value"
-          >
-            {pieData.map((slice, i) => (
-              <Cell key={slice.name} fill={COLORS[i]} />
-            ))}
-          </Pie>
+          />
           <Tooltip
             contentStyle={{
               backgroundColor: '#1c1917',

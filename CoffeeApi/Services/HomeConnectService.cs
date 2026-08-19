@@ -5,7 +5,7 @@ using CoffeeApi.DTOs;
 
 namespace CoffeeApi.Services;
 
-public class HomeConnectService : IHomeConnectService
+public partial class HomeConnectService : IHomeConnectService
 {
     private static readonly JsonSerializerOptions StatusJsonOptions = new() { PropertyNameCaseInsensitive = true };
 
@@ -36,7 +36,7 @@ public class HomeConnectService : IHomeConnectService
         var body = JsonSerializer.Serialize(new { state });
         var content = new StringContent(body, Encoding.UTF8, "application/json");
 
-        _logger.LogInformation("Calling n8n power webhook with state={State}", state);
+        LogCallingPowerWebhook(state);
 
         var response = await _httpClient.PutAsync(_webhookUrl, content);
         response.EnsureSuccessStatusCode();
@@ -88,4 +88,10 @@ public class HomeConnectService : IHomeConnectService
         LastUpdated = DateTime.UtcNow,
         Message = message
     };
+
+    [LoggerMessage(
+        EventId = 3001,
+        Level = LogLevel.Information,
+        Message = "Calling n8n power webhook with state={State}")]
+    private partial void LogCallingPowerWebhook(string state);
 }

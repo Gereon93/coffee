@@ -30,7 +30,7 @@ export function useFocusTrap(containerRef: RefObject<HTMLElement | null>, active
       if (focusable.length === 0) return;
 
       const first = focusable[0];
-      const last = focusable[focusable.length - 1];
+      const last = focusable.at(-1) ?? first;
       const current = document.activeElement as HTMLElement | null;
 
       if (!container.contains(current)) {

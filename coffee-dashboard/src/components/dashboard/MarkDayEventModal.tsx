@@ -36,7 +36,7 @@ export function MarkDayEventModal({ date, displayDate, existing, open, onClose }
   let submitLabel = existingEvent ? 'Aktualisieren' : 'Markieren';
   if (isPending) submitLabel = 'Speichere…';
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selected) {
       setError('Bitte einen Anlass wählen.');

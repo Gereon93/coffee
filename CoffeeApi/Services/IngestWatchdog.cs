@@ -8,7 +8,7 @@ namespace CoffeeApi.Services;
 /// ASP.NET Core integration promotes those to GlitchTip events, so no separate
 /// alerting channel is needed.
 /// </summary>
-public sealed class IngestWatchdog : BackgroundService
+public sealed partial class IngestWatchdog : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly WatchdogOptions _options;
@@ -36,8 +36,7 @@ public sealed class IngestWatchdog : BackgroundService
             return;
         }
 
-        _logger.LogInformation(
-            "Ingest watchdog started: alarm after {StaleAfterMinutes} min without a snapshot, quiet between {QuietFrom}:00 and {QuietTo}:00 UTC",
+        LogWatchdogStarted(
             _options.StaleAfterMinutes,
             _options.QuietFromUtcHour,
             _options.QuietToUtcHour);
@@ -103,9 +102,7 @@ public sealed class IngestWatchdog : BackgroundService
                 break;
 
             case WatchdogAction.Recovered:
-                _logger.LogInformation(
-                    "n8n ingest recovered: snapshot is {AgeMinutes} minutes old",
-                    ageMinutes);
+                LogIngestRecovered(ageMinutes);
                 break;
 
             case WatchdogAction.None:
@@ -113,4 +110,16 @@ public sealed class IngestWatchdog : BackgroundService
                 break;
         }
     }
+
+    [LoggerMessage(
+        EventId = 4001,
+        Level = LogLevel.Information,
+        Message = "Ingest watchdog started: alarm after {StaleAfterMinutes} min without a snapshot, quiet between {QuietFrom}:00 and {QuietTo}:00 UTC")]
+    private partial void LogWatchdogStarted(int staleAfterMinutes, int quietFrom, int quietTo);
+
+    [LoggerMessage(
+        EventId = 4002,
+        Level = LogLevel.Information,
+        Message = "n8n ingest recovered: snapshot is {AgeMinutes} minutes old")]
+    private partial void LogIngestRecovered(int? ageMinutes);
 }

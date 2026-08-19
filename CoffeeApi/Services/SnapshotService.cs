@@ -9,7 +9,7 @@ namespace CoffeeApi.Services;
 /// <summary>
 /// Service for snapshot operations with idempotency logic
 /// </summary>
-public class SnapshotService : ISnapshotService
+public partial class SnapshotService : ISnapshotService
 {
     /// <summary>Upper bound on <c>pageSize</c>; larger requests are clamped.</summary>
     public const int MaxPageSize = 100;
@@ -41,11 +41,7 @@ public class SnapshotService : ISnapshotService
         _context.MachineSnapshots.Add(newSnapshot);
         await _context.SaveChangesAsync();
 
-        var snapshotId = newSnapshot.Id;
-        var coffeeCount = newSnapshot.BeverageCounterCoffee;
-        var totalBeverages = newSnapshot.TotalBeverages;
-        _logger.LogInformation("New snapshot created: {Id}, Coffee: {Coffee}, Total: {Total}",
-            snapshotId, coffeeCount, totalBeverages);
+        LogSnapshotCreated(newSnapshot.Id, newSnapshot.BeverageCounterCoffee, newSnapshot.TotalBeverages);
 
         return (true, newSnapshot);
     }
@@ -315,4 +311,10 @@ public class SnapshotService : ISnapshotService
             || current.BeverageCounterMilk > last.BeverageCounterMilk
             || current.BeverageCounterHotWaterCups > last.BeverageCounterHotWaterCups;
     }
+
+    [LoggerMessage(
+        EventId = 2001,
+        Level = LogLevel.Information,
+        Message = "New snapshot created: {Id}, Coffee: {Coffee}, Total: {Total}")]
+    private partial void LogSnapshotCreated(int id, int coffee, int total);
 }

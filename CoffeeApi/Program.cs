@@ -73,9 +73,8 @@ namespace CoffeeApi
             builder.Services.AddMemoryCache();
 
             var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
-            var allowedOrigins = configuredOrigins is { Length: > 0 }
-                ? configuredOrigins
-                : builder.Environment.IsDevelopment() ? DefaultDevOrigins : [];
+            string[] fallbackOrigins = builder.Environment.IsDevelopment() ? DefaultDevOrigins : [];
+            var allowedOrigins = configuredOrigins is { Length: > 0 } ? configuredOrigins : fallbackOrigins;
 
             builder.Services.AddCors(options =>
             {

@@ -5,8 +5,9 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  Cell,
+  Rectangle,
 } from 'recharts';
+import type { BarShapeProps } from 'recharts';
 import type { SnapshotResponse } from '../../api/types';
 import { formatHour } from '../../lib/formatters';
 
@@ -55,6 +56,20 @@ function buildHourlyData(snapshots: SnapshotResponse[]): HourlyBucket[] {
   }
 
   return buckets;
+}
+
+// Faerbt jeden Balken einzeln: recharts ruft diese shape-Funktion je Balken auf.
+function renderHourBar(props: BarShapeProps) {
+  // recharts typisiert payload als any; das Diagramm bekommt ausschliesslich HourlyBucket[].
+  const entry = props.payload as HourlyBucket;
+  return (
+    <Rectangle
+      {...props}
+      fill={entry.isPeak ? '#ea580c' : '#d97706'}
+      stroke={entry.isPeak ? '#c2410c' : 'none'}
+      strokeWidth={entry.isPeak ? 2 : 0}
+    />
+  );
 }
 
 export function HourlyPeaksChart({ snapshots }: Readonly<Props>) {
@@ -106,16 +121,7 @@ export function HourlyPeaksChart({ snapshots }: Readonly<Props>) {
             formatter={(value?: number | string) => [value ?? 0, 'Bezuege']}
             labelFormatter={(label) => `${label} Uhr`}
           />
-          <Bar dataKey="delta" radius={[4, 4, 0, 0]}>
-            {data.map((entry) => (
-              <Cell
-                key={entry.hour}
-                fill={entry.isPeak ? '#ea580c' : '#d97706'}
-                stroke={entry.isPeak ? '#c2410c' : 'none'}
-                strokeWidth={entry.isPeak ? 2 : 0}
-              />
-            ))}
-          </Bar>
+          <Bar dataKey="delta" radius={[4, 4, 0, 0]} shape={renderHourBar} />
         </BarChart>
       </ResponsiveContainer>
       <div className="mt-3 flex items-center gap-4 text-xs text-stone-500 dark:text-stone-400">
