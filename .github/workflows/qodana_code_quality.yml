@@ -19,14 +19,27 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}  # to check out the actual pull request commit, not the merge commit
           fetch-depth: 0  # a full history is required for pull request analysis
+      - name: 'Baseline aus dem Zielbranch beziehen'
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if git cat-file -e "${BASE_SHA}:qodana.sarif.json" 2>/dev/null; then
+            git show "${BASE_SHA}:qodana.sarif.json" > qodana.sarif.json
+            echo "Baseline aus ${BASE_SHA} uebernommen."
+          else
+            echo "Auf dem Zielbranch liegt noch keine Baseline - es gilt die Fassung aus dem Pull Request."
+          fi
       - name: 'Qodana Scan'
         uses: JetBrains/qodana-action@v2026.1
         with:
           pr-mode: false
           upload-result: true
-          # Baseline: Bestandsbefunde von main werden nicht als 'new' gemeldet.
-          # Auffrischen: Lauf mit entferntem --baseline starten, das Artefakt
-          # 'qodana-report' herunterladen und dessen qodana.sarif.json hier ersetzen.
+          # Baseline: Bestandsbefunde des Zielbranches werden nicht als 'new' gemeldet.
+          # Bei Pull Requests gilt die Fassung des Zielbranches (Schritt oben), damit
+          # ein PR seine eigenen Befunde nicht in die Baseline schreiben kann.
+          # Auffrischen: Lauf auf main mit entferntem --baseline starten, das Artefakt
+          # 'qodana-report' herunterladen und dessen qodana.sarif.json hier einchecken.
           args: --baseline qodana.sarif.json
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN_852197924 }}
