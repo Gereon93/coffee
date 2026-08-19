@@ -1,17 +1,15 @@
 using CoffeeApi.Domain;
-using CoffeeApi.Services;
 using CoffeeTest.Helpers;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CoffeeTest.Services;
 
-public class SnapshotServiceHeatmapTests
+public class SnapshotStatisticsHeatmapTests
 {
     [Fact]
     public async Task GetHeatmapData_NoSnapshots_ReturnsEmpty()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Statistics(db);
 
         var result = await service.GetHeatmapDataAsync(4);
 
@@ -22,7 +20,7 @@ public class SnapshotServiceHeatmapTests
     public async Task GetHeatmapData_GroupsByDayAndHour()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Statistics(db);
 
         // Monday 10:00 -> Monday 11:00 = +2 coffees
         var monday = DateTime.UtcNow.Date;
@@ -46,7 +44,7 @@ public class SnapshotServiceHeatmapTests
     public async Task GetHeatmapData_SkipsDeltasOnExcludedDays()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Statistics(db);
 
         // Friday 20:00 baseline, Friday 21:00 mass-import spike (+30),
         // Saturday 08:00 normal delta (+1). Friday is marked as excluded.
@@ -79,7 +77,7 @@ public class SnapshotServiceHeatmapTests
     public async Task GetHeatmapData_DoesNotSkipEventDays()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Statistics(db);
 
         // Friday 20:00 baseline, Friday 21:00 +30 spike — Friday is marked as event (birthday).
         // Event days must remain in the heatmap (they are valid, just annotated).
@@ -109,7 +107,7 @@ public class SnapshotServiceHeatmapTests
     public async Task GetHeatmapData_SundayIsDayOfWeek7()
     {
         using var db = TestDbContextFactory.Create();
-        var service = new SnapshotService(db, NullLogger<SnapshotService>.Instance);
+        var service = SnapshotServices.Statistics(db);
 
         var sunday = DateTime.UtcNow.Date;
         while (sunday.DayOfWeek != DayOfWeek.Sunday) sunday = sunday.AddDays(-1);

@@ -69,7 +69,7 @@ public sealed partial class IngestWatchdog : BackgroundService
         try
         {
             using var scope = _scopeFactory.CreateScope();
-            var snapshots = scope.ServiceProvider.GetRequiredService<ISnapshotService>();
+            var snapshots = scope.ServiceProvider.GetRequiredService<ISnapshotQueryService>();
             lastSnapshotUtc = (await snapshots.GetLatestAsync())?.Timestamp;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

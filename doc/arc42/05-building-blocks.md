@@ -41,13 +41,17 @@ CoffeeApi/
 │   ├── PowerController.cs           # POST   /coffee/power
 │   └── CoffeeStatusController.cs    # GET    /coffee/status
 ├── Services/
-│   ├── ISnapshotService.cs / SnapshotService.cs      # ingest + all read aggregation
+│   ├── ISnapshotQueryService.cs / SnapshotQueryService.cs        # which rows?
+│   ├── ISnapshotIngestService.cs / SnapshotIngestService.cs      # idempotency + persistence
+│   ├── ISnapshotStatisticsService.cs / …StatisticsService.cs     # summary, range, heatmap
+│   ├── SnapshotPayloadMapper.cs                      # Home Connect payload → entity
 │   ├── IMarkedDayService.cs / MarkedDayService.cs    # annotation rules + persistence
 │   ├── IHomeConnectService.cs / HomeConnectService.cs# n8n webhook client
 │   └── IngestWatchdog.cs                             # alarms when the ingest stops
 ├── Domain/
 │   ├── MachineSnapshot.cs           # counters + status at a point in time
-│   └── MarkedDay.cs                 # per-date annotation
+│   ├── MarkedDay.cs                 # per-date annotation
+│   └── LocalDay.cs                  # the one definition of the local-day rule
 ├── DTOs/                            # request/response contracts, no entities on the wire
 ├── Infrastructure/
 │   ├── AppDbContext.cs              # EF Core model, indexes, UTC value converter
@@ -68,31 +72,28 @@ graph TD
     S --> I["Infrastructure<br/>(AppDbContext)"]
     I --> DOM
     M["Middleware"] -.->|pipeline| C
-    C -.->|"deviation:<br/>StatsController → AppDbContext"| I
 
     style C fill:#e8d5b7
     style S fill:#d4a55a
     style I fill:#8b5e1a,color:#fff
 ```
 
-The dashed edge is a known deviation from the documented layering, not an
-intended design. See [11 — Risks and Technical Debt](11-risks.md).
+No controller reaches past the service layer; the range aggregation that used
+to sit in `StatsController` moved into `SnapshotStatisticsService` (ADR-012).
 
-### 5.2.2 White box: `SnapshotService`
+### 5.2.2 White box: the snapshot services
 
-The largest and most important class in the system (307 LOC,
-`CoffeeApi/Services/SnapshotService.cs`). It carries five distinct groups of
-responsibility:
+Five concerns, five types — cut along the reason to change (ADR-012):
 
-| Group | Members | Notes |
-|-------|---------|-------|
-| **Ingest** | `ProcessIngestAsync`, `HasCounterIncreased` | Idempotency gate; returns `(Created, Snapshot)` |
-| **Payload translation** | `MapToEntity`, `ExtractOperationState`, `ConvertToBool`, `ConvertToInt` | Maps Home Connect key strings to entity properties; tolerates `JsonElement`, boxed primitives, and strings |
-| **Plain queries** | `GetLatestAsync`, `GetAllAsync`, `GetByDateAsync`, `GetByDateRangeAsync`, `GetLastSnapshotBeforeAsync` | `GetAllAsync` caps `pageSize` at 100 |
-| **Aggregation** | `GetDailySummaryAsync`, `GetHeatmapDataAsync` | Delta computation, peak-hour detection, mass-import exclusion |
-| **Time** | `GetLocalDayBoundsUtc` | Local date + offset → half-open UTC interval |
+| Type | Members | Notes |
+|------|---------|-------|
+| `LocalDay` | `BoundsUtc`, `ToLocal`, `DateOf` | Local date + offset → half-open UTC interval. The single definition of the day rule |
+| `SnapshotPayloadMapper` | `Map` | Maps Home Connect key strings to entity properties; tolerates `JsonElement`, boxed primitives, and strings. Pure — the caller supplies the timestamp |
+| `SnapshotQueryService` | `GetLatestAsync`, `GetAllAsync`, `GetByDateAsync`, `GetByDateRangeAsync`, `GetSinceAsync`, `GetLastSnapshotBeforeAsync`, `IsDatabaseReachableAsync` | `GetAllAsync` caps `pageSize` at 100 |
+| `SnapshotIngestService` | `ProcessIngestAsync`, `HasCounterIncreased` | Idempotency gate; returns `(Created, Snapshot)` |
+| `SnapshotStatisticsService` | `GetDailySummaryAsync`, `GetRangeAggregateAsync`, `GetHeatmapDataAsync` | Delta computation, peak-hour detection, mass-import exclusion |
 
-`GetDailySummaryAsync` in detail:
+`SnapshotStatisticsService.GetDailySummaryAsync` in detail:
 
 1. Load the day's snapshots (timezone-aware bounds).
 2. Empty → return a zeroed `DailySummaryDto`.
@@ -104,7 +105,7 @@ responsibility:
    positive `ΔTotalBeverages` determines `PeakHour`, reported in the caller's
    local time.
 
-`GetHeatmapDataAsync` in detail:
+`SnapshotStatisticsService.GetHeatmapDataAsync` in detail:
 
 1. Load all snapshots newer than `UtcNow − 7·weeks` days.
 2. Load the set of `mass-import` dates.
@@ -113,13 +114,17 @@ responsibility:
    accumulate into a `(dayOfWeek, hour)` bucket.
 4. `DayOfWeek` is emitted ISO-8601 style — Monday = 1 … Sunday = 7.
 
+`GetRangeAggregateAsync` groups the range by client-local date, seeds the
+first day from the last snapshot before the range, and rolls the baseline
+forward day by day. Same delta rule as the daily summary, applied per day.
+
 > The heatmap window is a rolling `weeks × 7` days measured from *now* in UTC,
 > not aligned to local week boundaries.
 
 ### 5.2.3 White box: other API components
 
 **`IngestController`** — Rejects payloads whose `data.status` is null or
-empty (400). Delegates to `SnapshotService`. `201 Created` with a `Location`
+empty (400). Delegates to `SnapshotIngestService`. `201 Created` with a `Location`
 of `/api/stats/{id}` when a row was written, `200 OK` when the payload carried
 no counter increase. Unexpected exceptions are logged and answered with a
 generic 500 body.
@@ -127,9 +132,9 @@ generic 500 body.
 **`StatsController`** — Read-only endpoints plus `/api/health`. Validates
 `page ≥ 1` and `pageSize ≥ 1`, then caps `pageSize` at 100. `GetDaily`
 prepends the previous day's last snapshot to the returned snapshot list so the
-frontend can compute the first hourly delta. `GetRange` performs the daily
-aggregation *in the controller*, grouping by client-local date and rolling the
-baseline forward across days. `GetHeatmap` caps `weeks` at 52.
+frontend can compute the first hourly delta. `GetRange` validates the two
+dates and hands the aggregation to `SnapshotStatisticsService`. `GetHeatmap`
+caps `weeks` at 52.
 
 **`MarkedDaysController`** — Thin. All validation lives in `MarkedDayService`,
 which returns a `MarkedDayError` enum; the controller maps that enum to status
@@ -278,8 +283,8 @@ does not yet have.
 | Directory | Scope |
 |-----------|-------|
 | `Controllers/` | Every action and every branch of all five controllers |
-| `Services/` | `SnapshotService` split by concern (idempotency, queries, daily summary, heatmap) and `HomeConnectService` against a stubbed handler |
-| `Domain/` | `MachineSnapshot.TotalBeverages` |
+| `Services/` | One suite per snapshot service (payload mapper, queries, ingest idempotency, daily summary, range, heatmap) and `HomeConnectService` against a stubbed handler |
+| `Domain/` | `MachineSnapshot.TotalBeverages`, `LocalDay` bounds and conversions |
 | `Infrastructure/` | `MigrationBaseliner` against real temporary SQLite files |
 | `Integration/` | `WebApplicationFactory` — real pipeline, real SQLite, API-key middleware |
-| `Helpers/` | `SnapshotBuilder`, `StubHttpMessageHandler`, `TestDbContextFactory` |
+| `Helpers/` | `SnapshotBuilder`, `SnapshotServices`, `StubHttpMessageHandler`, `TestDbContextFactory` |

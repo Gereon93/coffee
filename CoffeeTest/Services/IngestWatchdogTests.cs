@@ -24,7 +24,7 @@ public class IngestWatchdogTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(dbName));
-        services.AddScoped<ISnapshotService, SnapshotService>();
+        services.AddScoped<ISnapshotQueryService, SnapshotQueryService>();
         return services.BuildServiceProvider();
     }
 
@@ -171,7 +171,7 @@ public class IngestWatchdogTests
         // alarm, and it must not take the watchdog loop down either.
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddScoped<ISnapshotService, ThrowingSnapshotService>();
+        services.AddScoped<ISnapshotQueryService, ThrowingSnapshotQueryService>();
         await using var provider = services.BuildServiceProvider();
         var logger = new RecordingLogger<IngestWatchdog>();
         var watchdog = CreateWatchdog(provider, logger, Noon);
@@ -183,13 +183,10 @@ public class IngestWatchdogTests
         Assert.Single(logger.MessagesAt(LogLevel.Warning));
     }
 
-    private sealed class ThrowingSnapshotService : ISnapshotService
+    private sealed class ThrowingSnapshotQueryService : ISnapshotQueryService
     {
         public Task<MachineSnapshot?> GetLatestAsync(string machineId = "EQ900-DEFAULT") =>
             throw new InvalidOperationException("database unreachable");
-
-        public Task<(bool Created, MachineSnapshot Snapshot)> ProcessIngestAsync(IngestPayloadDto payload) =>
-            throw new NotSupportedException();
 
         public Task<(List<MachineSnapshot> Items, int TotalCount)> GetAllAsync(int page = 1, int pageSize = 50) =>
             throw new NotSupportedException();
@@ -200,13 +197,10 @@ public class IngestWatchdogTests
         public Task<List<MachineSnapshot>> GetByDateRangeAsync(DateOnly from, DateOnly to, int tzOffsetMinutes = 0) =>
             throw new NotSupportedException();
 
-        public Task<DailySummaryDto> GetDailySummaryAsync(DateOnly date, int tzOffsetMinutes = 0) =>
+        public Task<List<MachineSnapshot>> GetSinceAsync(DateTime fromUtc) =>
             throw new NotSupportedException();
 
-        public Task<List<HeatmapDataPointDto>> GetHeatmapDataAsync(int weeks = 4, int tzOffsetMinutes = 0) =>
-            throw new NotSupportedException();
-
-        public Task<MachineSnapshot?> GetLastSnapshotBeforeAsync(DateTime timestamp) =>
+        public Task<MachineSnapshot?> GetLastSnapshotBeforeAsync(DateTime timestampUtc) =>
             throw new NotSupportedException();
 
         public Task<bool> IsDatabaseReachableAsync() => throw new NotSupportedException();

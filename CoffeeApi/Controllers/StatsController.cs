@@ -1,4 +1,5 @@
 using System.Globalization;
+using CoffeeApi.Domain;
 using CoffeeApi.DTOs;
 using CoffeeApi.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -22,11 +23,13 @@ public class StatsController : ControllerBase
     private static readonly string[] DateFormatDetails = ["Use yyyy-MM-dd format"];
     private static readonly string[] RangeFormatDetails = ["Use yyyy-MM-dd format for both from and to"];
 
-    private readonly ISnapshotService _snapshotService;
+    private readonly ISnapshotQueryService _snapshots;
+    private readonly ISnapshotStatisticsService _statistics;
 
-    public StatsController(ISnapshotService snapshotService)
+    public StatsController(ISnapshotQueryService snapshots, ISnapshotStatisticsService statistics)
     {
-        _snapshotService = snapshotService;
+        _snapshots = snapshots;
+        _statistics = statistics;
     }
 
     /// <summary>
@@ -45,9 +48,9 @@ public class StatsController : ControllerBase
             return BadRequest(new { error = "Invalid pageSize", details = PageSizeDetails });
         }
 
-        pageSize = Math.Min(pageSize, SnapshotService.MaxPageSize);
+        pageSize = Math.Min(pageSize, SnapshotQueryService.MaxPageSize);
 
-        var (items, totalCount) = await _snapshotService.GetAllAsync(page, pageSize);
+        var (items, totalCount) = await _snapshots.GetAllAsync(page, pageSize);
 
         var response = new PaginatedResponseDto<SnapshotResponseDto>
         {
@@ -79,16 +82,14 @@ public class StatsController : ControllerBase
             return BadRequest(new { error = "Invalid date format", details = DateFormatDetails });
         }
 
-        var snapshots = await _snapshotService.GetByDateAsync(parsedDate, tz);
-        var summary = await _snapshotService.GetDailySummaryAsync(parsedDate, tz);
+        var snapshots = await _snapshots.GetByDateAsync(parsedDate, tz);
+        var summary = await _statistics.GetDailySummaryAsync(parsedDate, tz);
 
-        // Prepend previous day's last snapshot as baseline so the frontend
-        // can calculate the first hourly delta correctly
         var snapshotDtos = new List<SnapshotResponseDto>();
         if (snapshots.Count > 0)
         {
-            var (startOfDay, _) = GetLocalDayBoundsUtc(parsedDate, tz);
-            var baseline = await _snapshotService.GetLastSnapshotBeforeAsync(startOfDay);
+            var (startOfDay, _) = LocalDay.BoundsUtc(parsedDate, tz);
+            var baseline = await _snapshots.GetLastSnapshotBeforeAsync(startOfDay);
             if (baseline != null)
             {
                 snapshotDtos.Add(MapToDto(baseline));
@@ -123,45 +124,11 @@ public class StatsController : ControllerBase
             return BadRequest(new { error = "Invalid date format", details = RangeFormatDetails });
         }
 
-        var snapshots = await _snapshotService.GetByDateRangeAsync(fromDate, toDate, tz);
-
-        // Get the last snapshot before the range for cross-day deltas
-        var (rangeStart, _) = GetLocalDayBoundsUtc(fromDate, tz);
-        var previousSnapshot = await _snapshotService.GetLastSnapshotBeforeAsync(rangeStart);
-
-        // Aggregate by local date with cross-day delta support
-        var groups = snapshots
-            .GroupBy(s => DateOnly.FromDateTime(s.Timestamp.AddMinutes(tz)))
-            .OrderBy(g => g.Key)
-            .ToList();
-
-        Domain.MachineSnapshot? lastPrevious = previousSnapshot;
-        var dailyData = new List<DailyAggregateDto>();
-
-        foreach (var g in groups)
-        {
-            var daySnapshots = g.OrderBy(s => s.Timestamp).ToList();
-            var baseline = lastPrevious ?? daySnapshots[0];
-            var last = daySnapshots[^1];
-
-            dailyData.Add(new DailyAggregateDto
-            {
-                Date = g.Key.ToString("yyyy-MM-dd"),
-                CoffeeCount = Math.Max(0, last.BeverageCounterCoffee - baseline.BeverageCounterCoffee),
-                MilkCount = Math.Max(0,
-                    (last.BeverageCounterCoffeeAndMilk - baseline.BeverageCounterCoffeeAndMilk) +
-                    (last.BeverageCounterMilk - baseline.BeverageCounterMilk)),
-                Total = Math.Max(0, last.TotalBeverages - baseline.TotalBeverages)
-            });
-
-            lastPrevious = last;
-        }
-
         var response = new RangeStatsResponseDto
         {
             From = from,
             To = to,
-            Data = dailyData
+            Data = await _statistics.GetRangeAggregateAsync(fromDate, toDate, tz)
         };
 
         return Ok(response);
@@ -178,7 +145,7 @@ public class StatsController : ControllerBase
     {
         weeks = Math.Min(weeks, MaxHeatmapWeeks);
 
-        var heatmapData = await _snapshotService.GetHeatmapDataAsync(weeks, tz);
+        var heatmapData = await _statistics.GetHeatmapDataAsync(weeks, tz);
 
         var response = new HeatmapResponseDto
         {
@@ -196,20 +163,20 @@ public class StatsController : ControllerBase
     [ProducesResponseType(typeof(HealthResponseDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Health()
     {
-        var lastSnapshot = await _snapshotService.GetLatestAsync();
+        var lastSnapshot = await _snapshots.GetLatestAsync();
 
         var response = new HealthResponseDto
         {
             Status = "healthy",
             Timestamp = DateTime.UtcNow,
-            Database = await _snapshotService.IsDatabaseReachableAsync() ? "connected" : "disconnected",
+            Database = await _snapshots.IsDatabaseReachableAsync() ? "connected" : "disconnected",
             LastSnapshot = lastSnapshot?.Timestamp
         };
 
         return Ok(response);
     }
 
-    private static SnapshotResponseDto MapToDto(Domain.MachineSnapshot snapshot)
+    private static SnapshotResponseDto MapToDto(MachineSnapshot snapshot)
     {
         return new SnapshotResponseDto
         {
@@ -223,13 +190,5 @@ public class StatsController : ControllerBase
             BeverageCounterHotWater = snapshot.BeverageCounterHotWater,
             OperationState = snapshot.OperationState
         };
-    }
-
-    private static (DateTime Start, DateTime End) GetLocalDayBoundsUtc(DateOnly date, int tzOffsetMinutes)
-    {
-        var start = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)
-            .AddMinutes(-tzOffsetMinutes);
-        var end = start.AddDays(1);
-        return (start, end);
     }
 }

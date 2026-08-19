@@ -218,7 +218,7 @@ revisiting only if the dataset grew by orders of magnitude.
 
 | Category | Framework / technique | Scope |
 |----------|----------------------|-------|
-| Unit | xUnit + EF Core InMemory | `SnapshotService` (idempotency, queries, daily summary, heatmap), `MarkedDayService`, domain computation |
+| Unit | xUnit + EF Core InMemory | The snapshot services (payload mapping, queries, idempotency, daily summary, range, heatmap), `MarkedDayService`, domain computation |
 | Service with I/O | `StubHttpMessageHandler` | `HomeConnectService`: success, non-2xx, timeout, unparsable body |
 | Controller | xUnit + InMemory context | Every action, including every validation and error branch |
 | Infrastructure | Real temporary SQLite files | `MigrationBaseliner`: fresh DB, legacy DB, already-baselined DB |

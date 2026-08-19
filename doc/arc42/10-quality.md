@@ -58,20 +58,20 @@ that pins the behaviour, or states that it is unverified.
 
 | # | Stimulus | Required response | Covered by |
 |---|----------|------------------|------------|
-| Q-1 | Three coffees are brewed at 06:40; the first sample of the day arrives at 07:15 | They count against *that* day, using the previous day's last snapshot as baseline | `SnapshotServiceDailySummaryTests` |
-| Q-2 | Client sends `tz=120` (CEST) for `2026-08-15` | Query window is `[2026-08-14T22:00Z, 2026-08-15T22:00Z)` | `SnapshotServiceQueryTests` |
+| Q-1 | Three coffees are brewed at 06:40; the first sample of the day arrives at 07:15 | They count against *that* day, using the previous day's last snapshot as baseline | `SnapshotStatisticsDailySummaryTests` |
+| Q-2 | Client sends `tz=120` (CEST) for `2026-08-15` | Query window is `[2026-08-14T22:00Z, 2026-08-15T22:00Z)` | `SnapshotQueryServiceTests` |
 | Q-3 | A day in the requested range has no snapshots | The day is absent from `data[]` — not present with zeros | `StatsControllerTests` |
-| Q-4 | A day is marked `mass-import` | Its deltas are excluded from heatmap buckets and from anomaly statistics | `SnapshotServiceHeatmapTests` |
+| Q-4 | A day is marked `mass-import` | Its deltas are excluded from heatmap buckets and from anomaly statistics | `SnapshotStatisticsHeatmapTests` |
 | Q-5 | A day is marked `event` | It stays in consumption totals and heatmap aggregates and is annotated in the chart, but is **excluded from anomaly detection** — `DashboardPage` passes `allMarkedDates` (mass-import ∪ event) to `useAnomalyDetection` | backend CRUD by `MarkedDaysControllerTests`; the exclusion itself is frontend-only and untested |
 | Q-6 | Snapshot has 5 coffee, 3 coffee+milk, 2 milk, 1 hot-water cup, 500 ml hot water | `TotalBeverages == 11` — millilitres excluded | `MachineSnapshotTests` |
-| Q-7 | Heatmap groups a Sunday sample | `dayOfWeek == 7`, ISO-8601 style | `SnapshotServiceHeatmapTests` |
+| Q-7 | Heatmap groups a Sunday sample | `dayOfWeek == 7`, ISO-8601 style | `SnapshotStatisticsHeatmapTests` |
 | Q-8 | A 52-week heatmap is requested during CEST and spans the CET period | **Known deviation:** winter samples are shifted by one hour. Accepted, see [ADR-004](09-design.md#adr-004-client-driven-timezone-offset) | not covered |
 
 ### Reliability
 
 | # | Stimulus | Required response | Covered by |
 |---|----------|------------------|------------|
-| Q-9 | n8n delivers the identical payload three times | One row; responses `201`, `200`, `200`, all carrying the same snapshot id | `SnapshotServiceIdempotencyTests`, `IngestControllerTests` |
+| Q-9 | n8n delivers the identical payload three times | One row; responses `201`, `200`, `200`, all carrying the same snapshot id | `SnapshotIngestServiceTests`, `IngestControllerTests` |
 | Q-10 | n8n does not answer the status webhook within 5 s | `200 OK` with `reachable: false`, `label: "Offline"`; no exception surfaces | `HomeConnectServiceTests` |
 | Q-11 | n8n rejects a power command | `500` with a generic message; the exception is logged and reported to GlitchTip | `PowerControllerTests` |
 | Q-12 | Container restarts against an existing pre-migration database | `MigrationBaseliner` seeds the history; only pending migrations apply; no data loss | `MigrationBaselinerTests` |

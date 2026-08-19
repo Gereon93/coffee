@@ -13,12 +13,12 @@ public class IngestController : ControllerBase
 {
     private static readonly string[] PayloadDetails = ["data.status is required"];
 
-    private readonly ISnapshotService _snapshotService;
+    private readonly ISnapshotIngestService _ingestService;
     private readonly ILogger<IngestController> _logger;
 
-    public IngestController(ISnapshotService snapshotService, ILogger<IngestController> logger)
+    public IngestController(ISnapshotIngestService ingestService, ILogger<IngestController> logger)
     {
-        _snapshotService = snapshotService;
+        _ingestService = ingestService;
         _logger = logger;
     }
 
@@ -42,7 +42,7 @@ public class IngestController : ControllerBase
 
         try
         {
-            var (created, snapshot) = await _snapshotService.ProcessIngestAsync(payload);
+            var (created, snapshot) = await _ingestService.ProcessIngestAsync(payload);
 
             var response = new IngestResponseDto
             {

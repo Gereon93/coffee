@@ -1,6 +1,6 @@
 # 11. Risks and Technical Debt
 
-State verified against the code and a full test run: 102 xUnit tests
+State verified against the code and a full test run: 153 xUnit tests
 (`CoffeeTest/`) and 102 Vitest tests (`coffee-dashboard/`), all passing. Items
 already fixed have been removed from this list rather than left as noise.
 
@@ -35,11 +35,11 @@ generic CVSS-style score.
 
 | ID | Item | Severity | Detail |
 |----|------|----------|--------|
-| TD-12 | **`StatsController` violates the documented layering** | Medium | It injects `AppDbContext` directly and performs the entire range aggregation — grouping by local date, rolling the baseline, computing deltas — inside the action. `CLAUDE.md` mandates Controller → Service → EF Core, and the delta arithmetic already exists in `SnapshotService.GetDailySummaryAsync`. Two copies of the same rule in two layers is how they drift apart. |
-| TD-13 | **`SnapshotService` carries five responsibilities** | Medium | 307 LOC and an 8-member interface spanning ingest and idempotency, Home Connect payload parsing, plain queries, statistical aggregation, and timezone arithmetic. It is not a god class by size, but it is one by cohesion: nothing about parsing `JsonElement` values belongs in the same type as heatmap bucketing. A natural split is a payload mapper, an ingest service, a query service, and a statistics service. |
-| TD-14 | **`GetLocalDayBoundsUtc` is duplicated verbatim** | Low | The same private method exists in both `SnapshotService` and `StatsController`. The day-boundary rule is core domain logic and must have exactly one definition. |
+| TD-12 | **`StatsController` violates the documented layering** | ~~Medium~~ **Resolved** | The range aggregation moved into `SnapshotStatisticsService.GetRangeAggregateAsync`; the controller validates the two dates and maps the result. No controller injects `AppDbContext` any more. See [ADR-012](09-design.md#adr-012-snapshot-services-split-by-responsibility). |
+| TD-13 | **`SnapshotService` carries five responsibilities** | ~~Medium~~ **Resolved** | Split into `LocalDay`, `SnapshotPayloadMapper`, `SnapshotQueryService`, `SnapshotIngestService`, and `SnapshotStatisticsService`; `ISnapshotService` is gone and every caller depends only on what it uses. See [ADR-012](09-design.md#adr-012-snapshot-services-split-by-responsibility). |
+| TD-14 | **`GetLocalDayBoundsUtc` is duplicated verbatim** | ~~Low~~ **Resolved** | The rule now has exactly one definition: `LocalDay.BoundsUtc` in `Domain/`, covered by `LocalDayTests`. |
 | TD-16 | **Unused composite index** | ~~Low~~ **Resolved** | `IX_MachineSnapshots_Idempotency` is gone from the model and dropped by migration `DropUnusedIdempotencyIndex`. The idempotency check still reads the latest row by timestamp, which `IX_MachineSnapshots_Timestamp` serves. |
-| TD-17 | **Magic numbers without names** | ~~Low~~ **Resolved** | Now `ANOMALY_Z_SCORE_THRESHOLD`, `ALL_TIME_START_DATE`, `POWER_SETTLE_DELAY_MS`, `SnapshotService.MaxPageSize` (which `StatsController` reuses instead of repeating the literal) and `StatsController.MaxHeatmapWeeks`. |
+| TD-17 | **Magic numbers without names** | ~~Low~~ **Resolved** | Now `ANOMALY_Z_SCORE_THRESHOLD`, `ALL_TIME_START_DATE`, `POWER_SETTLE_DELAY_MS`, `SnapshotQueryService.MaxPageSize` (which `StatsController` reuses instead of repeating the literal) and `StatsController.MaxHeatmapWeeks`. |
 | TD-18 | **Hardcoded `ProductVersion` in the baseliner** | ~~Low~~ **Resolved** | `MigrationBaseliner` writes `ProductInfo.GetVersion()`, so the row records the EF Core version that actually ran. |
 | TD-19 | **`UseHttpsRedirection` with no HTTPS port** | ~~Low~~ **Resolved** | The call is gone; a comment in `Program.cs` records that the container serves plain HTTP and TLS terminates upstream. |
 
@@ -72,6 +72,5 @@ Ranked by risk removed per unit of effort, not by severity alone.
 
 1. **TD-03 / TD-23** — bump EF Core and OpenAPI packages to the .NET 10 line; clears the vulnerability warning as a side effect.
 2. **TD-09 / TD-10 / TD-27** — route frontend writes through `fetchJson`, extend the dev proxy to `/coffee`, and make the health probe survive a broken database. All three are small and each removes a case where the system misreports its own state.
-3. **TD-12 / TD-14** — move the range aggregation into `SnapshotService` and delete the duplicated day-bounds method. One behaviour, one home.
-4. **TD-22** — an error boundary around the routes, so a render-time exception in a chart cannot blank the page.
-5. **TD-02, TD-07, TD-13** — deeper changes with real design questions attached; worth their own discussion rather than a drive-by fix.
+3. **TD-22** — an error boundary around the routes, so a render-time exception in a chart cannot blank the page.
+4. **TD-02, TD-07** — deeper changes with real design questions attached; worth their own discussion rather than a drive-by fix.

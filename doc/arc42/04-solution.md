@@ -58,9 +58,9 @@ baseline is therefore the **last snapshot strictly before the local start of
 the period**. Only when no such snapshot exists (the very first day of the
 dataset) does the period's own first sample serve as the baseline.
 
-Both `SnapshotService.GetDailySummaryAsync` and `StatsController.GetRange`
-apply this. In the range case the baseline rolls forward: each day's baseline
-is the previous day's last snapshot.
+`SnapshotStatisticsService` applies this in both `GetDailySummaryAsync` and
+`GetRangeAggregateAsync`. In the range case the baseline rolls forward: each
+day's baseline is the previous day's last snapshot.
 
 ### Rule 3 — Store a sample only when it carries information
 
