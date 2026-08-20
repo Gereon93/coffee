@@ -4,7 +4,8 @@ namespace CoffeeApi.Services;
 
 /// <summary>
 /// Reads stored snapshots. No aggregation, no ingest — every method answers
-/// "which rows?" and nothing else.
+/// "which rows?" and nothing else. Every ordered result breaks ties on equal
+/// timestamps by id, so two callers walking the same rows see the same order.
 /// </summary>
 public interface ISnapshotQueryService
 {
@@ -36,9 +37,7 @@ public interface ISnapshotQueryService
     Task<List<MachineSnapshot>> GetSinceAsync(DateTime fromUtc);
 
     /// <summary>
-    /// Get the last snapshot before a given UTC timestamp. Snapshots sharing a
-    /// timestamp are broken by descending id, so every caller resolves the same
-    /// predecessor for the same reading.
+    /// Get the last snapshot before a given UTC timestamp
     /// </summary>
     Task<MachineSnapshot?> GetLastSnapshotBeforeAsync(DateTime timestampUtc);
 

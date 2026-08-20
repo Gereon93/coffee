@@ -66,7 +66,7 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
         var days = snapshots
             .GroupBy(s => LocalDay.DateOf(s.Timestamp, tzOffsetMinutes))
             .OrderBy(group => group.Key)
-            .Select(group => (LocalDate: group.Key, Snapshots: group.OrderBy(s => s.Timestamp).ToList()));
+            .Select(group => (LocalDate: group.Key, Snapshots: group.OrderBy(s => s.Timestamp).ThenBy(s => s.Id).ToList()));
 
         var aggregates = new List<DailyAggregateDto>();
 

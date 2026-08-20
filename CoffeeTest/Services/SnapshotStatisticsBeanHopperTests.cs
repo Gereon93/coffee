@@ -130,4 +130,41 @@ public class SnapshotStatisticsBeanHopperTests
         Assert.Equal(0, result[1].BeanHoppers.Hopper1);
         Assert.Equal(1, result[1].BeanHoppers.Excluded);
     }
+
+    [Fact]
+    public async Task GetDailySummary_TiedTimestamps_WalksTheSnapshotsInIdOrder()
+    {
+        using var db = TestDbContextFactory.Create();
+        var tied = new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc);
+        db.MachineSnapshots.AddRange(
+            new SnapshotBuilder().At(new DateTime(2026, 2, 6, 23, 0, 0, DateTimeKind.Utc)).WithCoffee(100).Build(),
+            new SnapshotBuilder().At(tied).WithCoffee(101).Build(),
+            new SnapshotBuilder().At(tied).WithCoffee(104).Build()
+        );
+        await db.SaveChangesAsync();
+
+        var result = await SnapshotServices.Statistics(db).GetDailySummaryAsync(Day);
+
+        Assert.Equal(4, result.CoffeeToday);
+        Assert.Equal(4, result.BeanHoppers.Hopper1);
+    }
+
+    [Fact]
+    public async Task GetRangeAggregate_TiedTimestamps_WalksTheSnapshotsInIdOrder()
+    {
+        using var db = TestDbContextFactory.Create();
+        var tied = new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc);
+        db.MachineSnapshots.AddRange(
+            new SnapshotBuilder().At(tied).WithCoffee(100).Build(),
+            new SnapshotBuilder().At(tied).WithCoffee(101).Build(),
+            new SnapshotBuilder().At(tied).WithCoffee(104).Build()
+        );
+        await db.SaveChangesAsync();
+
+        var result = await SnapshotServices.Statistics(db).GetRangeAggregateAsync(Day, Day);
+
+        var day = Assert.Single(result);
+        Assert.Equal(4, day.CoffeeCount);
+        Assert.Equal(4, day.BeanHoppers.Hopper1);
+    }
 }
