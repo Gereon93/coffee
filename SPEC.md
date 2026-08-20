@@ -19,6 +19,35 @@ akzeptieren `tz` — den UTC-Offset des Clients **in Minuten** (60 = CET,
 120 = CEST). Ohne Angabe wird UTC verwendet. Das Frontend haengt den Wert
 automatisch an.
 
+### Bohnenfach-Zuordnung
+
+Die EQ900 hat zwei Bohnenfaecher. Home Connect meldet kein Fach, aber getrennte
+Zaehler — daraus leitet die API die Zuordnung ab. Ein Bezug existiert nur als
+**Delta zwischen zwei aufeinanderfolgenden Snapshots**; das Delta wird dem
+**spaeteren** der beiden Snapshots zugeschrieben.
+
+Zwei Zaehler koennen Bohnen ziehen, und jeder hat ein Standardfach:
+
+| `counter` | Zaehler | Standard-`beanHopper` |
+|-----------|---------|-----------------------|
+| `coffee` | Kaffee | `1` |
+| `coffeeAndMilk` | K+Milch (Cappuccino, Latte macchiato) | `2` |
+
+`Milch` und `Heisswasser` ziehen keine Bohnen und tauchen in `beanHoppers` nie
+auf. Ein Zaehler ohne Standardfach faellt auf `1` zurueck.
+
+Ein Snapshot-Delta kann gemischt sein — zwei Kaffee **und** ein K+Milch im selben
+Intervall. `beanHoppers` ist deshalb eine Liste mit je einem Eintrag pro bewegtem
+Zaehler, und eine manuelle Korrektur (Endpunkte 9 und 10) gilt jeweils fuer genau
+ein `(Snapshot, counter)`-Paar. `source` sagt, woher die Zuordnung stammt:
+`auto` = Standardregel, `manual` = gespeicherte Korrektur.
+
+`beanHopper: null` heisst "kein Bohnenverbrauch" — die Bezuege zaehlen dann in
+den Aggregaten unter `excluded` statt unter `hopper1`/`hopper2`.
+
+Gramm-Werte, Bohnensorten und Inventar kennt diese API nicht; sie liefert nur
+die Bezugsmengen je Fach. Die Bewertung liegt im Dashboard (Murgbyte/dashboard-s7#235).
+
 ---
 
 ## Base URL
@@ -121,7 +150,11 @@ GET /api/stats?page=1&pageSize=50 HTTP/1.1
       "beverageCounterCoffeeAndMilk": 10,
       "beverageCounterMilk": 11,
       "totalBeverages": 1009,
-      "operationState": "Ready"
+      "operationState": "Ready",
+      "beanHoppers": [
+        { "counter": "coffee", "count": 2, "beanHopper": 1, "source": "auto" },
+        { "counter": "coffeeAndMilk", "count": 1, "beanHopper": 2, "source": "manual" }
+      ]
     }
   ],
   "pagination": {
@@ -159,6 +192,8 @@ GET /api/stats/daily/2025-01-25 HTTP/1.1
 
 Die Antwort enthaelt als ersten Eintrag in `snapshots` den letzten Snapshot des
 Vortags als Baseline, damit das erste Stunden-Delta korrekt berechenbar ist.
+Dieser Baseline-Eintrag hat ein leeres `beanHoppers`, weil sein eigenes Delta zum
+Vortag gehoert.
 
 #### Response (200 OK)
 
@@ -167,21 +202,28 @@ Vortags als Baseline, damit das erste Stunden-Delta korrekt berechenbar ist.
   "date": "2025-01-25",
   "snapshots": [
     {
+      "id": 41,
       "timestamp": "2025-01-25T07:00:00Z",
       "beverageCounterCoffee": 980,
-      "totalBeverages": 1000
+      "totalBeverages": 1000,
+      "beanHoppers": []
     },
     {
+      "id": 42,
       "timestamp": "2025-01-25T07:15:00Z",
       "beverageCounterCoffee": 982,
-      "totalBeverages": 1002
+      "totalBeverages": 1002,
+      "beanHoppers": [
+        { "counter": "coffee", "count": 2, "beanHopper": 1, "source": "auto" }
+      ]
     }
   ],
   "summary": {
     "coffeeToday": 8,
     "milkDrinksToday": 2,
     "totalToday": 10,
-    "peakHour": 9
+    "peakHour": 9,
+    "beanHoppers": { "hopper1": 8, "hopper2": 2, "excluded": 0 }
   }
 }
 ```
@@ -219,13 +261,15 @@ Tage ohne Snapshots fehlen in `data[]` — sie erscheinen nicht mit Nullwerten.
       "date": "2025-01-20",
       "coffeeCount": 45,
       "milkCount": 5,
-      "total": 50
+      "total": 50,
+      "beanHoppers": { "hopper1": 45, "hopper2": 3, "excluded": 2 }
     },
     {
       "date": "2025-01-21",
       "coffeeCount": 42,
       "milkCount": 8,
-      "total": 50
+      "total": 50,
+      "beanHoppers": { "hopper1": 42, "hopper2": 8, "excluded": 0 }
     }
   ]
 }
@@ -351,7 +395,81 @@ Statistik und sind nur von der Anomalie-Erkennung ausgenommen.
 
 ---
 
-### 9. GET /coffee/status
+### 9. POST /api/stats/snapshots/{id}/bean-hopper
+
+**Zweck:** Bohnenfach eines Snapshot-Deltas manuell korrigieren
+
+**Auth:** `X-API-Key` erforderlich.
+
+#### Request
+
+```http
+POST /api/stats/snapshots/42/bean-hopper HTTP/1.1
+Content-Type: application/json
+X-API-Key: <key>
+
+{
+  "counter": "coffee",
+  "beanHopper": 2
+}
+```
+
+#### Path Parameters
+
+| Parameter | Type | Beschreibung |
+|-----------|------|--------------|
+| id | int | Snapshot, an dem das Delta endet |
+
+#### Body
+
+| Feld | Type | Required | Beschreibung |
+|------|------|----------|--------------|
+| counter | string | Ja | `coffee` oder `coffeeAndMilk` |
+| beanHopper | int \| null | Ja | `1`, `2` oder `null` fuer "kein Bohnenverbrauch". Muss im Body stehen — ein fehlendes Feld wird abgelehnt, nicht als `null` gelesen. |
+
+Die Korrektur gilt fuer genau ein `(Snapshot, counter)`-Paar. Ein erneuter POST
+auf dasselbe Paar ueberschreibt den Wert, es entsteht keine zweite Zeile.
+
+#### Responses
+
+| Status | Bedingung |
+|--------|-----------|
+| 204 No Content | Korrektur gespeichert |
+| 400 Bad Request | `counter` unbekannt, `beanHopper` ausserhalb `1\|2\|null`, oder der Zaehler hat an diesem Snapshot kein Delta |
+| 404 Not Found | Snapshot existiert nicht |
+
+---
+
+### 10. DELETE /api/stats/snapshots/{id}/bean-hopper
+
+**Zweck:** Korrektur zuruecknehmen, das Delta faellt auf die Standardregel zurueck
+
+**Auth:** `X-API-Key` erforderlich.
+
+#### Request
+
+```http
+DELETE /api/stats/snapshots/42/bean-hopper?counter=coffee HTTP/1.1
+X-API-Key: <key>
+```
+
+#### Query Parameters
+
+| Parameter | Type | Required | Beschreibung |
+|-----------|------|----------|--------------|
+| counter | string | Ja | `coffee` oder `coffeeAndMilk` |
+
+#### Responses
+
+| Status | Bedingung |
+|--------|-----------|
+| 204 No Content | Korrektur entfernt |
+| 400 Bad Request | `counter` unbekannt |
+| 404 Not Found | Fuer dieses `(Snapshot, counter)`-Paar gibt es keine Korrektur |
+
+---
+
+### 11. GET /coffee/status
 
 **Zweck:** Live-Zustand der Maschine (Server-Cache 7 s)
 
@@ -375,7 +493,7 @@ Fehler des Dashboards.
 
 ---
 
-### 10. POST /coffee/power
+### 12. POST /coffee/power
 
 **Zweck:** Maschine ein-/ausschalten (Relay ueber n8n)
 
@@ -403,7 +521,7 @@ Das 07:00–18:00-Fenster ist eine reine UI-Sperre im Dashboard
 
 ---
 
-### 11. GET /api/health
+### 13. GET /api/health
 
 **Zweck:** Healthcheck für Monitoring
 

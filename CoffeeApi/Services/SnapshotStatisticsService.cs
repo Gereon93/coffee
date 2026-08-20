@@ -12,11 +12,16 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
     private const int DaysPerWeek = 7;
 
     private readonly ISnapshotQueryService _snapshots;
+    private readonly IBeanHopperService _beanHoppers;
     private readonly AppDbContext _context;
 
-    public SnapshotStatisticsService(ISnapshotQueryService snapshots, AppDbContext context)
+    public SnapshotStatisticsService(
+        ISnapshotQueryService snapshots,
+        IBeanHopperService beanHoppers,
+        AppDbContext context)
     {
         _snapshots = snapshots;
+        _beanHoppers = beanHoppers;
         _context = context;
     }
 
@@ -37,16 +42,15 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
 
         var (coffeeToday, milkDrinksToday) = BeverageDeltas(baseline, last);
 
-        var sequence = previousSnapshot != null
-            ? new[] { previousSnapshot }.Concat(snapshots).ToList()
-            : snapshots;
+        var sequence = PrecededBy(previousSnapshot, snapshots);
 
         return new DailySummaryDto
         {
             CoffeeToday = Math.Max(0, coffeeToday),
             MilkDrinksToday = Math.Max(0, milkDrinksToday),
             TotalToday = Math.Max(0, coffeeToday + milkDrinksToday),
-            PeakHour = FindPeakHour(sequence, tzOffsetMinutes)
+            PeakHour = FindPeakHour(sequence, tzOffsetMinutes),
+            BeanHoppers = await _beanHoppers.GetTotalsAsync(sequence)
         };
     }
 
@@ -57,10 +61,12 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
         var (rangeStart, _) = LocalDay.BoundsUtc(from, tzOffsetMinutes);
         var baseline = await _snapshots.GetLastSnapshotBeforeAsync(rangeStart);
 
+        var usageBySnapshot = await _beanHoppers.GetUsageAsync(PrecededBy(baseline, snapshots));
+
         var days = snapshots
             .GroupBy(s => LocalDay.DateOf(s.Timestamp, tzOffsetMinutes))
             .OrderBy(group => group.Key)
-            .Select(group => (LocalDate: group.Key, Snapshots: group.OrderBy(s => s.Timestamp).ToList()));
+            .Select(group => (LocalDate: group.Key, Snapshots: group.OrderBy(s => s.Timestamp).ThenBy(s => s.Id).ToList()));
 
         var aggregates = new List<DailyAggregateDto>();
 
@@ -71,12 +77,17 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
 
             var (coffee, milk) = BeverageDeltas(dayBaseline, last);
 
+            var dayUsages = daySnapshots
+                .Where(s => usageBySnapshot.ContainsKey(s.Id))
+                .SelectMany(s => usageBySnapshot[s.Id]);
+
             aggregates.Add(new DailyAggregateDto
             {
                 Date = localDate.ToString("yyyy-MM-dd"),
                 CoffeeCount = Math.Max(0, coffee),
                 MilkCount = Math.Max(0, milk),
-                Total = Math.Max(0, last.TotalBeverages - dayBaseline.TotalBeverages)
+                Total = Math.Max(0, last.TotalBeverages - dayBaseline.TotalBeverages),
+                BeanHoppers = _beanHoppers.SumUsage(dayUsages)
             });
 
             baseline = last;
@@ -120,6 +131,13 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
             .OrderBy(h => h.DayOfWeek)
             .ThenBy(h => h.Hour)
             .ToList();
+    }
+
+    private static List<MachineSnapshot> PrecededBy(MachineSnapshot? earlierReading, List<MachineSnapshot> snapshots)
+    {
+        return earlierReading != null
+            ? new[] { earlierReading }.Concat(snapshots).ToList()
+            : snapshots;
     }
 
     /// <summary>

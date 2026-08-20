@@ -19,6 +19,7 @@ public class ApiKeyMiddleware
         new("/api/ingest"),
         new("/coffee/power", ["POST"]),
         new("/api/stats/marked-days", ["POST", "DELETE"]),
+        new("/api/stats/snapshots", ["POST", "DELETE"]),
     };
 
     private sealed record ProtectedRoute(string PathPrefix, string[]? Methods = null);

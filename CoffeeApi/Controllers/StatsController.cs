@@ -25,11 +25,16 @@ public class StatsController : ControllerBase
 
     private readonly ISnapshotQueryService _snapshots;
     private readonly ISnapshotStatisticsService _statistics;
+    private readonly IBeanHopperService _beanHoppers;
 
-    public StatsController(ISnapshotQueryService snapshots, ISnapshotStatisticsService statistics)
+    public StatsController(
+        ISnapshotQueryService snapshots,
+        ISnapshotStatisticsService statistics,
+        IBeanHopperService beanHoppers)
     {
         _snapshots = snapshots;
         _statistics = statistics;
+        _beanHoppers = beanHoppers;
     }
 
     /// <summary>
@@ -52,9 +57,11 @@ public class StatsController : ControllerBase
 
         var (items, totalCount) = await _snapshots.GetAllAsync(page, pageSize);
 
+        var usageBySnapshot = await GetPageUsageAsync(items);
+
         var response = new PaginatedResponseDto<SnapshotResponseDto>
         {
-            Data = items.Select(MapToDto).ToList(),
+            Data = items.Select(snapshot => MapToDto(snapshot, usageBySnapshot)).ToList(),
             Pagination = new PaginationDto
             {
                 Page = page,
@@ -85,22 +92,24 @@ public class StatsController : ControllerBase
         var snapshots = await _snapshots.GetByDateAsync(parsedDate, tz);
         var summary = await _statistics.GetDailySummaryAsync(parsedDate, tz);
 
-        var snapshotDtos = new List<SnapshotResponseDto>();
+        var sequence = new List<MachineSnapshot>();
         if (snapshots.Count > 0)
         {
             var (startOfDay, _) = LocalDay.BoundsUtc(parsedDate, tz);
             var baseline = await _snapshots.GetLastSnapshotBeforeAsync(startOfDay);
             if (baseline != null)
             {
-                snapshotDtos.Add(MapToDto(baseline));
+                sequence.Add(baseline);
             }
         }
-        snapshotDtos.AddRange(snapshots.Select(MapToDto));
+        sequence.AddRange(snapshots);
+
+        var usageBySnapshot = await _beanHoppers.GetUsageAsync(sequence);
 
         var response = new DailyStatsResponseDto
         {
             Date = date,
-            Snapshots = snapshotDtos,
+            Snapshots = sequence.Select(snapshot => MapToDto(snapshot, usageBySnapshot)).ToList(),
             Summary = summary
         };
 
@@ -176,7 +185,30 @@ public class StatsController : ControllerBase
         return Ok(response);
     }
 
-    private static SnapshotResponseDto MapToDto(MachineSnapshot snapshot)
+    /// <summary>Bean draws for one page of the snapshot log.</summary>
+    private async Task<Dictionary<int, List<BeanHopperUsageDto>>> GetPageUsageAsync(List<MachineSnapshot> newestFirstPage)
+    {
+        if (newestFirstPage.Count == 0)
+        {
+            return [];
+        }
+
+        var oldestOnPage = newestFirstPage[^1];
+        var readingBeforePage = await _snapshots.GetLastSnapshotBeforeAsync(oldestOnPage.Timestamp);
+
+        var oldestFirst = new List<MachineSnapshot>();
+        if (readingBeforePage != null)
+        {
+            oldestFirst.Add(readingBeforePage);
+        }
+        oldestFirst.AddRange(Enumerable.Reverse(newestFirstPage));
+
+        return await _beanHoppers.GetUsageAsync(oldestFirst);
+    }
+
+    private static SnapshotResponseDto MapToDto(
+        MachineSnapshot snapshot,
+        Dictionary<int, List<BeanHopperUsageDto>> usageBySnapshot)
     {
         return new SnapshotResponseDto
         {
@@ -188,7 +220,8 @@ public class StatsController : ControllerBase
             BeverageCounterMilk = snapshot.BeverageCounterMilk,
             BeverageCounterHotWaterCups = snapshot.BeverageCounterHotWaterCups,
             BeverageCounterHotWater = snapshot.BeverageCounterHotWater,
-            OperationState = snapshot.OperationState
+            OperationState = snapshot.OperationState,
+            BeanHoppers = usageBySnapshot.GetValueOrDefault(snapshot.Id) ?? []
         };
     }
 }

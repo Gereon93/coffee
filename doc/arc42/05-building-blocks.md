@@ -38,6 +38,7 @@ CoffeeApi/
 │   ├── IngestController.cs          # POST   /api/ingest
 │   ├── StatsController.cs           # GET    /api/stats, /daily/{date}, /range, /heatmap, /api/health
 │   ├── MarkedDaysController.cs      # GET/POST/DELETE /api/stats/marked-days
+│   ├── BeanHoppersController.cs     # POST/DELETE /api/stats/snapshots/{id}/bean-hopper
 │   ├── PowerController.cs           # POST   /coffee/power
 │   └── CoffeeStatusController.cs    # GET    /coffee/status
 ├── Services/
@@ -46,19 +47,24 @@ CoffeeApi/
 │   ├── ISnapshotStatisticsService.cs / …StatisticsService.cs     # summary, range, heatmap
 │   ├── SnapshotPayloadMapper.cs                      # Home Connect payload → entity
 │   ├── IMarkedDayService.cs / MarkedDayService.cs    # annotation rules + persistence
+│   ├── IBeanHopperService.cs / BeanHopperService.cs  # bean-hopper rules + overrides
 │   ├── IHomeConnectService.cs / HomeConnectService.cs# n8n webhook client
 │   └── IngestWatchdog.cs                             # alarms when the ingest stops
 ├── Domain/
 │   ├── MachineSnapshot.cs           # counters + status at a point in time
 │   ├── MarkedDay.cs                 # per-date annotation
+│   ├── BeanCounters.cs              # which counters draw beans, and from which hopper
+│   ├── BeanHopperOverride.cs        # manual correction per (snapshot, counter)
 │   └── LocalDay.cs                  # the one definition of the local-day rule
 ├── DTOs/                            # request/response contracts, no entities on the wire
 ├── Infrastructure/
 │   ├── AppDbContext.cs              # EF Core model, indexes, UTC value converter
+│   ├── DesignTimeDbContextFactory.cs# lets `dotnet ef` build a context without the host
 │   └── MigrationBaseliner.cs        # pre-migration DB compatibility
 ├── Middleware/
 │   └── ApiKeyMiddleware.cs          # X-API-Key on ingest + writes
-└── Migrations/                      # 3 migrations: Initial, AddExcludedDays, RenameExcludedDaysToMarkedDays
+└── Migrations/                      # Initial, AddExcludedDays, RenameExcludedDaysToMarkedDays,
+                                     # DropUnusedIdempotencyIndex, AddBeanHopperOverrides
 ```
 
 ### 5.2.1 Layer dependencies
@@ -171,7 +177,7 @@ Sentry integration turns into a GlitchTip event; there is no second alerting
 path to configure. A failing snapshot read logs a warning instead and does not
 alarm: a broken database is not an ingest outage.
 
-**`ApiKeyMiddleware`** — Path-prefix allowlist, method-aware: `/api/ingest` (all methods), `POST /coffee/power`, `POST` and `DELETE /api/stats/marked-days`. Reads on those paths are deliberately left open. With no
+**`ApiKeyMiddleware`** — Path-prefix allowlist, method-aware: `/api/ingest` (all methods), `POST /coffee/power`, `POST` and `DELETE` on `/api/stats/marked-days` and `/api/stats/snapshots`. Reads on those paths are deliberately left open. With no
 configured key it logs a warning and lets the request through — deliberate
 development affordance, and a production risk if the key is ever unset.
 Comparison uses `CryptographicOperations.FixedTimeEquals`.
@@ -208,12 +214,23 @@ erDiagram
         string Reason "max 500"
         DateTime CreatedAt "UTC"
     }
+    BeanHopperOverride {
+        int SnapshotId PK "FK, cascade delete"
+        string Counter PK "max 20: coffee | coffeeAndMilk"
+        int BeanHopper "1 | 2 | null = no bean draw"
+        DateTime UpdatedAt "UTC, refreshed on overwrite"
+    }
+    MachineSnapshot ||--o{ BeanHopperOverride : "delta corrected at"
 ```
 
-The two tables have **no foreign key**. `MarkedDay` is joined to snapshots by
-local date at query time, computed from the caller's `tz` offset. That is
-deliberate: the same snapshot belongs to different local dates for different
-callers, so a stored relation would be wrong for all but one of them.
+`MachineSnapshot` and `MarkedDay` have **no foreign key**. `MarkedDay` is joined
+to snapshots by local date at query time, computed from the caller's `tz`
+offset. That is deliberate: the same snapshot belongs to different local dates
+for different callers, so a stored relation would be wrong for all but one of
+them.
+
+`BeanHopperOverride` does have one, because it points at a specific row rather
+than at a date — see [ADR-013](09-design.md#adr-013-bean-hopper-overrides-keyed-by-snapshot-and-counter).
 
 `TotalBeverages` is a computed property, explicitly `Ignore`d by EF Core and
 recomputed on read.

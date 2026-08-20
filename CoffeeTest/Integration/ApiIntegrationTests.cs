@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 
@@ -197,5 +198,94 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
 
         var deleteResponse = await client.SendAsync(delete);
         Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task SetBeanHopper_WithoutApiKey_Returns401()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PostAsync(
+            "/api/stats/snapshots/1/bean-hopper",
+            new StringContent("""{"counter":"coffee","beanHopper":2}""", Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ClearBeanHopper_WithoutApiKey_Returns401()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.DeleteAsync("/api/stats/snapshots/1/bean-hopper?counter=coffee");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task BeanHopper_OverrideSurvivesTheRoundTripThroughTheReadApi()
+    {
+        // Ingesting raises the counter for good, and the class fixture's database
+        // is shared, so this test brings its own to keep out of the others' way.
+        using var factory = new CoffeeApiFactory();
+        var client = factory.CreateClient();
+
+        await IngestCoffeeCounterAsync(client, 500);
+        var correctedId = await IngestCoffeeCounterAsync(client, 503);
+
+        var set = new HttpRequestMessage(HttpMethod.Post, $"/api/stats/snapshots/{correctedId}/bean-hopper")
+        {
+            Content = new StringContent("""{"counter":"coffee","beanHopper":2}""", Encoding.UTF8, "application/json"),
+        };
+        set.Headers.Add("X-API-Key", ApiKey);
+        Assert.Equal(HttpStatusCode.NoContent, (await client.SendAsync(set)).StatusCode);
+
+        var corrected = await ReadSnapshotAsync(client, correctedId);
+        var draw = corrected.GetProperty("beanHoppers").EnumerateArray().Single();
+        Assert.Equal("coffee", draw.GetProperty("counter").GetString());
+        Assert.Equal(2, draw.GetProperty("beanHopper").GetInt32());
+        Assert.Equal("manual", draw.GetProperty("source").GetString());
+
+        var clear = new HttpRequestMessage(
+            HttpMethod.Delete, $"/api/stats/snapshots/{correctedId}/bean-hopper?counter=coffee");
+        clear.Headers.Add("X-API-Key", ApiKey);
+        Assert.Equal(HttpStatusCode.NoContent, (await client.SendAsync(clear)).StatusCode);
+
+        var restored = await ReadSnapshotAsync(client, correctedId);
+        var auto = restored.GetProperty("beanHoppers").EnumerateArray().Single();
+        Assert.Equal(1, auto.GetProperty("beanHopper").GetInt32());
+        Assert.Equal("auto", auto.GetProperty("source").GetString());
+    }
+
+    private static async Task<int> IngestCoffeeCounterAsync(HttpClient client, int counter)
+    {
+        var payload = $$"""
+            { "data": { "status": [ { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee", "value": {{counter}} } ] } }
+            """;
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/ingest")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json"),
+        };
+        request.Headers.Add("X-API-Key", ApiKey);
+
+        var response = await client.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return document.RootElement.GetProperty("id").GetInt32();
+    }
+
+    private static async Task<JsonElement> ReadSnapshotAsync(HttpClient client, int snapshotId)
+    {
+        var response = await client.GetAsync("/api/stats?pageSize=100");
+        response.EnsureSuccessStatusCode();
+
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return document.RootElement
+            .GetProperty("data")
+            .EnumerateArray()
+            .Single(row => row.GetProperty("id").GetInt32() == snapshotId)
+            .Clone();
     }
 }

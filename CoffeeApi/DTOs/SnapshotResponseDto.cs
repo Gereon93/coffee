@@ -14,6 +14,13 @@ public class SnapshotResponseDto
     public int BeverageCounterHotWaterCups { get; set; }
     public int BeverageCounterHotWater { get; set; }
     public string OperationState { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Bean draws of the delta ending at this snapshot, one entry per counter
+    /// column that moved. Empty when nothing was drawn, or when the snapshot
+    /// only serves as a baseline and has no predecessor in the response.
+    /// </summary>
+    public List<BeanHopperUsageDto> BeanHoppers { get; set; } = new();
 }
 
 /// <summary>
@@ -55,6 +62,9 @@ public class DailySummaryDto
     public int MilkDrinksToday { get; set; }
     public int TotalToday { get; set; }
     public int? PeakHour { get; set; }
+
+    /// <summary>Bean draws of the day, split by hopper.</summary>
+    public BeanHopperTotalsDto BeanHoppers { get; set; } = new();
 }
 
 /// <summary>
@@ -76,6 +86,9 @@ public class DailyAggregateDto
     public int CoffeeCount { get; set; }
     public int MilkCount { get; set; }
     public int Total { get; set; }
+
+    /// <summary>Bean draws of the day, split by hopper.</summary>
+    public BeanHopperTotalsDto BeanHoppers { get; set; } = new();
 }
 
 /// <summary>

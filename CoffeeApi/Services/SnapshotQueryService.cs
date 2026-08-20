@@ -22,6 +22,7 @@ public class SnapshotQueryService : ISnapshotQueryService
         return await _context.MachineSnapshots
             .Where(s => s.MachineId == machineId)
             .OrderByDescending(s => s.Timestamp)
+            .ThenByDescending(s => s.Id)
             .FirstOrDefaultAsync();
     }
 
@@ -32,6 +33,7 @@ public class SnapshotQueryService : ISnapshotQueryService
 
         var items = await _context.MachineSnapshots
             .OrderByDescending(s => s.Timestamp)
+            .ThenByDescending(s => s.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -57,6 +59,7 @@ public class SnapshotQueryService : ISnapshotQueryService
         return await _context.MachineSnapshots
             .Where(s => s.Timestamp >= fromUtc)
             .OrderBy(s => s.Timestamp)
+            .ThenBy(s => s.Id)
             .ToListAsync();
     }
 
@@ -65,6 +68,7 @@ public class SnapshotQueryService : ISnapshotQueryService
         return await _context.MachineSnapshots
             .Where(s => s.Timestamp < timestampUtc)
             .OrderByDescending(s => s.Timestamp)
+            .ThenByDescending(s => s.Id)
             .FirstOrDefaultAsync();
     }
 
@@ -78,6 +82,7 @@ public class SnapshotQueryService : ISnapshotQueryService
         return await _context.MachineSnapshots
             .Where(s => s.Timestamp >= startInclusiveUtc && s.Timestamp < endExclusiveUtc)
             .OrderBy(s => s.Timestamp)
+            .ThenBy(s => s.Id)
             .ToListAsync();
     }
 }
