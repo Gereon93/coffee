@@ -11,7 +11,10 @@ public class StatsControllerTests
     private static (StatsController Controller, AppDbContext Db) Create(string? dbName = null)
     {
         var db = TestDbContextFactory.Create(dbName);
-        var controller = new StatsController(SnapshotServices.Query(db), SnapshotServices.Statistics(db));
+        var controller = new StatsController(
+            SnapshotServices.Query(db),
+            SnapshotServices.Statistics(db),
+            SnapshotServices.BeanHoppers(db));
         return (controller, db);
     }
 
@@ -148,5 +151,70 @@ public class StatsControllerTests
         var ok = Assert.IsType<OkObjectResult>(result);
         var response = Assert.IsType<HealthResponseDto>(ok.Value);
         Assert.Equal("healthy", response.Status);
+    }
+
+    [Fact]
+    public async Task GetAll_SnapshotLog_CarriesBeanHopperAssignments()
+    {
+        var (controller, db) = Create();
+        db.MachineSnapshots.AddRange(
+            new SnapshotBuilder().At(new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(100).Build(),
+            new SnapshotBuilder().At(new DateTime(2026, 2, 7, 9, 0, 0, DateTimeKind.Utc)).WithCoffee(102).WithCoffeeAndMilk(1).Build()
+        );
+        await db.SaveChangesAsync();
+
+        var result = await controller.GetAll();
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<PaginatedResponseDto<SnapshotResponseDto>>(ok.Value);
+
+        var newest = response.Data[0];
+        Assert.Equal(2, newest.BeanHoppers.Count);
+        Assert.Equal(1, newest.BeanHoppers.Single(b => b.Counter == "coffee").BeanHopper);
+        Assert.Equal(2, newest.BeanHoppers.Single(b => b.Counter == "coffeeAndMilk").BeanHopper);
+
+        Assert.Empty(response.Data[1].BeanHoppers);
+    }
+
+    [Fact]
+    public async Task GetAll_SecondPage_UsesTheSnapshotBeforeThePageAsBaseline()
+    {
+        var (controller, db) = Create();
+        db.MachineSnapshots.AddRange(
+            new SnapshotBuilder().At(new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(100).Build(),
+            new SnapshotBuilder().At(new DateTime(2026, 2, 7, 9, 0, 0, DateTimeKind.Utc)).WithCoffee(104).Build(),
+            new SnapshotBuilder().At(new DateTime(2026, 2, 7, 10, 0, 0, DateTimeKind.Utc)).WithCoffee(105).Build()
+        );
+        await db.SaveChangesAsync();
+
+        var result = await controller.GetAll(page: 2, pageSize: 1);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<PaginatedResponseDto<SnapshotResponseDto>>(ok.Value);
+
+        var row = Assert.Single(response.Data);
+        var draw = Assert.Single(row.BeanHoppers);
+        Assert.Equal(4, draw.Count);
+        Assert.Equal(1, draw.BeanHopper);
+    }
+
+    [Fact]
+    public async Task GetDaily_BaselineRowFromYesterday_HasNoBeanHoppers()
+    {
+        var (controller, db) = Create();
+        db.MachineSnapshots.AddRange(
+            new SnapshotBuilder().At(new DateTime(2026, 2, 6, 23, 0, 0, DateTimeKind.Utc)).WithCoffee(100).Build(),
+            new SnapshotBuilder().At(new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(102).Build()
+        );
+        await db.SaveChangesAsync();
+
+        var result = await controller.GetDaily("2026-02-07");
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<DailyStatsResponseDto>(ok.Value);
+
+        Assert.Equal(2, response.Snapshots.Count);
+        Assert.Empty(response.Snapshots[0].BeanHoppers);
+        Assert.Equal(2, Assert.Single(response.Snapshots[1].BeanHoppers).Count);
     }
 }

@@ -64,6 +64,7 @@ namespace CoffeeApi
             builder.Services.AddScoped<ISnapshotIngestService, SnapshotIngestService>();
             builder.Services.AddScoped<ISnapshotStatisticsService, SnapshotStatisticsService>();
             builder.Services.AddScoped<IMarkedDayService, MarkedDayService>();
+            builder.Services.AddScoped<IBeanHopperService, BeanHopperService>();
 
             // ===== Ingest Watchdog (alarms via Sentry/GlitchTip when n8n stops) =====
             builder.Services.Configure<WatchdogOptions>(builder.Configuration.GetSection("Watchdog"));

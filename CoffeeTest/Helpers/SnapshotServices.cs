@@ -11,8 +11,11 @@ public static class SnapshotServices
 {
     public static SnapshotQueryService Query(AppDbContext context) => new(context);
 
+    public static BeanHopperService BeanHoppers(AppDbContext context) =>
+        new(context, Query(context));
+
     public static SnapshotStatisticsService Statistics(AppDbContext context) =>
-        new(Query(context), context);
+        new(Query(context), BeanHoppers(context), context);
 
     public static SnapshotIngestService Ingest(AppDbContext context) =>
         new(context, Query(context), NullLogger<SnapshotIngestService>.Instance);

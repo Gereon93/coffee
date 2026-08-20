@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
 
     public DbSet<MachineSnapshot> MachineSnapshots { get; set; } = null!;
     public DbSet<MarkedDay> MarkedDays { get; set; } = null!;
+    public DbSet<BeanHopperOverride> BeanHopperOverrides { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -75,6 +76,23 @@ public class AppDbContext : DbContext
 
             entity.Property(e => e.CreatedAt)
                 .IsRequired();
+        });
+
+        modelBuilder.Entity<BeanHopperOverride>(entity =>
+        {
+            entity.HasKey(e => new { e.SnapshotId, e.Counter });
+
+            entity.Property(e => e.Counter)
+                .IsRequired()
+                .HasMaxLength(20);
+
+            entity.Property(e => e.CreatedAt)
+                .IsRequired();
+
+            entity.HasOne<MachineSnapshot>()
+                .WithMany()
+                .HasForeignKey(e => e.SnapshotId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // SQLite loses DateTimeKind on roundtrip — force all DateTime properties to Utc

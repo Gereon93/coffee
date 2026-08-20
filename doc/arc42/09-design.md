@@ -306,3 +306,46 @@ on the query service rather than on `AppDbContext` — except for the
 `mass-import` lookup, which still reads `MarkedDays` directly. Test doubles get
 cheaper: the watchdog's fake now implements 7 read methods instead of stubbing
 an interface that also covered ingest and statistics.
+
+---
+
+## ADR-013: Bean-Hopper Overrides Keyed by Snapshot and Counter
+
+**Status.** Accepted · #48
+
+**Context.** The EQ900 has two bean hoppers, but Home Connect reports no hopper
+— only per-category counters. Kaffee is drawn from hopper 1 and K+Milch from
+hopper 2, so the assignment can be derived. It cannot always be derived
+*correctly*: a plain coffee pulled from the espresso hopper looks identical in
+the counters, so manual correction has to be possible.
+
+A draw is not a stored row. Counters are cumulative, so a draw exists only as
+the delta between two consecutive snapshots, and a 15-minute sampling interval
+regularly contains several — sometimes across two counter columns at once.
+
+**Decision.** Store corrections in `BeanHopperOverride`, keyed by
+`(SnapshotId, Counter)`. The delta is attributed to the **later** of the two
+snapshots, which makes the existing snapshot id a stable key: snapshots are
+append-only and their ids are never rewritten. `BeanHopper` is nullable, and
+`null` means "no bean consumption" — a third state, not a missing value.
+
+Derivation stays computed rather than stored: no row means the default rule
+applies. `source` in the response tells the caller which of the two it is
+looking at.
+
+**Alternatives rejected.** One override per snapshot — the shape the issue
+first proposed — cannot express a mixed delta: correcting the two Kaffee in
+`+2 Kaffee, +1 K+Milch` would drag the K+Milch along. A separate
+delta/usage entity, materialised at ingest, would give overrides their own key,
+but it duplicates data that is a subtraction away and needs backfilling for
+every existing snapshot. Storing the derived hopper on the snapshot itself
+would freeze the default rule into historical rows, so changing the rule would
+need a data migration.
+
+**Consequences.** A correction only makes sense where drinks were actually
+drawn, so `SetOverrideAsync` rejects a counter with no delta at that snapshot —
+without that guard a mistyped id would store an inert row. Deleting a snapshot
+would cascade its overrides away and silently merge two deltas; nothing deletes
+snapshots today. Grams, bean varieties and inventory stay out: this API reports
+draws per hopper, the dashboard values them (Murgbyte/dashboard-s7#235).
+
