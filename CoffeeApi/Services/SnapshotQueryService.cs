@@ -65,6 +65,7 @@ public class SnapshotQueryService : ISnapshotQueryService
         return await _context.MachineSnapshots
             .Where(s => s.Timestamp < timestampUtc)
             .OrderByDescending(s => s.Timestamp)
+            .ThenByDescending(s => s.Id)
             .FirstOrDefaultAsync();
     }
 

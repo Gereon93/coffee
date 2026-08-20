@@ -138,4 +138,21 @@ public class SnapshotQueryServiceTests
 
         Assert.Equal(2, result.Count);
     }
+
+    [Fact]
+    public async Task GetLastSnapshotBefore_TiedTimestamps_TakesTheHighestId()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = SnapshotServices.Query(db);
+
+        var tied = new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc);
+        var first = new SnapshotBuilder().At(tied).WithCoffee(10).Build();
+        var second = new SnapshotBuilder().At(tied).WithCoffee(11).Build();
+        db.MachineSnapshots.AddRange(first, second);
+        await db.SaveChangesAsync();
+
+        var result = await service.GetLastSnapshotBeforeAsync(tied.AddHours(1));
+
+        Assert.Equal(second.Id, result?.Id);
+    }
 }

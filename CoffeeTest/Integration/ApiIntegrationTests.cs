@@ -201,7 +201,7 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
     }
 
     [Fact]
-    public async Task BeanHopper_WithoutApiKey_Returns401()
+    public async Task SetBeanHopper_WithoutApiKey_Returns401()
     {
         var client = _factory.CreateClient();
 
@@ -213,9 +213,22 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
     }
 
     [Fact]
-    public async Task BeanHopper_OverrideSurvivesTheRoundTripThroughTheReadApi()
+    public async Task ClearBeanHopper_WithoutApiKey_Returns401()
     {
         var client = _factory.CreateClient();
+
+        var response = await client.DeleteAsync("/api/stats/snapshots/1/bean-hopper?counter=coffee");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task BeanHopper_OverrideSurvivesTheRoundTripThroughTheReadApi()
+    {
+        // Ingesting raises the counter for good, and the class fixture's database
+        // is shared, so this test brings its own to keep out of the others' way.
+        using var factory = new CoffeeApiFactory();
+        var client = factory.CreateClient();
 
         await IngestCoffeeCounterAsync(client, 500);
         var correctedId = await IngestCoffeeCounterAsync(client, 503);
@@ -268,7 +281,7 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
         var response = await client.GetAsync("/api/stats?pageSize=100");
         response.EnsureSuccessStatusCode();
 
-        var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         return document.RootElement
             .GetProperty("data")
             .EnumerateArray()

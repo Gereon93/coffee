@@ -36,7 +36,9 @@ public interface ISnapshotQueryService
     Task<List<MachineSnapshot>> GetSinceAsync(DateTime fromUtc);
 
     /// <summary>
-    /// Get the last snapshot before a given UTC timestamp
+    /// Get the last snapshot before a given UTC timestamp. Snapshots sharing a
+    /// timestamp are broken by descending id, so every caller resolves the same
+    /// predecessor for the same reading.
     /// </summary>
     Task<MachineSnapshot?> GetLastSnapshotBeforeAsync(DateTime timestampUtc);
 

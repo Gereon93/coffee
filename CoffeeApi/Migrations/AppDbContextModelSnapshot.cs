@@ -29,7 +29,7 @@ namespace CoffeeApi.Migrations
                     b.Property<int?>("BeanHopper")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
                     b.HasKey("SnapshotId", "Counter");

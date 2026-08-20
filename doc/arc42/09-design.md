@@ -344,7 +344,9 @@ need a data migration.
 
 **Consequences.** A correction only makes sense where drinks were actually
 drawn, so `SetOverrideAsync` rejects a counter with no delta at that snapshot —
-without that guard a mistyped id would store an inert row. Deleting a snapshot
+without that guard a mistyped id would store an inert row. Setting the same pair
+twice is last write wins, including when the second write races the first: the
+insert catches the primary-key conflict and overwrites instead of failing. Deleting a snapshot
 would cascade its overrides away and silently merge two deltas; nothing deletes
 snapshots today. Grams, bean varieties and inventory stay out: this API reports
 draws per hopper, the dashboard values them (Murgbyte/dashboard-s7#235).

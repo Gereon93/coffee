@@ -3,13 +3,25 @@ using CoffeeApi.DTOs;
 
 namespace CoffeeApi.Services;
 
+/// <summary>Why a bean-hopper correction was refused.</summary>
 public enum BeanHopperError
 {
+    /// <summary>No error — the call succeeded.</summary>
     None,
+
+    /// <summary>The counter is not one that can draw beans.</summary>
     InvalidCounter,
+
+    /// <summary>The hopper is neither 1, 2, nor <c>null</c>.</summary>
     InvalidHopper,
+
+    /// <summary>No snapshot carries the requested id.</summary>
     SnapshotNotFound,
+
+    /// <summary>The counter did not move at this snapshot, so there is nothing to reassign.</summary>
     NoConsumption,
+
+    /// <summary>The pair has no stored correction to drop.</summary>
     OverrideNotFound
 }
 

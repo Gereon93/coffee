@@ -31,7 +31,7 @@ Zwei Zaehler koennen Bohnen ziehen, und jeder hat ein Standardfach:
 | `counter` | Zaehler | Standard-`beanHopper` |
 |-----------|---------|-----------------------|
 | `coffee` | Kaffee | `1` |
-| `coffeeAndMilk` | K+Milch (Cappuccino, Latte Macchiato) | `2` |
+| `coffeeAndMilk` | K+Milch (Cappuccino, Latte macchiato) | `2` |
 
 `Milch` und `Heisswasser` ziehen keine Bohnen und tauchen in `beanHoppers` nie
 auf. Ein Zaehler ohne Standardfach faellt auf `1` zurueck.

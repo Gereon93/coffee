@@ -18,7 +18,7 @@ namespace CoffeeApi.Migrations
                     SnapshotId = table.Column<int>(type: "INTEGER", nullable: false),
                     Counter = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
                     BeanHopper = table.Column<int>(type: "INTEGER", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {

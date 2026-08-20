@@ -42,7 +42,7 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
 
         var (coffeeToday, milkDrinksToday) = BeverageDeltas(baseline, last);
 
-        var sequence = WithBaseline(previousSnapshot, snapshots);
+        var sequence = PrecededBy(previousSnapshot, snapshots);
 
         return new DailySummaryDto
         {
@@ -61,10 +61,7 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
         var (rangeStart, _) = LocalDay.BoundsUtc(from, tzOffsetMinutes);
         var baseline = await _snapshots.GetLastSnapshotBeforeAsync(rangeStart);
 
-        // One pass over the whole range: a day's first delta reaches back into
-        // the previous day, so the hopper split is the same walk the aggregate
-        // already does — but it costs one query instead of one query per day.
-        var usageBySnapshot = await _beanHoppers.GetUsageAsync(WithBaseline(baseline, snapshots));
+        var usageBySnapshot = await _beanHoppers.GetUsageAsync(PrecededBy(baseline, snapshots));
 
         var days = snapshots
             .GroupBy(s => LocalDay.DateOf(s.Timestamp, tzOffsetMinutes))
@@ -136,14 +133,10 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
             .ToList();
     }
 
-    /// <summary>
-    /// Prepends the baseline reading to a run of snapshots, so the first
-    /// snapshot of the run has a predecessor to be a delta against.
-    /// </summary>
-    private static List<MachineSnapshot> WithBaseline(MachineSnapshot? baseline, List<MachineSnapshot> snapshots)
+    private static List<MachineSnapshot> PrecededBy(MachineSnapshot? earlierReading, List<MachineSnapshot> snapshots)
     {
-        return baseline != null
-            ? new[] { baseline }.Concat(snapshots).ToList()
+        return earlierReading != null
+            ? new[] { earlierReading }.Concat(snapshots).ToList()
             : snapshots;
     }
 

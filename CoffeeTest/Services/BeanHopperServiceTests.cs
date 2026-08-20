@@ -150,6 +150,26 @@ public class BeanHopperServiceTests
     }
 
     [Fact]
+    public async Task SetOverride_Twice_RefreshesUpdatedAt()
+    {
+        using var db = TestDbContextFactory.Create();
+        var sequence = await SeedAsync(db,
+            new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
+            new SnapshotBuilder().At(Noon).WithCoffee(102).Build());
+        var service = SnapshotServices.BeanHoppers(db);
+
+        await service.SetOverrideAsync(sequence[1].Id, new SetBeanHopperDto { Counter = BeanCounters.Coffee, BeanHopper = 2 });
+
+        var backdated = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        db.BeanHopperOverrides.Single().UpdatedAt = backdated;
+        await db.SaveChangesAsync();
+
+        await service.SetOverrideAsync(sequence[1].Id, new SetBeanHopperDto { Counter = BeanCounters.Coffee, BeanHopper = 1 });
+
+        Assert.True(db.BeanHopperOverrides.Single().UpdatedAt > backdated);
+    }
+
+    [Fact]
     public async Task SetOverride_Twice_KeepsOneRowAndTakesTheLastValue()
     {
         using var db = TestDbContextFactory.Create();

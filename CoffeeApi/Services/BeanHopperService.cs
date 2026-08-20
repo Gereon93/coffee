@@ -78,10 +78,10 @@ public class BeanHopperService : IBeanHopperService
         {
             switch (usage.BeanHopper)
             {
-                case 1:
+                case BeanCounters.PrimaryHopper:
                     totals.Hopper1 += usage.Count;
                     break;
-                case 2:
+                case BeanCounters.EspressoHopper:
                     totals.Hopper2 += usage.Count;
                     break;
                 default:
@@ -100,7 +100,7 @@ public class BeanHopperService : IBeanHopperService
             return (false, BeanHopperError.InvalidCounter, CounterDetail);
         }
 
-        if (dto.BeanHopper is not (null or 1 or 2))
+        if (!BeanCounters.IsValidHopper(dto.BeanHopper))
         {
             return (false, BeanHopperError.InvalidHopper, HopperDetail);
         }
@@ -111,8 +111,6 @@ public class BeanHopperService : IBeanHopperService
             return (false, BeanHopperError.SnapshotNotFound, $"No snapshot with id {snapshotId}");
         }
 
-        // Reassigning a hopper only means something where drinks were actually
-        // drawn. Without that guard a typo in the id would store an inert row.
         var previous = await _snapshots.GetLastSnapshotBeforeAsync(snapshot.Timestamp);
         if (previous == null || BeanCounters.DeltaOf(dto.Counter, previous, snapshot) == 0)
         {
@@ -123,19 +121,12 @@ public class BeanHopperService : IBeanHopperService
         var existing = await FindOverrideAsync(snapshotId, dto.Counter);
         if (existing != null)
         {
-            existing.BeanHopper = dto.BeanHopper;
-        }
-        else
-        {
-            _context.BeanHopperOverrides.Add(new BeanHopperOverride
-            {
-                SnapshotId = snapshotId,
-                Counter = dto.Counter,
-                BeanHopper = dto.BeanHopper
-            });
+            Apply(existing, dto.BeanHopper);
+            await _context.SaveChangesAsync();
+            return (true, BeanHopperError.None, null);
         }
 
-        await _context.SaveChangesAsync();
+        await InsertOrOverwriteAsync(snapshotId, dto);
         return (true, BeanHopperError.None, null);
     }
 
@@ -156,6 +147,42 @@ public class BeanHopperService : IBeanHopperService
         _context.BeanHopperOverrides.Remove(existing);
         await _context.SaveChangesAsync();
         return (true, BeanHopperError.None, null);
+    }
+
+    /// <summary>
+    /// Stores the correction, treating a row a concurrent request inserted
+    /// first as the one to overwrite: setting the same pair twice is documented
+    /// as last write wins, whether the second write races the first or not.
+    /// </summary>
+    private async Task InsertOrOverwriteAsync(int snapshotId, SetBeanHopperDto dto)
+    {
+        var fresh = new BeanHopperOverride { SnapshotId = snapshotId, Counter = dto.Counter };
+        Apply(fresh, dto.BeanHopper);
+        _context.BeanHopperOverrides.Add(fresh);
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            _context.Entry(fresh).State = EntityState.Detached;
+
+            var winner = await FindOverrideAsync(snapshotId, dto.Counter);
+            if (winner == null)
+            {
+                throw;
+            }
+
+            Apply(winner, dto.BeanHopper);
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    private static void Apply(BeanHopperOverride target, int? beanHopper)
+    {
+        target.BeanHopper = beanHopper;
+        target.UpdatedAt = DateTime.UtcNow;
     }
 
     private Task<BeanHopperOverride?> FindOverrideAsync(int snapshotId, string counter)

@@ -57,6 +57,7 @@ public class SnapshotStatisticsBeanHopperTests
         Assert.Equal(3, result.MilkDrinksToday);
         Assert.Equal(0, result.BeanHoppers.Hopper1);
         Assert.Equal(0, result.BeanHoppers.Hopper2);
+        Assert.Equal(0, result.BeanHoppers.Excluded);
     }
 
     [Fact]

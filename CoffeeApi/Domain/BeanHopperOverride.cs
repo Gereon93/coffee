@@ -17,5 +17,6 @@ public class BeanHopperOverride
     /// <summary>Hopper 1, hopper 2, or <c>null</c> for "no bean consumption".</summary>
     public int? BeanHopper { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    /// <summary>When the current value was last set. Refreshed on overwrite.</summary>
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

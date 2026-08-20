@@ -86,7 +86,7 @@ public class AppDbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(20);
 
-            entity.Property(e => e.CreatedAt)
+            entity.Property(e => e.UpdatedAt)
                 .IsRequired();
 
             entity.HasOne<MachineSnapshot>()

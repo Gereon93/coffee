@@ -7,12 +7,19 @@ namespace CoffeeApi.Domain;
 /// </summary>
 public static class BeanCounters
 {
-    /// <summary>Plain coffee. Hopper 1 by default.</summary>
+    /// <summary>Hopper holding the everyday beans. Plain coffee draws from it.</summary>
+    public const int PrimaryHopper = 1;
+
+    /// <summary>Hopper holding the espresso beans. Milk drinks draw from it.</summary>
+    public const int EspressoHopper = 2;
+
+    /// <summary>Plain coffee. <see cref="PrimaryHopper"/> by default.</summary>
     public const string Coffee = "coffee";
 
     /// <summary>
-    /// Coffee-and-milk drinks (cappuccino, latte macchiato). Hopper 2 by
-    /// default, because they are pulled with espresso beans.
+    /// Coffee-and-milk drinks (cappuccino, latte macchiato).
+    /// <see cref="EspressoHopper"/> by default, because they are pulled with
+    /// espresso beans.
     /// </summary>
     public const string CoffeeAndMilk = "coffeeAndMilk";
 
@@ -22,10 +29,18 @@ public static class BeanCounters
     public static bool IsValid(string counter) => Array.IndexOf(All, counter) >= 0;
 
     /// <summary>
-    /// Hopper a counter draws from when nothing was corrected manually.
-    /// Anything not explicitly mapped falls back to hopper 1.
+    /// Whether a hopper assignment is one the model knows. <c>null</c> is valid
+    /// and means "no bean consumption".
     /// </summary>
-    public static int DefaultHopper(string counter) => counter == CoffeeAndMilk ? 2 : 1;
+    public static bool IsValidHopper(int? hopper) =>
+        hopper is null or PrimaryHopper or EspressoHopper;
+
+    /// <summary>
+    /// Hopper a counter draws from when nothing was corrected manually.
+    /// Anything not explicitly mapped falls back to <see cref="PrimaryHopper"/>.
+    /// </summary>
+    public static int DefaultHopper(string counter) =>
+        counter == CoffeeAndMilk ? EspressoHopper : PrimaryHopper;
 
     /// <summary>
     /// Drinks drawn on <paramref name="counter"/> between two cumulative

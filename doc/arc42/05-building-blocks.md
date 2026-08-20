@@ -218,7 +218,7 @@ erDiagram
         int SnapshotId PK "FK, cascade delete"
         string Counter PK "max 20: coffee | coffeeAndMilk"
         int BeanHopper "1 | 2 | null = no bean draw"
-        DateTime CreatedAt "UTC"
+        DateTime UpdatedAt "UTC, refreshed on overwrite"
     }
     MachineSnapshot ||--o{ BeanHopperOverride : "delta corrected at"
 ```

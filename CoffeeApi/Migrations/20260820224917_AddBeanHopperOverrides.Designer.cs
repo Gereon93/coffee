@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CoffeeApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260820221335_AddBeanHopperOverrides")]
+    [Migration("20260820224917_AddBeanHopperOverrides")]
     partial class AddBeanHopperOverrides
     {
         /// <inheritdoc />
@@ -32,7 +32,7 @@ namespace CoffeeApi.Migrations
                     b.Property<int?>("BeanHopper")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
                     b.HasKey("SnapshotId", "Counter");

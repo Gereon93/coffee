@@ -6,8 +6,10 @@ namespace CoffeeApi.Infrastructure;
 /// <summary>
 /// Builds an <see cref="AppDbContext"/> for the <c>dotnet ef</c> tooling.
 /// Without it the tooling tries to start the web host, which never returns
-/// because <c>Program.Main</c> ends in <c>app.Run()</c>. Design time only —
-/// the connection string is never opened, it only has to name a provider.
+/// because <c>Program.Main</c> ends in <c>app.Run()</c>. The connection string
+/// here is the design-time default: <c>migrations add</c> never opens it, while
+/// <c>database update</c> does — override it with <c>--connection</c> to point
+/// a command at a different file.
 /// </summary>
 public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 {

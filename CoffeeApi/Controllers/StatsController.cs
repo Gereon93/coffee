@@ -185,29 +185,25 @@ public class StatsController : ControllerBase
         return Ok(response);
     }
 
-    /// <summary>
-    /// Bean draws for one page of the snapshot log. The page arrives
-    /// newest-first and its oldest row needs the snapshot just before the page
-    /// as a baseline, otherwise that row would show no delta at all.
-    /// </summary>
-    private async Task<Dictionary<int, List<BeanHopperUsageDto>>> GetPageUsageAsync(List<MachineSnapshot> page)
+    /// <summary>Bean draws for one page of the snapshot log.</summary>
+    private async Task<Dictionary<int, List<BeanHopperUsageDto>>> GetPageUsageAsync(List<MachineSnapshot> newestFirstPage)
     {
-        if (page.Count == 0)
+        if (newestFirstPage.Count == 0)
         {
             return [];
         }
 
-        var sequence = new List<MachineSnapshot>();
+        var oldestOnPage = newestFirstPage[^1];
+        var readingBeforePage = await _snapshots.GetLastSnapshotBeforeAsync(oldestOnPage.Timestamp);
 
-        var predecessor = await _snapshots.GetLastSnapshotBeforeAsync(page[^1].Timestamp);
-        if (predecessor != null)
+        var oldestFirst = new List<MachineSnapshot>();
+        if (readingBeforePage != null)
         {
-            sequence.Add(predecessor);
+            oldestFirst.Add(readingBeforePage);
         }
+        oldestFirst.AddRange(Enumerable.Reverse(newestFirstPage));
 
-        sequence.AddRange(Enumerable.Reverse(page));
-
-        return await _beanHoppers.GetUsageAsync(sequence);
+        return await _beanHoppers.GetUsageAsync(oldestFirst);
     }
 
     private static SnapshotResponseDto MapToDto(
