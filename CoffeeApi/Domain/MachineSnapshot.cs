@@ -33,6 +33,9 @@ public class MachineSnapshot
     // Metadata
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>Whether this snapshot is an estimated historical backfill.</summary>
+    public bool IsEstimated { get; set; }
+
     /// <summary>
     /// Computed total of all beverage counters (excluding hot water ml)
     /// </summary>

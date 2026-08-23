@@ -15,10 +15,24 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
 {
     public AppDbContext CreateDbContext(string[] args)
     {
+        var connectionString = GetConnectionString(args) ?? "Data Source=coffee.db";
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite("Data Source=coffee.db")
+            .UseSqlite(connectionString)
             .Options;
 
         return new AppDbContext(options);
+    }
+
+    private static string? GetConnectionString(string[] args)
+    {
+        for (var i = 0; i < args.Length - 1; i++)
+        {
+            if (args[i] == "--connection")
+            {
+                return args[i + 1];
+            }
+        }
+
+        return null;
     }
 }

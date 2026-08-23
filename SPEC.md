@@ -151,6 +151,7 @@ GET /api/stats?page=1&pageSize=50 HTTP/1.1
       "beverageCounterMilk": 11,
       "totalBeverages": 1009,
       "operationState": "Ready",
+      "isEstimated": false,
       "beanHoppers": [
         { "counter": "coffee", "count": 2, "beanHopper": 1, "source": "auto" },
         { "counter": "coffeeAndMilk", "count": 1, "beanHopper": 2, "source": "manual" }
@@ -166,9 +167,33 @@ GET /api/stats?page=1&pageSize=50 HTTP/1.1
 }
 ```
 
+`isEstimated` is `true` only for the reversible historical backfill snapshots
+created by the manually triggered historical backfill apply endpoint. The
+snapshots are distributed deterministically by day from the configured
+`commissionedAt` date through December 31 of the year before the first real
+snapshot, and must not be interpreted as direct Home Connect measurements.
+
 ---
 
-### 3. GET /api/stats/daily/{date}
+### 3. POST /api/admin/historical-backfill/preview
+
+Requires the API key. The request previews a one-time historical estimate
+without changing the database. `commissionedAt` uses `yyyy-MM-dd`; the target
+period ends on December 31 of the year before the first real snapshot.
+
+```json
+{ "commissionedAt": "2025-07-10", "machineId": "EQ900-DEFAULT" }
+```
+
+### 4. POST /api/admin/historical-backfill/apply
+
+Requires the API key. Applies the previewed plan by inserting daily snapshots
+with `isEstimated: true`. A second apply is rejected. The operation is
+explicitly separate from EF schema migrations and normal application startup.
+The configured machine must have no more than 366 estimated days in the
+requested period; a database backup is the rollback path after applying.
+
+### 5. GET /api/stats/daily/{date}
 
 **Zweck:** Tagesstatistik abrufen
 
@@ -230,7 +255,7 @@ Vortag gehoert.
 
 ---
 
-### 4. GET /api/stats/range
+### 6. GET /api/stats/range
 
 **Zweck:** Snapshots in Zeitraum abrufen
 
@@ -277,7 +302,7 @@ Tage ohne Snapshots fehlen in `data[]` — sie erscheinen nicht mit Nullwerten.
 
 ---
 
-### 5. GET /api/stats/heatmap
+### 7. GET /api/stats/heatmap
 
 **Zweck:** Aggregierte Daten für Heatmap (Stunde x Wochentag)
 
@@ -312,7 +337,7 @@ GET /api/stats/heatmap?weeks=4 HTTP/1.1
 
 ---
 
-### 6. GET /api/stats/marked-days
+### 8. GET /api/stats/marked-days
 
 **Zweck:** Manuell markierte Tage lesen
 
@@ -351,7 +376,7 @@ Statistik und sind nur von der Anomalie-Erkennung ausgenommen.
 
 ---
 
-### 7. POST /api/stats/marked-days
+### 9. POST /api/stats/marked-days
 
 **Zweck:** Tag markieren
 
@@ -381,7 +406,7 @@ Statistik und sind nur von der Anomalie-Erkennung ausgenommen.
 
 ---
 
-### 8. DELETE /api/stats/marked-days/{date}
+### 10. DELETE /api/stats/marked-days/{date}
 
 **Zweck:** Markierung aufheben
 
@@ -395,7 +420,7 @@ Statistik und sind nur von der Anomalie-Erkennung ausgenommen.
 
 ---
 
-### 9. POST /api/stats/snapshots/{id}/bean-hopper
+### 11. POST /api/stats/snapshots/{id}/bean-hopper
 
 **Zweck:** Bohnenfach eines Snapshot-Deltas manuell korrigieren
 

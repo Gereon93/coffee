@@ -41,6 +41,10 @@ public class AppDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .IsRequired();
 
+            entity.Property(e => e.IsEstimated)
+                .IsRequired()
+                .HasDefaultValue(false);
+
             // Indexes for performance
             entity.HasIndex(e => e.Timestamp)
                 .HasDatabaseName("IX_MachineSnapshots_Timestamp");

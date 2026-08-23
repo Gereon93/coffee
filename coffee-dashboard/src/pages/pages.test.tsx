@@ -71,6 +71,11 @@ const page1: PaginatedResponse<SnapshotResponse> = {
   pagination: { page: 1, pageSize: 25, totalItems: 40, totalPages: 2 },
 };
 
+const estimatedPage: PaginatedResponse<SnapshotResponse> = {
+  data: [{ ...snapshot(3, '2025-07-15T12:00:00Z', 1), isEstimated: true }],
+  pagination: { page: 1, pageSize: 25, totalItems: 1, totalPages: 1 },
+};
+
 const massImport: MarkedDay = {
   date: '2026-08-15',
   kind: 'mass-import',
@@ -169,6 +174,13 @@ describe('LogPage', () => {
     expect(await screen.findByText('Snapshot Log')).toBeInTheDocument();
     expect(screen.getByText('40 Snapshots')).toBeInTheDocument();
     expect(screen.getByText('+3')).toBeInTheDocument();
+  });
+
+  it('labels estimated snapshots in the log', async () => {
+    vi.mocked(statsApi.fetchSnapshots).mockResolvedValue(estimatedPage);
+    renderWithQuery(<LogPage />);
+
+    expect(await screen.findByText('Geschätzt')).toBeInTheDocument();
   });
 
   it('pages forward and back', async () => {

@@ -14,6 +14,7 @@ public class SnapshotResponseDto
     public int BeverageCounterHotWaterCups { get; set; }
     public int BeverageCounterHotWater { get; set; }
     public string OperationState { get; set; } = string.Empty;
+    public bool IsEstimated { get; set; }
 
     /// <summary>
     /// Bean draws of the delta ending at this snapshot, one entry per counter

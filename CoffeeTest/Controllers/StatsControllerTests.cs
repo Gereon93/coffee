@@ -31,6 +31,25 @@ public class StatsControllerTests
         Assert.Equal(0, response.Pagination.TotalItems);
     }
 
+    [Fact]
+    public async Task GetAll_MapsEstimatedFlag()
+    {
+        var (controller, db) = Create();
+        var snapshot = new SnapshotBuilder()
+            .At(new DateTime(2025, 7, 15, 12, 0, 0, DateTimeKind.Utc))
+            .WithCoffee(1)
+            .Build();
+        snapshot.IsEstimated = true;
+        db.MachineSnapshots.Add(snapshot);
+        await db.SaveChangesAsync();
+
+        var result = await controller.GetAll();
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<PaginatedResponseDto<SnapshotResponseDto>>(ok.Value);
+        Assert.True(Assert.Single(response.Data).IsEstimated);
+    }
+
     [Theory]
     [InlineData("02/07/2026")]
     [InlineData("7.2.2026")]
