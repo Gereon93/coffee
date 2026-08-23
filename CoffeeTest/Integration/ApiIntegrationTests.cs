@@ -67,6 +67,43 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
     }
 
     [Fact]
+    public async Task GetStats_MachineIdQueryScopesTheSqliteRead()
+    {
+        using var factory = new CoffeeApiFactory();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.MachineSnapshots.AddRange(
+                new MachineSnapshot
+                {
+                    MachineId = "EQ900-A",
+                    Timestamp = new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc),
+                    BeverageCounterCoffee = 10,
+                    OperationState = "Ready"
+                },
+                new MachineSnapshot
+                {
+                    MachineId = "EQ900-B",
+                    Timestamp = new DateTime(2026, 2, 7, 9, 0, 0, DateTimeKind.Utc),
+                    BeverageCounterCoffee = 20,
+                    OperationState = "Ready"
+                });
+            await db.SaveChangesAsync();
+        }
+
+        var response = await factory.CreateClient().GetAsync(
+            "/api/stats?machineId=EQ900-A&pageSize=100");
+
+        response.EnsureSuccessStatusCode();
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var rows = document.RootElement.GetProperty("data").EnumerateArray().ToArray();
+
+        var row = Assert.Single(rows);
+        Assert.Equal("Ready", row.GetProperty("operationState").GetString());
+        Assert.Equal(10, row.GetProperty("beverageCounterCoffee").GetInt32());
+    }
+
+    [Fact]
     public async Task Ingest_WithoutApiKey_Returns401()
     {
         var client = _factory.CreateClient();
