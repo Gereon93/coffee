@@ -155,4 +155,23 @@ public class SnapshotQueryServiceTests
 
         Assert.Equal(second.Id, result?.Id);
     }
+
+    [Fact]
+    public async Task GetAll_ScopesResultsToRequestedMachine()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = SnapshotServices.Query(db);
+
+        var machineA = new SnapshotBuilder().At(DateTime.UtcNow).WithCoffee(10).Build();
+        machineA.MachineId = "EQ900-A";
+        var machineB = new SnapshotBuilder().At(DateTime.UtcNow.AddMinutes(1)).WithCoffee(20).Build();
+        machineB.MachineId = "EQ900-B";
+        db.MachineSnapshots.AddRange(machineA, machineB);
+        await db.SaveChangesAsync();
+
+        var (items, total) = await service.GetAllAsync(machineId: "EQ900-B");
+
+        Assert.Equal(1, total);
+        Assert.Equal("EQ900-B", Assert.Single(items).MachineId);
+    }
 }

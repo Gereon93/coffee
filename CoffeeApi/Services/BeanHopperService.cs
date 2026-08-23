@@ -111,7 +111,7 @@ public class BeanHopperService : IBeanHopperService
             return (false, BeanHopperError.SnapshotNotFound, $"No snapshot with id {snapshotId}");
         }
 
-        var previous = await _snapshots.GetLastSnapshotBeforeAsync(snapshot.Timestamp);
+        var previous = await _snapshots.GetLastSnapshotBeforeAsync(snapshot.Timestamp, snapshot.MachineId);
         if (previous == null || BeanCounters.DeltaOf(dto.Counter, previous, snapshot) == 0)
         {
             return (false, BeanHopperError.NoConsumption,

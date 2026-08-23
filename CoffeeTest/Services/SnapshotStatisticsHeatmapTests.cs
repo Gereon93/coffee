@@ -123,4 +123,24 @@ public class SnapshotStatisticsHeatmapTests
         Assert.Single(result);
         Assert.Equal(7, result[0].DayOfWeek); // Sunday = 7 (ISO-8601)
     }
+
+    [Fact]
+    public async Task GetHeatmapData_IgnoresEstimatedRowsAndTheirDeltas()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = SnapshotServices.Statistics(db);
+        var day = DateTime.UtcNow.Date.AddHours(-1);
+
+        var estimated = new SnapshotBuilder().At(day.AddHours(2)).WithCoffee(20).Build();
+        estimated.IsEstimated = true;
+        db.MachineSnapshots.AddRange(
+            new SnapshotBuilder().At(day).WithCoffee(10).Build(),
+            estimated,
+            new SnapshotBuilder().At(day.AddHours(4)).WithCoffee(30).Build());
+        await db.SaveChangesAsync();
+
+        var result = await service.GetHeatmapDataAsync(4);
+
+        Assert.Empty(result);
+    }
 }

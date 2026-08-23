@@ -142,10 +142,10 @@ npm run dev
 
 ```bash
 dotnet test CoffeeTest/
-# 130 Tests: Idempotenz, Cross-Day Deltas, Controller, Heatmap, Power, HomeConnect, Watchdog, Integration
+# 216 Tests: Idempotenz, Cross-Day Deltas, Controller, Heatmap, Power, HomeConnect, Watchdog, Integration
 
 cd coffee-dashboard && npm run test
-# 102 Tests: lib/api/hooks, Charts, Modals, Power-Button, Seiten
+# 103 Tests: lib/api/hooks, Charts, Modals, Power-Button, Seiten
 ```
 
 ## API Endpoints
@@ -155,10 +155,10 @@ cd coffee-dashboard && npm run test
 | POST | `/api/ingest` | Snapshot von n8n entgegennehmen | API-Key |
 | POST | `/api/admin/historical-backfill/preview` | Historische Schätzung prüfen | API-Key |
 | POST | `/api/admin/historical-backfill/apply` | Historische Schätzung einmalig anwenden | API-Key |
-| GET | `/api/stats?page=&pageSize=` | Alle Snapshots (paginiert, pageSize max. 100) | - |
-| GET | `/api/stats/daily/{date}?tz=` | Tagesstatistik inkl. Baseline-Snapshot des Vortags | - |
-| GET | `/api/stats/range?from=&to=&tz=` | Zeitraum-Aggregation pro lokalem Tag | - |
-| GET | `/api/stats/heatmap?weeks=&tz=` | Heatmap-Daten (Wochentag x Stunde), weeks max. 52 | - |
+| GET | `/api/stats?page=&pageSize=&machineId=` | Snapshots der Maschine (paginiert, pageSize max. 100) | - |
+| GET | `/api/stats/daily/{date}?tz=&machineId=` | Tagesstatistik inkl. Baseline-Snapshot des Vortags | - |
+| GET | `/api/stats/range?from=&to=&tz=&machineId=` | Zeitraum-Aggregation pro lokalem Tag | - |
+| GET | `/api/stats/heatmap?weeks=&tz=&machineId=` | Heatmap-Daten (Wochentag x Stunde), weeks max. 52 | - |
 | GET | `/api/stats/marked-days?kind=` | Markierte Tage, optional gefiltert nach `mass-import` / `event` | - |
 | POST | `/api/stats/marked-days` | Tag markieren (`mass-import` oder `event`) | - |
 | DELETE | `/api/stats/marked-days/{date}` | Markierung aufheben | - |
@@ -169,10 +169,12 @@ cd coffee-dashboard && npm run test
 
 Der `tz`-Parameter ist der UTC-Offset des Clients **in Minuten** (60 = CET,
 120 = CEST). Das Frontend haengt ihn automatisch an. Ohne Angabe wird UTC
-verwendet. Vollstaendiger Contract: [`SPEC.md`](SPEC.md).
+verwendet. `machineId` filtert die Abfragen und ist standardmaessig
+`EQ900-DEFAULT`. Vollstaendiger Contract: [`SPEC.md`](SPEC.md).
 
 > **Hinweis zur Absicherung:** Alle schreibenden Endpunkte (`/api/ingest`,
-> `POST /coffee/power`, `POST` / `DELETE /api/stats/marked-days`) verlangen den
+> `POST /api/admin/historical-backfill/*`, `POST /coffee/power`, `POST` /
+> `DELETE /api/stats/marked-days`) verlangen den
 > API-Key; lesende Endpunkte sind offen — tragbar nur unter der
 > LAN-only-Annahme. `POST /coffee/power` ist zusaetzlich auf 10 Anfragen pro
 > Minute begrenzt (darueber `429`), weil der Aufruf bis zu BSH durchreicht.

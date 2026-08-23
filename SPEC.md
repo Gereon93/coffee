@@ -17,7 +17,8 @@ Alle Statistik-Endpunkte, die nach lokalen Tagen gruppieren
 (`/api/stats/daily/{date}`, `/api/stats/range`, `/api/stats/heatmap`),
 akzeptieren `tz` — den UTC-Offset des Clients **in Minuten** (60 = CET,
 120 = CEST). Ohne Angabe wird UTC verwendet. Das Frontend haengt den Wert
-automatisch an.
+automatisch an. Statistik- und Snapshot-Abfragen akzeptieren ausserdem
+`machineId` und verwenden standardmaessig `EQ900-DEFAULT`.
 
 ### Bohnenfach-Zuordnung
 
@@ -128,7 +129,7 @@ Content-Type: application/json
 #### Request
 
 ```http
-GET /api/stats?page=1&pageSize=50 HTTP/1.1
+GET /api/stats?page=1&pageSize=50&machineId=EQ900-DEFAULT HTTP/1.1
 ```
 
 #### Query Parameters
@@ -200,7 +201,7 @@ requested period; a database backup is the rollback path after applying.
 #### Request
 
 ```http
-GET /api/stats/daily/2025-01-25 HTTP/1.1
+GET /api/stats/daily/2025-01-25?machineId=EQ900-DEFAULT HTTP/1.1
 ```
 
 #### Path Parameters
@@ -262,7 +263,7 @@ Vortag gehoert.
 #### Request
 
 ```http
-GET /api/stats/range?from=2025-01-20&to=2025-01-25 HTTP/1.1
+GET /api/stats/range?from=2025-01-20&to=2025-01-25&machineId=EQ900-DEFAULT HTTP/1.1
 ```
 
 #### Query Parameters
@@ -309,7 +310,7 @@ Tage ohne Snapshots fehlen in `data[]` — sie erscheinen nicht mit Nullwerten.
 #### Request
 
 ```http
-GET /api/stats/heatmap?weeks=4 HTTP/1.1
+GET /api/stats/heatmap?weeks=4&machineId=EQ900-DEFAULT HTTP/1.1
 ```
 
 #### Query Parameters
