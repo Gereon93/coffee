@@ -77,8 +77,8 @@ public class SnapshotStatisticsBeanHopperTests
 
         var result = await SnapshotServices.Statistics(db).GetDailySummaryAsync(Day);
 
-        Assert.Equal(2, result.BeanHoppers.Hopper1);
-        Assert.Equal(0, result.BeanHoppers.Hopper2);
+        Assert.Equal(0, result.BeanHoppers.Hopper1);
+        Assert.Equal(2, result.BeanHoppers.Hopper2);
         Assert.Equal(2, result.CoffeeToday);
     }
 
@@ -98,11 +98,11 @@ public class SnapshotStatisticsBeanHopperTests
 
         Assert.Equal(2, result.Count);
 
-        Assert.Equal(3, result[0].BeanHoppers.Hopper1);
-        Assert.Equal(1, result[0].BeanHoppers.Hopper2);
+        Assert.Equal(1, result[0].BeanHoppers.Hopper1);
+        Assert.Equal(3, result[0].BeanHoppers.Hopper2);
 
-        Assert.Equal(1, result[1].BeanHoppers.Hopper1);
-        Assert.Equal(4, result[1].BeanHoppers.Hopper2);
+        Assert.Equal(4, result[1].BeanHoppers.Hopper1);
+        Assert.Equal(1, result[1].BeanHoppers.Hopper2);
     }
 
     [Fact]
@@ -124,10 +124,12 @@ public class SnapshotStatisticsBeanHopperTests
         var result = await SnapshotServices.Statistics(db)
             .GetRangeAggregateAsync(Day, new DateOnly(2026, 2, 8));
 
-        Assert.Equal(3, result[0].BeanHoppers.Hopper1);
+        Assert.Equal(0, result[0].BeanHoppers.Hopper1);
+        Assert.Equal(3, result[0].BeanHoppers.Hopper2);
         Assert.Equal(0, result[0].BeanHoppers.Excluded);
 
         Assert.Equal(0, result[1].BeanHoppers.Hopper1);
+        Assert.Equal(0, result[1].BeanHoppers.Hopper2);
         Assert.Equal(1, result[1].BeanHoppers.Excluded);
     }
 
@@ -146,7 +148,8 @@ public class SnapshotStatisticsBeanHopperTests
         var result = await SnapshotServices.Statistics(db).GetDailySummaryAsync(Day);
 
         Assert.Equal(4, result.CoffeeToday);
-        Assert.Equal(4, result.BeanHoppers.Hopper1);
+        Assert.Equal(0, result.BeanHoppers.Hopper1);
+        Assert.Equal(4, result.BeanHoppers.Hopper2);
     }
 
     [Fact]
@@ -165,7 +168,8 @@ public class SnapshotStatisticsBeanHopperTests
 
         var day = Assert.Single(result);
         Assert.Equal(4, day.CoffeeCount);
-        Assert.Equal(4, day.BeanHoppers.Hopper1);
+        Assert.Equal(0, day.BeanHoppers.Hopper1);
+        Assert.Equal(4, day.BeanHoppers.Hopper2);
     }
 
     [Fact]

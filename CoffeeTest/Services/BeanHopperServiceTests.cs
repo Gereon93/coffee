@@ -363,8 +363,8 @@ public class BeanHopperServiceTests
 
         var totals = await SnapshotServices.BeanHoppers(db).GetTotalsAsync(sequence);
 
-        Assert.Equal(3, totals.Hopper1);
-        Assert.Equal(4, totals.Hopper2);
+        Assert.Equal(4, totals.Hopper1);
+        Assert.Equal(3, totals.Hopper2);
         Assert.Equal(0, totals.Excluded);
     }
 

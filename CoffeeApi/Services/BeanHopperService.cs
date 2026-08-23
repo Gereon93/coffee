@@ -83,10 +83,10 @@ public class BeanHopperService : IBeanHopperService
         {
             switch (usage.BeanHopper)
             {
-                case BeanCounters.PrimaryHopper:
+                case BeanCounters.EspressoHopper:
                     totals.Hopper1 += usage.Count;
                     break;
-                case BeanCounters.EspressoHopper:
+                case BeanCounters.PrimaryHopper:
                     totals.Hopper2 += usage.Count;
                     break;
                 default:
