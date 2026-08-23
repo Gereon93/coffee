@@ -198,6 +198,9 @@ Die schreibenden Endpunkte sind per API-Key geschuetzt:
 | `POST` / `DELETE /api/stats/marked-days` | ja |
 | alle GETs (inkl. `/coffee/status`, `GET /api/stats/marked-days`) | nein |
 
+Beide historischen Backfill-Endpunkte (`preview` und `apply`) gehoeren damit
+ebenfalls zu den API-Key-geschuetzten Schreibpfaden.
+
 Der Key wird als `ApiKey` Environment-Variable im API-Container gesetzt und muss als `X-API-Key` Header mitgeschickt werden (Vergleich erfolgt konstantzeitig):
 
 ```bash

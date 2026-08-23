@@ -93,10 +93,51 @@ public class HistoricalBackfillServiceTests
         Assert.Empty(await db.MachineSnapshots.Where(snapshot => snapshot.IsEstimated).ToListAsync());
     }
 
-    private static MachineSnapshot FirstRealSnapshot(
-        DateTime timestamp = default) => new()
+    [Fact]
+    public async Task Preview_UsesFirstRealSnapshotOfRequestedMachine()
     {
-        Id = 1,
+        using var db = TestDbContextFactory.Create();
+        db.MachineSnapshots.Add(FirstRealSnapshot(machineId: "EQ900-A"));
+        db.MachineSnapshots.Add(FirstRealSnapshot(
+            new DateTime(2026, 2, 1, 16, 10, 0, DateTimeKind.Utc), "EQ900-B", 2));
+        await db.SaveChangesAsync();
+        var service = new HistoricalBackfillService(db, NullLogger<HistoricalBackfillService>.Instance);
+
+        var preview = await service.PreviewAsync("2025-07-10", "EQ900-B");
+
+        Assert.True(preview.Success);
+        Assert.Equal("EQ900-B", preview.Plan!.MachineId);
+        Assert.Equal(2, preview.Plan.FirstSnapshotId);
+    }
+
+    [Fact]
+    public async Task Apply_AllowsIndependentBackfillsPerMachine()
+    {
+        using var db = TestDbContextFactory.Create();
+        db.MachineSnapshots.Add(FirstRealSnapshot(machineId: "EQ900-A"));
+        db.MachineSnapshots.Add(FirstRealSnapshot(
+            new DateTime(2026, 2, 1, 16, 10, 0, DateTimeKind.Utc), "EQ900-B", 2));
+        await db.SaveChangesAsync();
+        var service = new HistoricalBackfillService(db, NullLogger<HistoricalBackfillService>.Instance);
+
+        var machineA = await service.ApplyAsync("2025-07-10", "EQ900-A");
+        var machineB = await service.ApplyAsync("2025-07-10", "EQ900-B");
+
+        Assert.True(machineA.Success);
+        Assert.True(machineB.Success);
+        Assert.Equal(175, await db.MachineSnapshots.CountAsync(snapshot =>
+            snapshot.IsEstimated && snapshot.MachineId == "EQ900-A"));
+        Assert.Equal(175, await db.MachineSnapshots.CountAsync(snapshot =>
+            snapshot.IsEstimated && snapshot.MachineId == "EQ900-B"));
+    }
+
+    private static MachineSnapshot FirstRealSnapshot(
+        DateTime timestamp = default,
+        string machineId = "EQ900-DEFAULT",
+        int id = 1) => new()
+    {
+        Id = id,
+        MachineId = machineId,
         Timestamp = timestamp == default
             ? new DateTime(2026, 1, 25, 16, 10, 0, DateTimeKind.Utc)
             : timestamp,

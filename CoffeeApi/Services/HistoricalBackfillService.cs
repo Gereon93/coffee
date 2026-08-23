@@ -27,7 +27,7 @@ public class HistoricalBackfillService : IHistoricalBackfillService
 
     public async Task<(bool Success, HistoricalBackfillPlanDto? Plan, string? Error)> PreviewAsync(
         string commissionedAt,
-        string machineId = "EQ900-DEFAULT")
+        string machineId = HistoricalBackfillDefaults.MachineId)
     {
         var preparation = await PrepareAsync(commissionedAt, machineId);
         if (!preparation.Success)
@@ -40,7 +40,7 @@ public class HistoricalBackfillService : IHistoricalBackfillService
 
     public async Task<(bool Success, HistoricalBackfillPlanDto? Plan, string? Error)> ApplyAsync(
         string commissionedAt,
-        string machineId = "EQ900-DEFAULT")
+        string machineId = HistoricalBackfillDefaults.MachineId)
     {
         await ApplyGate.WaitAsync();
         try
