@@ -119,13 +119,20 @@ export function LogPage() {
                   </td>
                   <td className="px-3 py-2 text-right font-semibold tabular-nums">{s.totalBeverages}</td>
                   <td className="px-3 py-2">
-                    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                      s.operationState === 'Ready'
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300'
-                        : 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400'
-                    }`}>
-                      {s.operationState}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                        s.operationState === 'Ready'
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300'
+                          : 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400'
+                      }`}>
+                        {s.operationState}
+                      </span>
+                      {s.isEstimated === true && (
+                        <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                          Geschätzt
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-3 py-2">
                     {isDayExcluded ? (

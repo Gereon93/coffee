@@ -20,6 +20,7 @@ public class ApiKeyMiddleware
         new("/coffee/power", ["POST"]),
         new("/api/stats/marked-days", ["POST", "DELETE"]),
         new("/api/stats/snapshots", ["POST", "DELETE"]),
+        new("/api/admin/historical-backfill", ["POST"]),
     };
 
     private sealed record ProtectedRoute(string PathPrefix, string[]? Methods = null);

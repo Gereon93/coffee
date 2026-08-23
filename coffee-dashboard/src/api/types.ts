@@ -10,6 +10,7 @@ export interface SnapshotResponse {
   beverageCounterHotWaterCups: number;
   beverageCounterHotWater: number;
   operationState: string;
+  isEstimated?: boolean;
 }
 
 export interface Pagination {

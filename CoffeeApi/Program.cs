@@ -65,6 +65,7 @@ namespace CoffeeApi
             builder.Services.AddScoped<ISnapshotStatisticsService, SnapshotStatisticsService>();
             builder.Services.AddScoped<IMarkedDayService, MarkedDayService>();
             builder.Services.AddScoped<IBeanHopperService, BeanHopperService>();
+            builder.Services.AddScoped<IHistoricalBackfillService, HistoricalBackfillService>();
 
             // ===== Ingest Watchdog (alarms via Sentry/GlitchTip when n8n stops) =====
             builder.Services.Configure<WatchdogOptions>(builder.Configuration.GetSection("Watchdog"));
@@ -119,7 +120,10 @@ namespace CoffeeApi
             if (app.Environment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+            }
 
+            if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("OpenApi:Enabled"))
+            {
                 // Scalar API documentation (replaces Swagger). Development only —
                 // in production the spec is readable by anyone who reaches the
                 // reverse proxy, and nothing there needs it.

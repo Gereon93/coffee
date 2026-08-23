@@ -221,6 +221,7 @@ public class StatsController : ControllerBase
             BeverageCounterHotWaterCups = snapshot.BeverageCounterHotWaterCups,
             BeverageCounterHotWater = snapshot.BeverageCounterHotWater,
             OperationState = snapshot.OperationState,
+            IsEstimated = snapshot.IsEstimated,
             BeanHoppers = usageBySnapshot.GetValueOrDefault(snapshot.Id) ?? []
         };
     }

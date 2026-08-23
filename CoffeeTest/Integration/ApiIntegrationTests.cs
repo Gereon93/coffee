@@ -75,6 +75,18 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
     }
 
     [Fact]
+    public async Task HistoricalBackfill_WithoutApiKey_Returns401()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PostAsync(
+            "/api/admin/historical-backfill/preview",
+            new StringContent("{\"commissionedAt\":\"2025-07-10\"}", Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Ingest_WithValidApiKey_PersistsSnapshotAndIsReadableViaStats()
     {
         var client = _factory.CreateClient();

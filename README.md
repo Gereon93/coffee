@@ -101,6 +101,8 @@ services:
     image: ghcr.io/gereon93/coffee-dashboard:latest
     container_name: coffee-dashboard
     restart: unless-stopped
+    environment:
+      API_KEY: <dein-api-key>
     ports:
       - "8090:80"
     depends_on:
@@ -151,6 +153,8 @@ cd coffee-dashboard && npm run test
 | Method | Endpoint | Beschreibung | Auth |
 |--------|----------|--------------|------|
 | POST | `/api/ingest` | Snapshot von n8n entgegennehmen | API-Key |
+| POST | `/api/admin/historical-backfill/preview` | Historische Schätzung prüfen | API-Key |
+| POST | `/api/admin/historical-backfill/apply` | Historische Schätzung einmalig anwenden | API-Key |
 | GET | `/api/stats?page=&pageSize=` | Alle Snapshots (paginiert, pageSize max. 100) | - |
 | GET | `/api/stats/daily/{date}?tz=` | Tagesstatistik inkl. Baseline-Snapshot des Vortags | - |
 | GET | `/api/stats/range?from=&to=&tz=` | Zeitraum-Aggregation pro lokalem Tag | - |
@@ -161,7 +165,7 @@ cd coffee-dashboard && npm run test
 | GET | `/coffee/status` | Live-Status der Maschine (7s Server-Cache) | - |
 | POST | `/coffee/power` | Maschine ein-/ausschalten (`{"state":"on"\|"off"}`), max. 10/min | - |
 | GET | `/api/health` | Health Check inkl. `lastSnapshot` | - |
-| GET | `/scalar/v1` | Interaktive API-Dokumentation (nur `Development`) | - |
+| GET | `/scalar/v1` | Interaktive API-Dokumentation (`Development` oder `OpenApi__Enabled=true`) | - |
 
 Der `tz`-Parameter ist der UTC-Offset des Clients **in Minuten** (60 = CET,
 120 = CEST). Das Frontend haengt ihn automatisch an. Ohne Angabe wird UTC
@@ -189,6 +193,7 @@ Die schreibenden Endpunkte sind per API-Key geschuetzt:
 | Endpunkt | Key noetig |
 |----------|-----------|
 | `POST /api/ingest` | ja |
+| `POST /api/admin/historical-backfill/*` | ja |
 | `POST /coffee/power` | ja |
 | `POST` / `DELETE /api/stats/marked-days` | ja |
 | alle GETs (inkl. `/coffee/status`, `GET /api/stats/marked-days`) | nein |
@@ -201,6 +206,29 @@ curl -X POST http://coffee.example.local:8089/api/ingest \
   -H "X-API-Key: <dein-key>" \
   -d '{"data":{"status":[{"key":"ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee","value":42}]}}'
 ```
+
+### Historischer Backfill
+
+Der Backfill wird nicht beim Start und nicht durch eine EF-Schema-Migration
+ausgeführt. Zuerst zeigt `preview` den ersten echten Snapshot, den Zielstand
+und die Anzahl der täglichen Schätzwerte. Nur ein anschließendes `apply` legt
+die Werte an; ein zweiter Apply-Versuch wird abgelehnt. `commissionedAt` ist
+das Inbetriebnahmedatum im Format `yyyy-MM-dd`.
+
+```bash
+curl -X POST http://coffee.example.local:8089/api/admin/historical-backfill/preview \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: <dein-key>" \
+  -d '{"commissionedAt":"2025-07-10"}'
+
+curl -X POST http://coffee.example.local:8089/api/admin/historical-backfill/apply \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: <dein-key>" \
+  -d '{"commissionedAt":"2025-07-10"}'
+```
+
+Für Scalar in einer Produktionsumgebung `OpenApi__Enabled=true` setzen und
+danach wieder deaktivieren.
 
 ### Idempotenz
 
