@@ -10,6 +10,8 @@ namespace CoffeeApi.Services;
 public class HistoricalBackfillService : IHistoricalBackfillService
 {
     private const string DateFormat = "yyyy-MM-dd";
+    private const string UserTimeZoneId = "Europe/Berlin";
+    private const int MaxEstimatedSnapshotCount = 366;
     private const int SnapshotHourUtc = 12;
     private static readonly SemaphoreSlim ApplyGate = new(1, 1);
 
@@ -118,10 +120,20 @@ public class HistoricalBackfillService : IHistoricalBackfillService
             return Preparation.Failed("No real snapshot exists yet.");
         }
 
-        var endDate = new DateOnly(firstSnapshot.Timestamp.Year - 1, 12, 31);
+        var firstSnapshotLocalTime = TimeZoneInfo.ConvertTimeFromUtc(
+            DateTime.SpecifyKind(firstSnapshot.Timestamp, DateTimeKind.Utc),
+            TimeZoneInfo.FindSystemTimeZoneById(UserTimeZoneId));
+        var endDate = new DateOnly(firstSnapshotLocalTime.Year - 1, 12, 31);
         if (commissionedDate >= endDate)
         {
             return Preparation.Failed("commissionedAt must be before the historical target period.");
+        }
+
+        var estimatedSnapshotCount = endDate.DayNumber - commissionedDate.DayNumber + 1;
+        if (estimatedSnapshotCount > MaxEstimatedSnapshotCount)
+        {
+            return Preparation.Failed(
+                $"Backfill period exceeds the maximum of {MaxEstimatedSnapshotCount} daily snapshots.");
         }
 
         var alreadyApplied = await _context.MachineSnapshots

@@ -190,6 +190,8 @@ period ends on December 31 of the year before the first real snapshot.
 Requires the API key. Applies the previewed plan by inserting daily snapshots
 with `isEstimated: true`. A second apply is rejected. The operation is
 explicitly separate from EF schema migrations and normal application startup.
+The configured machine must have no more than 366 estimated days in the
+requested period; a database backup is the rollback path after applying.
 
 ### 5. GET /api/stats/daily/{date}
 

@@ -49,10 +49,57 @@ public class HistoricalBackfillServiceTests
         Assert.Equal(11, estimated.Max(s => s.BeverageCounterMilk));
     }
 
-    private static MachineSnapshot FirstRealSnapshot() => new()
+    [Fact]
+    public async Task Preview_UsesBerlinCalendarYearForUtcBoundary()
+    {
+        using var db = TestDbContextFactory.Create();
+        db.MachineSnapshots.Add(FirstRealSnapshot(
+            new DateTime(2025, 12, 31, 23, 30, 0, DateTimeKind.Utc)));
+        await db.SaveChangesAsync();
+        var service = new HistoricalBackfillService(db, NullLogger<HistoricalBackfillService>.Instance);
+
+        var preview = await service.PreviewAsync("2025-07-10");
+
+        Assert.True(preview.Success);
+        Assert.Equal(new DateOnly(2025, 12, 31), preview.Plan!.EndDate);
+    }
+
+    [Theory]
+    [InlineData("not-a-date")]
+    [InlineData("2025-12-31")]
+    [InlineData("0001-01-01")]
+    public async Task Preview_RejectsInvalidOrUnsafePeriodsWithoutWriting(string commissionedAt)
+    {
+        using var db = TestDbContextFactory.Create();
+        db.MachineSnapshots.Add(FirstRealSnapshot());
+        await db.SaveChangesAsync();
+        var service = new HistoricalBackfillService(db, NullLogger<HistoricalBackfillService>.Instance);
+
+        var preview = await service.PreviewAsync(commissionedAt);
+
+        Assert.False(preview.Success);
+        Assert.Empty(await db.MachineSnapshots.Where(snapshot => snapshot.IsEstimated).ToListAsync());
+    }
+
+    [Fact]
+    public async Task Preview_RejectsWhenNoRealSnapshotExists()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = new HistoricalBackfillService(db, NullLogger<HistoricalBackfillService>.Instance);
+
+        var preview = await service.PreviewAsync("2025-07-10");
+
+        Assert.False(preview.Success);
+        Assert.Empty(await db.MachineSnapshots.Where(snapshot => snapshot.IsEstimated).ToListAsync());
+    }
+
+    private static MachineSnapshot FirstRealSnapshot(
+        DateTime timestamp = default) => new()
     {
         Id = 1,
-        Timestamp = new DateTime(2026, 1, 25, 16, 10, 0, DateTimeKind.Utc),
+        Timestamp = timestamp == default
+            ? new DateTime(2026, 1, 25, 16, 10, 0, DateTimeKind.Utc)
+            : timestamp,
         BeverageCounterCoffee = 988,
         BeverageCounterCoffeeAndMilk = 10,
         BeverageCounterMilk = 11,

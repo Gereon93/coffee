@@ -239,8 +239,9 @@ Konkret: gespeichert wird nur, wenn mindestens einer der Getraenke-Zaehler
 letzten Snapshot. Reine Status-Aenderungen landen nicht in der DB — der
 Live-Zustand kommt stattdessen von `/coffee/status`.
 
-Ist der `ApiKey` nicht gesetzt, laesst die Middleware die Anfrage mit einer
-Warnung im Log durch. In Produktion also zwingend setzen.
+In Development darf `ApiKey` fehlen; ausserhalb von Development werden
+geschuetzte Anfragen ohne konfigurierte `ApiKey` abgelehnt. In Produktion also
+zwingend setzen.
 
 **Das Dashboard schickt den Key nicht selbst.** Sein nginx injiziert ihn aus der
 Container-Variable `API_KEY` auf den Proxy-Pfaden `/api/` und `/coffee/` — so
