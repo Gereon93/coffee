@@ -1,8 +1,12 @@
+using CoffeeApi.Domain;
+using CoffeeApi.Infrastructure;
 using System.Net;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CoffeeTest.Integration;
 
@@ -84,6 +88,63 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
             new StringContent("{\"commissionedAt\":\"2025-07-10\"}", Encoding.UTF8, "application/json"));
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task HistoricalBackfill_WithApiKeyPersistsRowsAndRejectsSecondApply()
+    {
+        const string machineId = "EQ900-INTEGRATION";
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.MachineSnapshots.Add(new MachineSnapshot
+            {
+                MachineId = machineId,
+                Timestamp = new DateTime(2026, 1, 25, 16, 10, 0, DateTimeKind.Utc),
+                BeverageCounterCoffee = 988,
+                BeverageCounterCoffeeAndMilk = 10,
+                BeverageCounterMilk = 11,
+                BeverageCounterHotWaterCups = 1,
+                BeverageCounterHotWater = 150,
+                OperationState = "Ready"
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var client = _factory.CreateClient();
+        var requestBody = JsonSerializer.Serialize(new
+        {
+            commissionedAt = "2025-07-10",
+            machineId
+        });
+
+        using var firstRequest = new HttpRequestMessage(
+            HttpMethod.Post, "/api/admin/historical-backfill/apply")
+        {
+            Content = new StringContent(requestBody, Encoding.UTF8, "application/json")
+        };
+        firstRequest.Headers.Add("X-API-Key", ApiKey);
+
+        var firstResponse = await client.SendAsync(firstRequest);
+        firstResponse.EnsureSuccessStatusCode();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            Assert.Equal(175, await db.MachineSnapshots.CountAsync(snapshot =>
+                snapshot.IsEstimated && snapshot.MachineId == machineId));
+        }
+
+        using var secondRequest = new HttpRequestMessage(
+            HttpMethod.Post, "/api/admin/historical-backfill/apply")
+        {
+            Content = new StringContent(requestBody, Encoding.UTF8, "application/json")
+        };
+        secondRequest.Headers.Add("X-API-Key", ApiKey);
+
+        var secondResponse = await client.SendAsync(secondRequest);
+
+        Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);
     }
 
     [Fact]
