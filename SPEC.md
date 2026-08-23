@@ -168,9 +168,10 @@ GET /api/stats?page=1&pageSize=50 HTTP/1.1
 ```
 
 `isEstimated` is `true` only for the reversible historical backfill snapshots
-created by the `AddEstimatedSnapshotBackfill` migration. These snapshots are
-distributed deterministically by day from 2025-07-15 through 2025-12-31 and
-must not be interpreted as direct Home Connect measurements.
+created by the manually triggered historical backfill apply endpoint. The
+snapshots are distributed deterministically by day from the configured
+`commissionedAt` date through December 31 of the year before the first real
+snapshot, and must not be interpreted as direct Home Connect measurements.
 
 ---
 
@@ -181,7 +182,7 @@ without changing the database. `commissionedAt` uses `yyyy-MM-dd`; the target
 period ends on December 31 of the year before the first real snapshot.
 
 ```json
-{ "commissionedAt": "2025-07-10" }
+{ "commissionedAt": "2025-07-10", "machineId": "EQ900-DEFAULT" }
 ```
 
 ### 4. POST /api/admin/historical-backfill/apply

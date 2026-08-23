@@ -1,3 +1,4 @@
+using System.Data;
 using System.Globalization;
 using CoffeeApi.Domain;
 using CoffeeApi.DTOs;
@@ -22,9 +23,10 @@ public class HistoricalBackfillService : IHistoricalBackfillService
     }
 
     public async Task<(bool Success, HistoricalBackfillPlanDto? Plan, string? Error)> PreviewAsync(
-        string commissionedAt)
+        string commissionedAt,
+        string machineId = "EQ900-DEFAULT")
     {
-        var preparation = await PrepareAsync(commissionedAt);
+        var preparation = await PrepareAsync(commissionedAt, machineId);
         if (!preparation.Success)
         {
             return (false, null, preparation.Error);
@@ -34,12 +36,17 @@ public class HistoricalBackfillService : IHistoricalBackfillService
     }
 
     public async Task<(bool Success, HistoricalBackfillPlanDto? Plan, string? Error)> ApplyAsync(
-        string commissionedAt)
+        string commissionedAt,
+        string machineId = "EQ900-DEFAULT")
     {
         await ApplyGate.WaitAsync();
         try
         {
-            var preparation = await PrepareAsync(commissionedAt);
+            await using var transaction = _context.Database.IsRelational()
+                ? await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable)
+                : null;
+
+            var preparation = await PrepareAsync(commissionedAt, machineId);
             if (!preparation.Success)
             {
                 return (false, null, preparation.Error);
@@ -64,6 +71,10 @@ public class HistoricalBackfillService : IHistoricalBackfillService
 
             _context.MachineSnapshots.AddRange(snapshots);
             await _context.SaveChangesAsync();
+            if (transaction != null)
+            {
+                await transaction.CommitAsync();
+            }
 
             _logger.LogInformation(
                 "Created {Count} estimated historical snapshots through {EndDate} from first real snapshot {SnapshotId}",
@@ -79,8 +90,13 @@ public class HistoricalBackfillService : IHistoricalBackfillService
         }
     }
 
-    private async Task<Preparation> PrepareAsync(string commissionedAt)
+    private async Task<Preparation> PrepareAsync(string commissionedAt, string machineId)
     {
+        if (string.IsNullOrWhiteSpace(machineId))
+        {
+            return Preparation.Failed("machineId must not be empty.");
+        }
+
         if (!DateOnly.TryParseExact(
                 commissionedAt,
                 DateFormat,
@@ -92,7 +108,7 @@ public class HistoricalBackfillService : IHistoricalBackfillService
         }
 
         var firstSnapshot = await _context.MachineSnapshots
-            .Where(snapshot => !snapshot.IsEstimated)
+            .Where(snapshot => !snapshot.IsEstimated && snapshot.MachineId == machineId)
             .OrderBy(snapshot => snapshot.Timestamp)
             .ThenBy(snapshot => snapshot.Id)
             .FirstOrDefaultAsync();
@@ -108,8 +124,9 @@ public class HistoricalBackfillService : IHistoricalBackfillService
             return Preparation.Failed("commissionedAt must be before the historical target period.");
         }
 
-        var alreadyApplied = await _context.MachineSnapshots.AnyAsync(snapshot => snapshot.IsEstimated);
-        return new Preparation(commissionedDate, endDate, firstSnapshot, alreadyApplied, null);
+        var alreadyApplied = await _context.MachineSnapshots
+            .AnyAsync(snapshot => snapshot.IsEstimated && snapshot.MachineId == machineId);
+        return new Preparation(machineId, commissionedDate, endDate, firstSnapshot, alreadyApplied, null);
     }
 
     private static HistoricalBackfillPlanDto BuildPlan(Preparation preparation)
@@ -117,6 +134,7 @@ public class HistoricalBackfillService : IHistoricalBackfillService
         var estimatedSnapshotCount = preparation.EndDate.DayNumber - preparation.CommissionedAt.DayNumber + 1;
         return new HistoricalBackfillPlanDto
         {
+            MachineId = preparation.MachineId,
             CommissionedAt = preparation.CommissionedAt.ToString(DateFormat, CultureInfo.InvariantCulture),
             EndDate = preparation.EndDate,
             FirstSnapshotId = preparation.FirstSnapshot.Id,
@@ -157,6 +175,7 @@ public class HistoricalBackfillService : IHistoricalBackfillService
     }
 
     private sealed record Preparation(
+        string MachineId,
         DateOnly CommissionedAt,
         DateOnly EndDate,
         MachineSnapshot FirstSnapshot,
@@ -165,6 +184,6 @@ public class HistoricalBackfillService : IHistoricalBackfillService
     {
         public bool Success => Error == null;
 
-        public static Preparation Failed(string error) => new(default, default, null!, false, error);
+        public static Preparation Failed(string error) => new(string.Empty, default, default, null!, false, error);
     }
 }

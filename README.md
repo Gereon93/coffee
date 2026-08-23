@@ -219,12 +219,12 @@ das Inbetriebnahmedatum im Format `yyyy-MM-dd`.
 curl -X POST http://coffee.example.local:8089/api/admin/historical-backfill/preview \
   -H "Content-Type: application/json" \
   -H "X-API-Key: <dein-key>" \
-  -d '{"commissionedAt":"2025-07-10"}'
+  -d '{"commissionedAt":"2025-07-10","machineId":"EQ900-DEFAULT"}'
 
 curl -X POST http://coffee.example.local:8089/api/admin/historical-backfill/apply \
   -H "Content-Type: application/json" \
   -H "X-API-Key: <dein-key>" \
-  -d '{"commissionedAt":"2025-07-10"}'
+  -d '{"commissionedAt":"2025-07-10","machineId":"EQ900-DEFAULT"}'
 ```
 
 Für Scalar in einer Produktionsumgebung `OpenApi__Enabled=true` setzen und

@@ -20,7 +20,7 @@ public class HistoricalBackfillController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Preview([FromBody] HistoricalBackfillRequestDto request)
     {
-        var result = await _service.PreviewAsync(request.CommissionedAt);
+        var result = await _service.PreviewAsync(request.CommissionedAt, request.MachineId);
         return result.Success
             ? Ok(result.Plan)
             : BadRequest(new { error = result.Error });
@@ -32,7 +32,7 @@ public class HistoricalBackfillController : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Apply([FromBody] HistoricalBackfillRequestDto request)
     {
-        var result = await _service.ApplyAsync(request.CommissionedAt);
+        var result = await _service.ApplyAsync(request.CommissionedAt, request.MachineId);
         if (result.Success)
         {
             return Ok(result.Plan);
