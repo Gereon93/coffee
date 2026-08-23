@@ -117,7 +117,10 @@ public class BeanHopperService : IBeanHopperService
         }
 
         var previous = await _snapshots.GetLastSnapshotBeforeAsync(snapshot.Timestamp, snapshot.MachineId);
-        if (previous == null || BeanCounters.DeltaOf(dto.Counter, previous, snapshot) == 0)
+        if (previous == null
+            || previous.IsEstimated
+            || snapshot.IsEstimated
+            || BeanCounters.DeltaOf(dto.Counter, previous, snapshot) == 0)
         {
             return (false, BeanHopperError.NoConsumption,
                 $"Snapshot {snapshotId} has no {dto.Counter} delta to reassign");

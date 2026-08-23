@@ -326,7 +326,7 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
 
         var restored = await ReadSnapshotAsync(client, correctedId);
         var auto = restored.GetProperty("beanHoppers").EnumerateArray().Single();
-        Assert.Equal(1, auto.GetProperty("beanHopper").GetInt32());
+        Assert.Equal(2, auto.GetProperty("beanHopper").GetInt32());
         Assert.Equal("auto", auto.GetProperty("source").GetString());
     }
 

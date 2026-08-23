@@ -12,7 +12,7 @@ public class BeanHopperServiceTests
     private static readonly DateTime Noon = new(2026, 2, 7, 12, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public async Task GetUsage_CoffeeDelta_DefaultsToHopperOne()
+    public async Task GetUsage_CoffeeDelta_DefaultsToHopperTwo()
     {
         using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
@@ -24,12 +24,12 @@ public class BeanHopperServiceTests
         var entry = Assert.Single(usage[sequence[1].Id]);
         Assert.Equal(BeanCounters.Coffee, entry.Counter);
         Assert.Equal(2, entry.Count);
-        Assert.Equal(1, entry.BeanHopper);
+        Assert.Equal(2, entry.BeanHopper);
         Assert.Equal(BeanHopperSources.Auto, entry.Source);
     }
 
     [Fact]
-    public async Task GetUsage_CoffeeAndMilkDelta_DefaultsToHopperTwo()
+    public async Task GetUsage_CoffeeAndMilkDelta_DefaultsToHopperOne()
     {
         using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
@@ -41,7 +41,7 @@ public class BeanHopperServiceTests
         var entry = Assert.Single(usage[sequence[1].Id]);
         Assert.Equal(BeanCounters.CoffeeAndMilk, entry.Counter);
         Assert.Equal(3, entry.Count);
-        Assert.Equal(2, entry.BeanHopper);
+        Assert.Equal(1, entry.BeanHopper);
     }
 
     [Fact]
@@ -71,11 +71,11 @@ public class BeanHopperServiceTests
         Assert.Equal(2, entries.Count);
         var coffee = entries.Single(e => e.Counter == BeanCounters.Coffee);
         Assert.Equal(2, coffee.Count);
-        Assert.Equal(1, coffee.BeanHopper);
+        Assert.Equal(2, coffee.BeanHopper);
 
         var coffeeAndMilk = entries.Single(e => e.Counter == BeanCounters.CoffeeAndMilk);
         Assert.Equal(1, coffeeAndMilk.Count);
-        Assert.Equal(2, coffeeAndMilk.BeanHopper);
+        Assert.Equal(1, coffeeAndMilk.BeanHopper);
     }
 
     [Fact]
@@ -126,7 +126,7 @@ public class BeanHopperServiceTests
         Assert.Equal(BeanHopperSources.Manual, coffee.Source);
 
         var coffeeAndMilk = entries.Single(e => e.Counter == BeanCounters.CoffeeAndMilk);
-        Assert.Equal(2, coffeeAndMilk.BeanHopper);
+        Assert.Equal(1, coffeeAndMilk.BeanHopper);
         Assert.Equal(BeanHopperSources.Auto, coffeeAndMilk.Source);
     }
 
@@ -255,6 +255,44 @@ public class BeanHopperServiceTests
     }
 
     [Fact]
+    public async Task SetOverride_EstimatedCurrentSnapshot_IsRejected()
+    {
+        using var db = TestDbContextFactory.Create();
+        var sequence = await SeedAsync(db,
+            new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
+            new SnapshotBuilder().At(Noon).WithCoffee(102).Build());
+        sequence[1].IsEstimated = true;
+        await db.SaveChangesAsync();
+
+        var (success, error, _) = await SnapshotServices.BeanHoppers(db).SetOverrideAsync(
+            sequence[1].Id,
+            new SetBeanHopperDto { Counter = BeanCounters.Coffee, BeanHopper = 2 });
+
+        Assert.False(success);
+        Assert.Equal(BeanHopperError.NoConsumption, error);
+        Assert.Empty(db.BeanHopperOverrides);
+    }
+
+    [Fact]
+    public async Task SetOverride_EstimatedPreviousSnapshot_IsRejected()
+    {
+        using var db = TestDbContextFactory.Create();
+        var sequence = await SeedAsync(db,
+            new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
+            new SnapshotBuilder().At(Noon).WithCoffee(102).Build());
+        sequence[0].IsEstimated = true;
+        await db.SaveChangesAsync();
+
+        var (success, error, _) = await SnapshotServices.BeanHoppers(db).SetOverrideAsync(
+            sequence[1].Id,
+            new SetBeanHopperDto { Counter = BeanCounters.Coffee, BeanHopper = 2 });
+
+        Assert.False(success);
+        Assert.Equal(BeanHopperError.NoConsumption, error);
+        Assert.Empty(db.BeanHopperOverrides);
+    }
+
+    [Fact]
     public async Task SetOverride_FirstSnapshotEver_IsRejected()
     {
         using var db = TestDbContextFactory.Create();
@@ -284,7 +322,7 @@ public class BeanHopperServiceTests
         Assert.Equal(BeanHopperError.None, error);
 
         var entry = Assert.Single((await service.GetUsageAsync(sequence))[sequence[1].Id]);
-        Assert.Equal(1, entry.BeanHopper);
+        Assert.Equal(2, entry.BeanHopper);
         Assert.Equal(BeanHopperSources.Auto, entry.Source);
     }
 

@@ -77,8 +77,8 @@ public class SnapshotStatisticsBeanHopperTests
 
         var result = await SnapshotServices.Statistics(db).GetDailySummaryAsync(Day);
 
-        Assert.Equal(0, result.BeanHoppers.Hopper1);
-        Assert.Equal(2, result.BeanHoppers.Hopper2);
+        Assert.Equal(2, result.BeanHoppers.Hopper1);
+        Assert.Equal(0, result.BeanHoppers.Hopper2);
         Assert.Equal(2, result.CoffeeToday);
     }
 
@@ -172,15 +172,18 @@ public class SnapshotStatisticsBeanHopperTests
     public async Task GetRangeAggregate_DoesNotCreateHopperUsageAcrossEstimatedRows()
     {
         using var db = TestDbContextFactory.Create();
+        const int InitialCoffee = 100;
+        const int EstimatedCoffee = 105;
+        const int SubsequentCoffee = 106;
         var estimated = new SnapshotBuilder()
             .At(new DateTime(2026, 2, 7, 12, 0, 0, DateTimeKind.Utc))
-            .WithCoffee(105)
+            .WithCoffee(EstimatedCoffee)
             .Build();
         estimated.IsEstimated = true;
         db.MachineSnapshots.AddRange(
-            new SnapshotBuilder().At(new DateTime(2026, 2, 6, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(100).Build(),
+            new SnapshotBuilder().At(new DateTime(2026, 2, 6, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(InitialCoffee).Build(),
             estimated,
-            new SnapshotBuilder().At(new DateTime(2026, 2, 8, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(106).Build());
+            new SnapshotBuilder().At(new DateTime(2026, 2, 8, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(SubsequentCoffee).Build());
         await db.SaveChangesAsync();
 
         var result = await SnapshotServices.Statistics(db).GetRangeAggregateAsync(

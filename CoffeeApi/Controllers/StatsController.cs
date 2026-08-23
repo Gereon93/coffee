@@ -45,7 +45,7 @@ public class StatsController : ControllerBase
     public async Task<IActionResult> GetAll(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
-        [FromQuery] string machineId = "EQ900-DEFAULT")
+        [FromQuery] string machineId = ISnapshotQueryService.DefaultMachineId)
     {
         if (page < 1)
         {
@@ -87,7 +87,8 @@ public class StatsController : ControllerBase
     [ProducesResponseType(typeof(DailyStatsResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetDaily(
-        string date, [FromQuery] int tz = 0, [FromQuery] string machineId = "EQ900-DEFAULT")
+        string date, [FromQuery] int tz = 0,
+        [FromQuery] string machineId = ISnapshotQueryService.DefaultMachineId)
     {
         if (!DateOnly.TryParseExact(date, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
         {
@@ -135,7 +136,7 @@ public class StatsController : ControllerBase
         [FromQuery] string from,
         [FromQuery] string to,
         [FromQuery] int tz = 0,
-        [FromQuery] string machineId = "EQ900-DEFAULT")
+        [FromQuery] string machineId = ISnapshotQueryService.DefaultMachineId)
     {
         if (!DateOnly.TryParseExact(from, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var fromDate)
             || !DateOnly.TryParseExact(to, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var toDate))
@@ -164,7 +165,7 @@ public class StatsController : ControllerBase
     public async Task<IActionResult> GetHeatmap(
         [FromQuery] int weeks = 4,
         [FromQuery] int tz = 0,
-        [FromQuery] string machineId = "EQ900-DEFAULT")
+        [FromQuery] string machineId = ISnapshotQueryService.DefaultMachineId)
     {
         weeks = Math.Min(weeks, MaxHeatmapWeeks);
 

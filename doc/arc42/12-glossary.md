@@ -6,7 +6,7 @@
 |------|-----------|
 | **Anomaly** | A day whose total consumption exceeds the mean of the selected range by more than 1.5 standard deviations. Computed client-side over the range currently displayed, after **all** annotated days — `mass-import` *and* `event` — have been removed from the baseline. |
 | **Baseline** | The snapshot used as the subtrahend when computing a period's consumption. Normally the last snapshot strictly *before* the period; only when none exists does the period's own first snapshot serve. |
-| **Bean hopper** | One of the EQ900's two bean containers. Not reported by Home Connect; derived per counter column (`coffee` → 1, `coffeeAndMilk` → 2) and correctable per snapshot delta. See [ADR-013](09-design.md#adr-013-bean-hopper-overrides-keyed-by-snapshot-and-counter). |
+| **Bean hopper** | One of the EQ900's two bean containers. Not reported by Home Connect; derived per counter column (`coffee` → 2, `coffeeAndMilk` → 1) and correctable per snapshot delta. See [ADR-013](09-design.md#adr-013-bean-hopper-overrides-keyed-by-snapshot-and-counter). |
 | **Bean draw** | The part of a snapshot delta that consumed beans. `Milk` and `HotWaterCups` never produce one. A draw assigned to no hopper counts as `excluded`, not as zero. |
 | **Beverage counter** | A monotonically increasing lifetime count for one beverage category, as reported by the machine. Never reset by the application. |
 | **Counter** | Short for beverage counter. |

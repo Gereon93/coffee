@@ -181,7 +181,7 @@ public class SnapshotQueryServiceTests
         using var db = TestDbContextFactory.Create();
         var service = SnapshotServices.Query(db);
         var timestamp = new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc);
-        var machineA = new SnapshotBuilder().At(timestamp).WithCoffee(10).Build();
+        var machineA = new SnapshotBuilder().At(timestamp.AddMinutes(2)).WithCoffee(10).Build();
         machineA.MachineId = "EQ900-A";
         var machineB = new SnapshotBuilder().At(timestamp.AddMinutes(1)).WithCoffee(20).Build();
         machineB.MachineId = "EQ900-B";

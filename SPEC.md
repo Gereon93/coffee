@@ -31,11 +31,11 @@ Zwei Zaehler koennen Bohnen ziehen, und jeder hat ein Standardfach:
 
 | `counter` | Zaehler | Standard-`beanHopper` |
 |-----------|---------|-----------------------|
-| `coffee` | Kaffee | `1` |
-| `coffeeAndMilk` | K+Milch (Cappuccino, Latte macchiato) | `2` |
+| `coffee` | Kaffee | `2` |
+| `coffeeAndMilk` | K+Milch (Cappuccino, Latte macchiato) | `1` |
 
 `Milch` und `Heisswasser` ziehen keine Bohnen und tauchen in `beanHoppers` nie
-auf. Ein Zaehler ohne Standardfach faellt auf `1` zurueck.
+auf. Ein Zaehler ohne Standardfach faellt auf `2` zurueck.
 
 Ein Snapshot-Delta kann gemischt sein — zwei Kaffee **und** ein K+Milch im selben
 Intervall. `beanHoppers` ist deshalb eine Liste mit je einem Eintrag pro bewegtem
@@ -138,6 +138,7 @@ GET /api/stats?page=1&pageSize=50&machineId=EQ900-DEFAULT HTTP/1.1
 |-----------|------|---------|--------------|
 | page | int | 1 | Seitennummer |
 | pageSize | int | 50 | Einträge pro Seite (max 100) |
+| machineId | string | EQ900-DEFAULT | Maschine, deren Snapshots gelesen werden |
 
 #### Response (200 OK)
 
@@ -154,8 +155,8 @@ GET /api/stats?page=1&pageSize=50&machineId=EQ900-DEFAULT HTTP/1.1
       "operationState": "Ready",
       "isEstimated": false,
       "beanHoppers": [
-        { "counter": "coffee", "count": 2, "beanHopper": 1, "source": "auto" },
-        { "counter": "coffeeAndMilk", "count": 1, "beanHopper": 2, "source": "manual" }
+        { "counter": "coffee", "count": 2, "beanHopper": 2, "source": "auto" },
+        { "counter": "coffeeAndMilk", "count": 1, "beanHopper": 1, "source": "manual" }
       ]
     }
   ],
@@ -215,6 +216,7 @@ GET /api/stats/daily/2025-01-25?machineId=EQ900-DEFAULT HTTP/1.1
 | Parameter | Type | Default | Beschreibung |
 |-----------|------|---------|--------------|
 | tz | int | 0 | UTC-Offset des Clients in Minuten |
+| machineId | string | EQ900-DEFAULT | Maschine, deren Tagesdaten gelesen werden |
 
 Die Antwort enthaelt als ersten Eintrag in `snapshots` den letzten Snapshot des
 Vortags als Baseline, damit das erste Stunden-Delta korrekt berechenbar ist.
@@ -240,7 +242,7 @@ Vortag gehoert.
       "beverageCounterCoffee": 982,
       "totalBeverages": 1002,
       "beanHoppers": [
-        { "counter": "coffee", "count": 2, "beanHopper": 1, "source": "auto" }
+        { "counter": "coffee", "count": 2, "beanHopper": 2, "source": "auto" }
       ]
     }
   ],
@@ -273,6 +275,7 @@ GET /api/stats/range?from=2025-01-20&to=2025-01-25&machineId=EQ900-DEFAULT HTTP/
 | from | string | yyyy-MM-dd | Ja | Startdatum |
 | to | string | yyyy-MM-dd | Ja | Enddatum |
 | tz | int | - | Nein | UTC-Offset des Clients in Minuten (Default 0) |
+| machineId | string | EQ900-DEFAULT | Nein | Maschine, deren Bereichsdaten gelesen werden |
 
 Tage ohne Snapshots fehlen in `data[]` — sie erscheinen nicht mit Nullwerten.
 
@@ -319,6 +322,7 @@ GET /api/stats/heatmap?weeks=4&machineId=EQ900-DEFAULT HTTP/1.1
 |-----------|------|---------|--------------|
 | weeks | int | 4 | Anzahl Wochen zurück, gedeckelt auf 52 |
 | tz | int | 0 | UTC-Offset des Clients in Minuten |
+| machineId | string | EQ900-DEFAULT | Maschine, deren Daten in der Heatmap erscheinen |
 
 #### Response (200 OK)
 

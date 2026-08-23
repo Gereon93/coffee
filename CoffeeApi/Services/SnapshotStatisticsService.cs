@@ -26,7 +26,7 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
     }
 
     public async Task<DailySummaryDto> GetDailySummaryAsync(
-        DateOnly date, int tzOffsetMinutes = 0, string machineId = "EQ900-DEFAULT")
+        DateOnly date, int tzOffsetMinutes = 0, string machineId = ISnapshotQueryService.DefaultMachineId)
     {
         var snapshots = await _snapshots.GetByDateAsync(date, tzOffsetMinutes, machineId);
 
@@ -56,7 +56,7 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
     }
 
     public async Task<List<DailyAggregateDto>> GetRangeAggregateAsync(
-        DateOnly from, DateOnly to, int tzOffsetMinutes = 0, string machineId = "EQ900-DEFAULT")
+        DateOnly from, DateOnly to, int tzOffsetMinutes = 0, string machineId = ISnapshotQueryService.DefaultMachineId)
     {
         var snapshots = await _snapshots.GetByDateRangeAsync(from, to, tzOffsetMinutes, machineId);
 
@@ -99,7 +99,7 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
     }
 
     public async Task<List<HeatmapDataPointDto>> GetHeatmapDataAsync(
-        int weeks = 4, int tzOffsetMinutes = 0, string machineId = "EQ900-DEFAULT")
+        int weeks = 4, int tzOffsetMinutes = 0, string machineId = ISnapshotQueryService.DefaultMachineId)
     {
         var snapshots = await _snapshots.GetSinceAsync(
             DateTime.UtcNow.AddDays(-DaysPerWeek * weeks), machineId);
