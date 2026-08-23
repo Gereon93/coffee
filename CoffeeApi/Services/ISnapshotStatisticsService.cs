@@ -11,15 +11,18 @@ public interface ISnapshotStatisticsService
     /// <summary>
     /// Get daily statistics summary for a local date
     /// </summary>
-    Task<DailySummaryDto> GetDailySummaryAsync(DateOnly date, int tzOffsetMinutes = 0);
+    Task<DailySummaryDto> GetDailySummaryAsync(
+        DateOnly date, int tzOffsetMinutes = 0, string machineId = ISnapshotQueryService.DefaultMachineId);
 
     /// <summary>
     /// Aggregate consumption per local day across an inclusive date range
     /// </summary>
-    Task<List<DailyAggregateDto>> GetRangeAggregateAsync(DateOnly from, DateOnly to, int tzOffsetMinutes = 0);
+    Task<List<DailyAggregateDto>> GetRangeAggregateAsync(
+        DateOnly from, DateOnly to, int tzOffsetMinutes = 0, string machineId = ISnapshotQueryService.DefaultMachineId);
 
     /// <summary>
     /// Get aggregated data for the weekday-by-hour heatmap
     /// </summary>
-    Task<List<HeatmapDataPointDto>> GetHeatmapDataAsync(int weeks = 4, int tzOffsetMinutes = 0);
+    Task<List<HeatmapDataPointDto>> GetHeatmapDataAsync(
+        int weeks = 4, int tzOffsetMinutes = 0, string machineId = ISnapshotQueryService.DefaultMachineId);
 }

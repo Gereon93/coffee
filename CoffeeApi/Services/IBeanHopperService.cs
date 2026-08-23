@@ -28,8 +28,8 @@ public enum BeanHopperError
 /// <summary>
 /// Assigns bean draws to the EQ900's two hoppers. Counters are cumulative, so a
 /// draw only exists as a delta between two consecutive snapshots; the delta is
-/// attributed to the later of the two. Kaffee goes to hopper 1 and K+Milch to
-/// hopper 2 unless a stored override says otherwise.
+    /// attributed to the later of the two. Kaffee goes to hopper 2 and K+Milch to
+    /// hopper 1 unless a stored override says otherwise.
 /// </summary>
 public interface IBeanHopperService
 {

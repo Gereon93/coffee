@@ -25,9 +25,10 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
         _context = context;
     }
 
-    public async Task<DailySummaryDto> GetDailySummaryAsync(DateOnly date, int tzOffsetMinutes = 0)
+    public async Task<DailySummaryDto> GetDailySummaryAsync(
+        DateOnly date, int tzOffsetMinutes = 0, string machineId = ISnapshotQueryService.DefaultMachineId)
     {
-        var snapshots = await _snapshots.GetByDateAsync(date, tzOffsetMinutes);
+        var snapshots = await _snapshots.GetByDateAsync(date, tzOffsetMinutes, machineId);
 
         if (snapshots.Count == 0)
         {
@@ -35,7 +36,7 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
         }
 
         var (startOfDay, _) = LocalDay.BoundsUtc(date, tzOffsetMinutes);
-        var previousSnapshot = await _snapshots.GetLastSnapshotBeforeAsync(startOfDay);
+        var previousSnapshot = await _snapshots.GetLastSnapshotBeforeAsync(startOfDay, machineId);
 
         var baseline = previousSnapshot ?? snapshots[0];
         var last = snapshots[^1];
@@ -54,12 +55,13 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
         };
     }
 
-    public async Task<List<DailyAggregateDto>> GetRangeAggregateAsync(DateOnly from, DateOnly to, int tzOffsetMinutes = 0)
+    public async Task<List<DailyAggregateDto>> GetRangeAggregateAsync(
+        DateOnly from, DateOnly to, int tzOffsetMinutes = 0, string machineId = ISnapshotQueryService.DefaultMachineId)
     {
-        var snapshots = await _snapshots.GetByDateRangeAsync(from, to, tzOffsetMinutes);
+        var snapshots = await _snapshots.GetByDateRangeAsync(from, to, tzOffsetMinutes, machineId);
 
         var (rangeStart, _) = LocalDay.BoundsUtc(from, tzOffsetMinutes);
-        var baseline = await _snapshots.GetLastSnapshotBeforeAsync(rangeStart);
+        var baseline = await _snapshots.GetLastSnapshotBeforeAsync(rangeStart, machineId);
 
         var usageBySnapshot = await _beanHoppers.GetUsageAsync(PrecededBy(baseline, snapshots));
 
@@ -96,15 +98,22 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
         return aggregates;
     }
 
-    public async Task<List<HeatmapDataPointDto>> GetHeatmapDataAsync(int weeks = 4, int tzOffsetMinutes = 0)
+    public async Task<List<HeatmapDataPointDto>> GetHeatmapDataAsync(
+        int weeks = 4, int tzOffsetMinutes = 0, string machineId = ISnapshotQueryService.DefaultMachineId)
     {
-        var snapshots = await _snapshots.GetSinceAsync(DateTime.UtcNow.AddDays(-DaysPerWeek * weeks));
+        var snapshots = await _snapshots.GetSinceAsync(
+            DateTime.UtcNow.AddDays(-DaysPerWeek * weeks), machineId);
         var excludedDates = await GetMassImportDatesAsync();
 
         var buckets = new Dictionary<(int DayOfWeek, int Hour), int>();
 
         for (int i = 1; i < snapshots.Count; i++)
         {
+            if (snapshots[i - 1].IsEstimated || snapshots[i].IsEstimated)
+            {
+                continue;
+            }
+
             var delta = snapshots[i].TotalBeverages - snapshots[i - 1].TotalBeverages;
             if (delta <= 0)
             {
@@ -161,6 +170,11 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
 
         for (int i = 1; i < sequence.Count; i++)
         {
+            if (sequence[i - 1].IsEstimated || sequence[i].IsEstimated)
+            {
+                continue;
+            }
+
             var delta = sequence[i].TotalBeverages - sequence[i - 1].TotalBeverages;
 
             if (delta > maxDelta)

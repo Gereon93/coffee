@@ -189,8 +189,8 @@ public class StatsControllerTests
 
         var newest = response.Data[0];
         Assert.Equal(2, newest.BeanHoppers.Count);
-        Assert.Equal(1, newest.BeanHoppers.Single(b => b.Counter == "coffee").BeanHopper);
-        Assert.Equal(2, newest.BeanHoppers.Single(b => b.Counter == "coffeeAndMilk").BeanHopper);
+        Assert.Equal(2, newest.BeanHoppers.Single(b => b.Counter == "coffee").BeanHopper);
+        Assert.Equal(1, newest.BeanHoppers.Single(b => b.Counter == "coffeeAndMilk").BeanHopper);
 
         Assert.Empty(response.Data[1].BeanHoppers);
     }
@@ -214,7 +214,7 @@ public class StatsControllerTests
         var row = Assert.Single(response.Data);
         var draw = Assert.Single(row.BeanHoppers);
         Assert.Equal(4, draw.Count);
-        Assert.Equal(1, draw.BeanHopper);
+        Assert.Equal(2, draw.BeanHopper);
     }
 
     [Fact]

@@ -314,8 +314,8 @@ an interface that also covered ingest and statistics.
 **Status.** Accepted · #48
 
 **Context.** The EQ900 has two bean hoppers, but Home Connect reports no hopper
-— only per-category counters. Kaffee is drawn from hopper 1 and K+Milch from
-hopper 2, so the assignment can be derived. It cannot always be derived
+— only per-category counters. Kaffee is drawn from hopper 2 and K+Milch from
+hopper 1, so the assignment can be derived. It cannot always be derived
 *correctly*: a plain coffee pulled from the espresso hopper looks identical in
 the counters, so manual correction has to be possible.
 
@@ -350,4 +350,3 @@ insert catches the primary-key conflict and overwrites instead of failing. Delet
 would cascade its overrides away and silently merge two deltas; nothing deletes
 snapshots today. Grams, bean varieties and inventory stay out: this API reports
 draws per hopper, the dashboard values them (Murgbyte/dashboard-s7#235).
-

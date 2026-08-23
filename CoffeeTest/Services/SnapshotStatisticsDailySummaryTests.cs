@@ -99,6 +99,28 @@ public class SnapshotStatisticsDailySummaryTests
     }
 
     [Fact]
+    public async Task GetDailySummary_DoesNotDerivePeakHourFromEstimatedRows()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = SnapshotServices.Statistics(db);
+
+        var estimated = new SnapshotBuilder()
+            .At(new DateTime(2026, 2, 7, 12, 0, 0, DateTimeKind.Utc))
+            .WithCoffee(105)
+            .Build();
+        estimated.IsEstimated = true;
+        db.MachineSnapshots.AddRange(
+            new SnapshotBuilder().At(new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(100).Build(),
+            estimated,
+            new SnapshotBuilder().At(new DateTime(2026, 2, 7, 14, 0, 0, DateTimeKind.Utc)).WithCoffee(106).Build());
+        await db.SaveChangesAsync();
+
+        var result = await service.GetDailySummaryAsync(new DateOnly(2026, 2, 7));
+
+        Assert.Null(result.PeakHour);
+    }
+
+    [Fact]
     public async Task GetDailySummary_NoPreviousSnapshot_UsesFirstOfDay()
     {
         using var db = TestDbContextFactory.Create();

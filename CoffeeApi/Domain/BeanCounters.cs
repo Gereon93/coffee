@@ -7,11 +7,11 @@ namespace CoffeeApi.Domain;
 /// </summary>
 public static class BeanCounters
 {
-    /// <summary>Hopper holding the everyday beans. Plain coffee draws from it.</summary>
-    public const int PrimaryHopper = 1;
+    /// <summary>Hopper 2 holds the everyday beans. Plain coffee draws from it.</summary>
+    public const int PrimaryHopper = 2;
 
-    /// <summary>Hopper holding the espresso beans. Milk drinks draw from it.</summary>
-    public const int EspressoHopper = 2;
+    /// <summary>Hopper 1 holds the espresso beans. Milk drinks draw from it.</summary>
+    public const int EspressoHopper = 1;
 
     /// <summary>Plain coffee. <see cref="PrimaryHopper"/> by default.</summary>
     public const string Coffee = "coffee";

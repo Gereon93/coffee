@@ -185,22 +185,31 @@ public class IngestWatchdogTests
 
     private sealed class ThrowingSnapshotQueryService : ISnapshotQueryService
     {
-        public Task<MachineSnapshot?> GetLatestAsync(string machineId = "EQ900-DEFAULT") =>
+        public Task<MachineSnapshot?> GetLatestAsync(
+            string machineId = ISnapshotQueryService.DefaultMachineId) =>
             throw new InvalidOperationException("database unreachable");
 
-        public Task<(List<MachineSnapshot> Items, int TotalCount)> GetAllAsync(int page = 1, int pageSize = 50) =>
+        public Task<(List<MachineSnapshot> Items, int TotalCount)> GetAllAsync(
+            int page = 1, int pageSize = 50,
+            string machineId = ISnapshotQueryService.DefaultMachineId) =>
             throw new NotSupportedException();
 
-        public Task<List<MachineSnapshot>> GetByDateAsync(DateOnly date, int tzOffsetMinutes = 0) =>
+        public Task<List<MachineSnapshot>> GetByDateAsync(
+            DateOnly date, int tzOffsetMinutes = 0,
+            string machineId = ISnapshotQueryService.DefaultMachineId) =>
             throw new NotSupportedException();
 
-        public Task<List<MachineSnapshot>> GetByDateRangeAsync(DateOnly from, DateOnly to, int tzOffsetMinutes = 0) =>
+        public Task<List<MachineSnapshot>> GetByDateRangeAsync(
+            DateOnly from, DateOnly to, int tzOffsetMinutes = 0,
+            string machineId = ISnapshotQueryService.DefaultMachineId) =>
             throw new NotSupportedException();
 
-        public Task<List<MachineSnapshot>> GetSinceAsync(DateTime fromUtc) =>
+        public Task<List<MachineSnapshot>> GetSinceAsync(
+            DateTime fromUtc, string machineId = ISnapshotQueryService.DefaultMachineId) =>
             throw new NotSupportedException();
 
-        public Task<MachineSnapshot?> GetLastSnapshotBeforeAsync(DateTime timestampUtc) =>
+        public Task<MachineSnapshot?> GetLastSnapshotBeforeAsync(
+            DateTime timestampUtc, string machineId = ISnapshotQueryService.DefaultMachineId) =>
             throw new NotSupportedException();
 
         public Task<bool> IsDatabaseReachableAsync() => throw new NotSupportedException();

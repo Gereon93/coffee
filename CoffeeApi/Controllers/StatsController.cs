@@ -42,7 +42,10 @@ public class StatsController : ControllerBase
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(PaginatedResponseDto<SnapshotResponseDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        [FromQuery] string machineId = ISnapshotQueryService.DefaultMachineId)
     {
         if (page < 1)
         {
@@ -55,7 +58,7 @@ public class StatsController : ControllerBase
 
         pageSize = Math.Min(pageSize, SnapshotQueryService.MaxPageSize);
 
-        var (items, totalCount) = await _snapshots.GetAllAsync(page, pageSize);
+        var (items, totalCount) = await _snapshots.GetAllAsync(page, pageSize, machineId);
 
         var usageBySnapshot = await GetPageUsageAsync(items);
 
@@ -79,24 +82,27 @@ public class StatsController : ControllerBase
     /// </summary>
     /// <param name="date">Date in yyyy-MM-dd format</param>
     /// <param name="tz">UTC offset in minutes (e.g. 60 for CET, 120 for CEST)</param>
+    /// <param name="machineId">Machine to query; defaults to EQ900-DEFAULT.</param>
     [HttpGet("daily/{date}")]
     [ProducesResponseType(typeof(DailyStatsResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> GetDaily(string date, [FromQuery] int tz = 0)
+    public async Task<IActionResult> GetDaily(
+        string date, [FromQuery] int tz = 0,
+        [FromQuery] string machineId = ISnapshotQueryService.DefaultMachineId)
     {
         if (!DateOnly.TryParseExact(date, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
         {
             return BadRequest(new { error = "Invalid date format", details = DateFormatDetails });
         }
 
-        var snapshots = await _snapshots.GetByDateAsync(parsedDate, tz);
-        var summary = await _statistics.GetDailySummaryAsync(parsedDate, tz);
+        var snapshots = await _snapshots.GetByDateAsync(parsedDate, tz, machineId);
+        var summary = await _statistics.GetDailySummaryAsync(parsedDate, tz, machineId);
 
         var sequence = new List<MachineSnapshot>();
         if (snapshots.Count > 0)
         {
             var (startOfDay, _) = LocalDay.BoundsUtc(parsedDate, tz);
-            var baseline = await _snapshots.GetLastSnapshotBeforeAsync(startOfDay);
+            var baseline = await _snapshots.GetLastSnapshotBeforeAsync(startOfDay, machineId);
             if (baseline != null)
             {
                 sequence.Add(baseline);
@@ -122,10 +128,15 @@ public class StatsController : ControllerBase
     /// <param name="from">Start date in yyyy-MM-dd format</param>
     /// <param name="to">End date in yyyy-MM-dd format</param>
     /// <param name="tz">UTC offset in minutes (e.g. 60 for CET, 120 for CEST)</param>
+    /// <param name="machineId">Machine to query; defaults to EQ900-DEFAULT.</param>
     [HttpGet("range")]
     [ProducesResponseType(typeof(RangeStatsResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> GetRange([FromQuery] string from, [FromQuery] string to, [FromQuery] int tz = 0)
+    public async Task<IActionResult> GetRange(
+        [FromQuery] string from,
+        [FromQuery] string to,
+        [FromQuery] int tz = 0,
+        [FromQuery] string machineId = ISnapshotQueryService.DefaultMachineId)
     {
         if (!DateOnly.TryParseExact(from, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var fromDate)
             || !DateOnly.TryParseExact(to, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var toDate))
@@ -137,7 +148,7 @@ public class StatsController : ControllerBase
         {
             From = from,
             To = to,
-            Data = await _statistics.GetRangeAggregateAsync(fromDate, toDate, tz)
+            Data = await _statistics.GetRangeAggregateAsync(fromDate, toDate, tz, machineId)
         };
 
         return Ok(response);
@@ -148,13 +159,17 @@ public class StatsController : ControllerBase
     /// </summary>
     /// <param name="weeks">Number of weeks to include (max <see cref="MaxHeatmapWeeks"/>)</param>
     /// <param name="tz">UTC offset in minutes (e.g. 60 for CET, 120 for CEST)</param>
+    /// <param name="machineId">Machine to query; defaults to EQ900-DEFAULT.</param>
     [HttpGet("heatmap")]
     [ProducesResponseType(typeof(HeatmapResponseDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetHeatmap([FromQuery] int weeks = 4, [FromQuery] int tz = 0)
+    public async Task<IActionResult> GetHeatmap(
+        [FromQuery] int weeks = 4,
+        [FromQuery] int tz = 0,
+        [FromQuery] string machineId = ISnapshotQueryService.DefaultMachineId)
     {
         weeks = Math.Min(weeks, MaxHeatmapWeeks);
 
-        var heatmapData = await _statistics.GetHeatmapDataAsync(weeks, tz);
+        var heatmapData = await _statistics.GetHeatmapDataAsync(weeks, tz, machineId);
 
         var response = new HeatmapResponseDto
         {
@@ -194,7 +209,8 @@ public class StatsController : ControllerBase
         }
 
         var oldestOnPage = newestFirstPage[^1];
-        var readingBeforePage = await _snapshots.GetLastSnapshotBeforeAsync(oldestOnPage.Timestamp);
+        var readingBeforePage = await _snapshots.GetLastSnapshotBeforeAsync(
+            oldestOnPage.Timestamp, oldestOnPage.MachineId);
 
         var oldestFirst = new List<MachineSnapshot>();
         if (readingBeforePage != null)

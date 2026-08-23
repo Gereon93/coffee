@@ -34,6 +34,11 @@ public class BeanHopperService : IBeanHopperService
         for (int i = 1; i < sequence.Count; i++)
         {
             var current = sequence[i];
+            if (sequence[i - 1].IsEstimated || current.IsEstimated)
+            {
+                continue;
+            }
+
             var usages = new List<BeanHopperUsageDto>();
 
             foreach (var counter in BeanCounters.All)
@@ -78,10 +83,10 @@ public class BeanHopperService : IBeanHopperService
         {
             switch (usage.BeanHopper)
             {
-                case BeanCounters.PrimaryHopper:
+                case BeanCounters.EspressoHopper:
                     totals.Hopper1 += usage.Count;
                     break;
-                case BeanCounters.EspressoHopper:
+                case BeanCounters.PrimaryHopper:
                     totals.Hopper2 += usage.Count;
                     break;
                 default:
@@ -111,8 +116,11 @@ public class BeanHopperService : IBeanHopperService
             return (false, BeanHopperError.SnapshotNotFound, $"No snapshot with id {snapshotId}");
         }
 
-        var previous = await _snapshots.GetLastSnapshotBeforeAsync(snapshot.Timestamp);
-        if (previous == null || BeanCounters.DeltaOf(dto.Counter, previous, snapshot) == 0)
+        var previous = await _snapshots.GetLastSnapshotBeforeAsync(snapshot.Timestamp, snapshot.MachineId);
+        if (previous == null
+            || previous.IsEstimated
+            || snapshot.IsEstimated
+            || BeanCounters.DeltaOf(dto.Counter, previous, snapshot) == 0)
         {
             return (false, BeanHopperError.NoConsumption,
                 $"Snapshot {snapshotId} has no {dto.Counter} delta to reassign");
