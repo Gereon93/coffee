@@ -251,7 +251,7 @@ Vortag gehoert.
     "milkDrinksToday": 2,
     "totalToday": 10,
     "peakHour": 9,
-    "beanHoppers": { "hopper1": 8, "hopper2": 2, "excluded": 0 }
+    "beanHoppers": { "hopper1": 2, "hopper2": 8, "excluded": 0 }
   }
 }
 ```
@@ -291,14 +291,14 @@ Tage ohne Snapshots fehlen in `data[]` — sie erscheinen nicht mit Nullwerten.
       "coffeeCount": 45,
       "milkCount": 5,
       "total": 50,
-      "beanHoppers": { "hopper1": 45, "hopper2": 3, "excluded": 2 }
+      "beanHoppers": { "hopper1": 3, "hopper2": 45, "excluded": 2 }
     },
     {
       "date": "2025-01-21",
       "coffeeCount": 42,
       "milkCount": 8,
       "total": 50,
-      "beanHoppers": { "hopper1": 42, "hopper2": 8, "excluded": 0 }
+      "beanHoppers": { "hopper1": 8, "hopper2": 42, "excluded": 0 }
     }
   ]
 }
