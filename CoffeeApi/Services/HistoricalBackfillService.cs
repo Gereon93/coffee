@@ -10,6 +10,7 @@ namespace CoffeeApi.Services;
 public class HistoricalBackfillService : IHistoricalBackfillService
 {
     private const string DateFormat = "yyyy-MM-dd";
+    private const string EstimatedOperationState = "Estimated";
     private const string UserTimeZoneId = "Europe/Berlin";
     private const int MaxEstimatedSnapshotCount = 366;
     private const int SnapshotHourUtc = 12;
@@ -175,7 +176,7 @@ public class HistoricalBackfillService : IHistoricalBackfillService
             BeverageCounterMilk = Interpolate(target.BeverageCounterMilk, day, totalDays),
             BeverageCounterHotWaterCups = Interpolate(target.BeverageCounterHotWaterCups, day, totalDays),
             BeverageCounterHotWater = Interpolate(target.BeverageCounterHotWater, day, totalDays),
-            OperationState = "Estimated",
+            OperationState = EstimatedOperationState,
             IsEstimated = true,
             CreatedAt = DateTime.UtcNow
         };
