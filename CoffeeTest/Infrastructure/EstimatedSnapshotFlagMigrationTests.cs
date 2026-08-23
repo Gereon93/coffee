@@ -8,6 +8,13 @@ namespace CoffeeTest.Infrastructure;
 
 public class EstimatedSnapshotFlagMigrationTests : IDisposable
 {
+    private const string SeedTimestamp = "2026-01-25 10:15:00";
+    private const int SeedCoffeeCounter = 988;
+    private const int SeedCoffeeAndMilkCounter = 10;
+    private const int SeedMilkCounter = 11;
+    private const int SeedHotWaterCupCounter = 1;
+    private const int SeedHotWaterMillilitres = 150;
+
     private readonly string _databasePath = Path.Combine(
         Path.GetTempPath(), $"estimated-backfill-{Guid.NewGuid():N}.db");
 
@@ -65,15 +72,16 @@ public class EstimatedSnapshotFlagMigrationTests : IDisposable
 
     private static async Task SeedFirstRealSnapshotAsync(AppDbContext context)
     {
-        await context.Database.ExecuteSqlRawAsync("""
+        await context.Database.ExecuteSqlRawAsync($"""
             INSERT INTO "MachineSnapshots" (
                 "Timestamp", "MachineId", "BeverageCounterCoffee", "BeverageCounterCoffeeAndMilk",
                 "BeverageCounterMilk", "BeverageCounterHotWaterCups", "BeverageCounterHotWater",
                 "OperationState", "RemoteControlAllowed", "LocalControlActive",
                 "InteriorIlluminationActive", "CreatedAt"
             ) VALUES (
-                '2026-01-25 10:15:00', 'EQ900-DEFAULT', 988, 10, 11, 1, 150,
-                'Ready', 0, 0, 0, '2026-01-25 10:15:00'
+                '{SeedTimestamp}', 'EQ900-DEFAULT', {SeedCoffeeCounter}, {SeedCoffeeAndMilkCounter},
+                {SeedMilkCounter}, {SeedHotWaterCupCounter}, {SeedHotWaterMillilitres},
+                'Ready', 0, 0, 0, '{SeedTimestamp}'
             );
             """);
     }
