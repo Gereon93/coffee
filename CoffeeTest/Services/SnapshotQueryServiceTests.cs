@@ -174,4 +174,29 @@ public class SnapshotQueryServiceTests
         Assert.Equal(1, total);
         Assert.Equal("EQ900-B", Assert.Single(items).MachineId);
     }
+
+    [Fact]
+    public async Task DateAndTimestampQueries_ScopeResultsToRequestedMachine()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = SnapshotServices.Query(db);
+        var timestamp = new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc);
+        var machineA = new SnapshotBuilder().At(timestamp).WithCoffee(10).Build();
+        machineA.MachineId = "EQ900-A";
+        var machineB = new SnapshotBuilder().At(timestamp.AddMinutes(1)).WithCoffee(20).Build();
+        machineB.MachineId = "EQ900-B";
+        db.MachineSnapshots.AddRange(machineA, machineB);
+        await db.SaveChangesAsync();
+
+        var byDate = await service.GetByDateAsync(new DateOnly(2026, 2, 7), machineId: "EQ900-B");
+        var byRange = await service.GetByDateRangeAsync(
+            new DateOnly(2026, 2, 7), new DateOnly(2026, 2, 7), machineId: "EQ900-B");
+        var since = await service.GetSinceAsync(timestamp.AddMinutes(-1), "EQ900-B");
+        var before = await service.GetLastSnapshotBeforeAsync(timestamp.AddHours(1), "EQ900-B");
+
+        Assert.Equal("EQ900-B", Assert.Single(byDate).MachineId);
+        Assert.Equal("EQ900-B", Assert.Single(byRange).MachineId);
+        Assert.Equal("EQ900-B", Assert.Single(since).MachineId);
+        Assert.Equal("EQ900-B", before!.MachineId);
+    }
 }

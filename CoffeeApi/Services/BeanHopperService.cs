@@ -34,6 +34,11 @@ public class BeanHopperService : IBeanHopperService
         for (int i = 1; i < sequence.Count; i++)
         {
             var current = sequence[i];
+            if (sequence[i - 1].IsEstimated || current.IsEstimated)
+            {
+                continue;
+            }
+
             var usages = new List<BeanHopperUsageDto>();
 
             foreach (var counter in BeanCounters.All)

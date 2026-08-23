@@ -167,4 +167,31 @@ public class SnapshotStatisticsBeanHopperTests
         Assert.Equal(4, day.CoffeeCount);
         Assert.Equal(4, day.BeanHoppers.Hopper1);
     }
+
+    [Fact]
+    public async Task GetRangeAggregate_DoesNotCreateHopperUsageAcrossEstimatedRows()
+    {
+        using var db = TestDbContextFactory.Create();
+        var estimated = new SnapshotBuilder()
+            .At(new DateTime(2026, 2, 7, 12, 0, 0, DateTimeKind.Utc))
+            .WithCoffee(105)
+            .Build();
+        estimated.IsEstimated = true;
+        db.MachineSnapshots.AddRange(
+            new SnapshotBuilder().At(new DateTime(2026, 2, 6, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(100).Build(),
+            estimated,
+            new SnapshotBuilder().At(new DateTime(2026, 2, 8, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(106).Build());
+        await db.SaveChangesAsync();
+
+        var result = await SnapshotServices.Statistics(db).GetRangeAggregateAsync(
+            new DateOnly(2026, 2, 6), new DateOnly(2026, 2, 8));
+
+        Assert.Equal(3, result.Count);
+        Assert.All(result, aggregate =>
+        {
+            Assert.Equal(0, aggregate.BeanHoppers.Hopper1);
+            Assert.Equal(0, aggregate.BeanHoppers.Hopper2);
+            Assert.Equal(0, aggregate.BeanHoppers.Excluded);
+        });
+    }
 }
