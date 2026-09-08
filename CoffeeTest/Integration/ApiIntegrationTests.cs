@@ -367,6 +367,32 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
         Assert.Equal("auto", auto.GetProperty("source").GetString());
     }
 
+    [Fact]
+    public async Task BeanHopper_SingleCupOfCoffee_ReachesTheReadApiAsEspressoDraw()
+    {
+        using var factory = new CoffeeApiFactory();
+        var client = factory.CreateClient();
+
+        await IngestCoffeeCounterAsync(client, 700);
+        var singleCupId = await IngestCoffeeCounterAsync(client, 701);
+
+        var snapshot = await ReadSnapshotAsync(client, singleCupId);
+        var draw = snapshot.GetProperty("beanHoppers").EnumerateArray().Single();
+        Assert.Equal("coffee", draw.GetProperty("counter").GetString());
+        Assert.Equal(1, draw.GetProperty("count").GetInt32());
+        Assert.Equal(1, draw.GetProperty("beanHopper").GetInt32());
+        Assert.Equal("auto", draw.GetProperty("source").GetString());
+
+        var day = snapshot.GetProperty("timestamp").GetDateTime();
+        var dailyResponse = await client.GetAsync($"/api/stats/daily/{day:yyyy-MM-dd}");
+        dailyResponse.EnsureSuccessStatusCode();
+
+        using var daily = JsonDocument.Parse(await dailyResponse.Content.ReadAsStringAsync());
+        var totals = daily.RootElement.GetProperty("summary").GetProperty("beanHoppers");
+        Assert.Equal(1, totals.GetProperty("hopper1").GetInt32());
+        Assert.Equal(0, totals.GetProperty("hopper2").GetInt32());
+    }
+
     private static async Task<int> IngestCoffeeCounterAsync(HttpClient client, int counter)
     {
         var payload = $$"""

@@ -12,7 +12,7 @@ public class BeanHopperServiceTests
     private static readonly DateTime Noon = new(2026, 2, 7, 12, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public async Task GetUsage_CoffeeDelta_DefaultsToHopperTwo()
+    public async Task GetUsage_TwoCupsOfCoffee_DefaultsToEverydayHopper()
     {
         using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
@@ -26,6 +26,38 @@ public class BeanHopperServiceTests
         Assert.Equal(2, entry.Count);
         Assert.Equal(2, entry.BeanHopper);
         Assert.Equal(BeanHopperSources.Auto, entry.Source);
+    }
+
+    [Fact]
+    public async Task GetUsage_SingleCupOfCoffee_DefaultsToEspressoHopper()
+    {
+        using var db = TestDbContextFactory.Create();
+        var sequence = await SeedAsync(db,
+            new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
+            new SnapshotBuilder().At(Noon).WithCoffee(101).Build());
+
+        var usage = await SnapshotServices.BeanHoppers(db).GetUsageAsync(sequence);
+
+        var entry = Assert.Single(usage[sequence[1].Id]);
+        Assert.Equal(BeanCounters.Coffee, entry.Counter);
+        Assert.Equal(1, entry.Count);
+        Assert.Equal(1, entry.BeanHopper);
+        Assert.Equal(BeanHopperSources.Auto, entry.Source);
+    }
+
+    [Fact]
+    public async Task GetUsage_MoreThanTwoCupsOfCoffee_DefaultsToEverydayHopper()
+    {
+        using var db = TestDbContextFactory.Create();
+        var sequence = await SeedAsync(db,
+            new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
+            new SnapshotBuilder().At(Noon).WithCoffee(103).Build());
+
+        var usage = await SnapshotServices.BeanHoppers(db).GetUsageAsync(sequence);
+
+        var entry = Assert.Single(usage[sequence[1].Id]);
+        Assert.Equal(3, entry.Count);
+        Assert.Equal(2, entry.BeanHopper);
     }
 
     [Fact]
@@ -363,8 +395,8 @@ public class BeanHopperServiceTests
 
         var totals = await SnapshotServices.BeanHoppers(db).GetTotalsAsync(sequence);
 
-        Assert.Equal(4, totals.Hopper1);
-        Assert.Equal(3, totals.Hopper2);
+        Assert.Equal(5, totals.Hopper1);
+        Assert.Equal(2, totals.Hopper2);
         Assert.Equal(0, totals.Excluded);
     }
 

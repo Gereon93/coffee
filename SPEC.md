@@ -27,12 +27,19 @@ Zaehler — daraus leitet die API die Zuordnung ab. Ein Bezug existiert nur als
 **Delta zwischen zwei aufeinanderfolgenden Snapshots**; das Delta wird dem
 **spaeteren** der beiden Snapshots zugeschrieben.
 
-Zwei Zaehler koennen Bohnen ziehen, und jeder hat ein Standardfach:
+Zwei Zaehler koennen Bohnen ziehen. Das Standardfach haengt am Zaehler und, beim
+Kaffee, an der Anzahl der Tassen im Delta:
 
-| `counter` | Zaehler | Standard-`beanHopper` |
-|-----------|---------|-----------------------|
-| `coffee` | Kaffee | `2` |
-| `coffeeAndMilk` | K+Milch (Cappuccino, Latte macchiato) | `1` |
+| `counter` | Zaehler | Delta | Standard-`beanHopper` |
+|-----------|---------|-------|-----------------------|
+| `coffee` | Kaffee | `1` | `1` |
+| `coffee` | Kaffee | `>= 2` | `2` |
+| `coffeeAndMilk` | K+Milch (Cappuccino, Latte macchiato) | beliebig | `1` |
+
+Hintergrund: eine einzelne Tasse ist im Haushalt ein Espresso aus Fach 1, zwei
+Tassen sind der uebliche Doppelbezug Kaffee aus Fach 2, und Milchgetraenke werden
+ohnehin mit Espressobohnen gezogen. Zwei Espressi im selben Poll-Intervall sehen
+deshalb aus wie ein Kaffee-Doppelbezug und brauchen eine manuelle Korrektur.
 
 `Milch` und `Heisswasser` ziehen keine Bohnen und tauchen in `beanHoppers` nie
 auf. Ein Zaehler ohne Standardfach faellt auf `2` zurueck.
