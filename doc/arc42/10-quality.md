@@ -76,7 +76,7 @@ that pins the behaviour, or states that it is unverified.
 | Q-11 | n8n rejects a power command | `500` with a generic message; the exception is logged and reported to GlitchTip | `PowerControllerTests` |
 | Q-12 | Container restarts against an existing pre-migration database | `MigrationBaseliner` seeds the history; only pending migrations apply; no data loss | `MigrationBaselinerTests` |
 | Q-13 | Ingest arrives with an empty `data.status` | `400` with `{ error, details[] }`; nothing written | `IngestControllerTests` |
-| Q-14 | Database file is unreachable | **Known deviation:** `Health()` awaits `GetLatestAsync()` *before* `CanConnectAsync()`, so the query throws and the endpoint answers 5xx. The `database: "disconnected"` payload is unreachable for exactly the failure it was written for | not covered — `ApiIntegrationTests.Health_ReturnsOk` only exercises a reachable database |
+| Q-14 | Database file is unreachable | `200 OK` with `database: "disconnected"` and `lastSnapshot: null`; probe or query failures are caught and logged | `StatsControllerTests`, `ApiIntegrationTests.Health_DatabaseUnreachable_StillAnswersDisconnected` |
 | Q-15 | The machine's counters reset to 0 after maintenance | **Known deviation:** treated as "no increase", not stored; deltas clamp to 0 until counters pass the old maximum | [11](11-risks.md) |
 
 ### Security

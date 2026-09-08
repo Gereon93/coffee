@@ -1,4 +1,5 @@
 using CoffeeApi.Domain;
+using CoffeeApi.DTOs;
 using CoffeeApi.Infrastructure;
 using CoffeeApi.Services;
 using CoffeeTest.Helpers;
@@ -62,21 +63,22 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
     [Fact]
     public async Task Health_DatabaseUnreachable_StillAnswersDisconnected()
     {
-        // The app migrates at startup, so a dead connection string would kill
-        // the host before it can serve — the query service is replaced instead.
-        await using var factory = _factory.WithWebHostBuilder(builder =>
-            builder.ConfigureTestServices(services =>
-                services.AddScoped<ISnapshotQueryService>(
-                    _ => new UnreachableSnapshotQueryService(probeThrows: true))));
+        await using var factory = CreateFactoryWithUnreachableDatabase();
         var client = factory.CreateClient();
 
         var response = await client.GetAsync("/api/health");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.Equal("disconnected", document.RootElement.GetProperty("database").GetString());
+        Assert.Equal(HealthResponseDto.Disconnected, document.RootElement.GetProperty("database").GetString());
         Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("lastSnapshot").ValueKind);
     }
+
+    private WebApplicationFactory<CoffeeApi.Program> CreateFactoryWithUnreachableDatabase() =>
+        _factory.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services =>
+                services.AddScoped<ISnapshotQueryService>(
+                    _ => new UnreachableSnapshotQueryService(probeThrows: true))));
 
     [Fact]
     public async Task GetStats_OnFreshDatabase_ReturnsOk()

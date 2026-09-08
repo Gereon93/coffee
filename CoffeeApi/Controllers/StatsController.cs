@@ -192,7 +192,7 @@ public class StatsController : ControllerBase
     {
         var response = new HealthResponseDto
         {
-            Database = "disconnected"
+            Database = HealthResponseDto.Disconnected
         };
 
         try
@@ -200,12 +200,12 @@ public class StatsController : ControllerBase
             if (await _snapshots.IsDatabaseReachableAsync())
             {
                 response.LastSnapshot = (await _snapshots.GetLatestAsync())?.Timestamp;
-                response.Database = "connected";
+                response.Database = HealthResponseDto.Connected;
             }
         }
         catch (Exception ex)
         {
-            response.Database = "disconnected";
+            response.Database = HealthResponseDto.Disconnected;
             _logger.LogWarning(ex, "Database probe failed; reporting disconnected");
         }
 

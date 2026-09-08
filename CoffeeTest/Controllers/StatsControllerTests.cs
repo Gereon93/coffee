@@ -86,7 +86,7 @@ public class StatsControllerTests
 
         var ok = Assert.IsType<OkObjectResult>(result);
         var response = Assert.IsType<HealthResponseDto>(ok.Value);
-        Assert.Equal("connected", response.Database);
+        Assert.Equal(HealthResponseDto.Connected, response.Database);
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public class StatsControllerTests
 
         var ok = Assert.IsType<OkObjectResult>(result);
         var response = Assert.IsType<HealthResponseDto>(ok.Value);
-        Assert.Equal("disconnected", response.Database);
+        Assert.Equal(HealthResponseDto.Disconnected, response.Database);
         Assert.Null(response.LastSnapshot);
         Assert.False(snapshots.LatestRequested);
     }
@@ -123,7 +123,7 @@ public class StatsControllerTests
 
         var ok = Assert.IsType<OkObjectResult>(result);
         var response = Assert.IsType<HealthResponseDto>(ok.Value);
-        Assert.Equal("disconnected", response.Database);
+        Assert.Equal(HealthResponseDto.Disconnected, response.Database);
     }
 
     [Fact]
@@ -140,7 +140,7 @@ public class StatsControllerTests
 
         var ok = Assert.IsType<OkObjectResult>(result);
         var response = Assert.IsType<HealthResponseDto>(ok.Value);
-        Assert.Equal("disconnected", response.Database);
+        Assert.Equal(HealthResponseDto.Disconnected, response.Database);
     }
 
     [Fact]
