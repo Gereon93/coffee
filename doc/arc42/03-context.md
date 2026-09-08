@@ -97,7 +97,7 @@ generated at runtime and served at `/openapi/v1.json` when the API runs in
    entity properties and stamps `Timestamp = DateTime.UtcNow`.
 7. The idempotency check compares the new counters against the latest stored
    snapshot for the same `MachineId`.
-8. **Counters increased** → row inserted, `201 Created`.
+8. **Counters changed** (increase or reset) → row inserted, `201 Created`.
    **Otherwise** → nothing written, `200 OK` with `created: false`.
 
 > The payload's own timestamp is not used; the server's receive time is

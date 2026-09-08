@@ -24,9 +24,10 @@ A point-in-time reading of the machine's lifetime counters and status.
 | `CreatedAt` | `DateTime` (UTC) | Row creation time |
 | `TotalBeverages` | `int` (computed) | `Coffee + CoffeeAndMilk + Milk + HotWaterCups`. EF-`Ignore`d. Deliberately excludes hot-water **ml**, which is not a beverage count. |
 
-**Invariant (assumed, not enforced):** counters increase monotonically. The
-machine can break this after a factory reset or mainboard replacement, and the
-system has no defence — see [ADR-005](09-design.md#adr-005-counter-based-idempotency).
+**Invariant (assumed at the machine):** counters increase monotonically between
+resets. After a factory reset or mainboard replacement the machine reports lower
+values; a decrease in any cup counter is persisted and re-anchors statistics.
+See [ADR-015](09-design.md#adr-015-counter-reset-detection).
 
 ### 8.1.2 MarkedDay
 
@@ -63,16 +64,20 @@ code and HTTP status:
 
 ## 8.2 Idempotency
 
-`POST /api/ingest` is idempotent by construction: a row is written only if at
-least one *beverage* counter is strictly greater than in the latest stored
-snapshot for the same machine.
+`POST /api/ingest` is idempotent by construction: a row is written only when at
+least one cup counter differs from the latest stored snapshot for the same
+machine.
 
 ```
-write ⟺  new.Coffee          > last.Coffee
-      ∨  new.CoffeeAndMilk   > last.CoffeeAndMilk
-      ∨  new.Milk            > last.Milk
-      ∨  new.HotWaterCups    > last.HotWaterCups
+write ⟺  new.Coffee          ≠ last.Coffee
+      ∨  new.CoffeeAndMilk   ≠ last.CoffeeAndMilk
+      ∨  new.Milk            ≠ last.Milk
+      ∨  new.HotWaterCups    ≠ last.HotWaterCups
 ```
+
+An increase is normal consumption; a decrease is treated as a counter reset
+and starts a new epoch (see
+[ADR-015](09-design.md#adr-015-counter-reset-detection)).
 
 Consequences worth stating explicitly:
 
@@ -84,9 +89,8 @@ Consequences worth stating explicitly:
   `OperationState` shown in the log is the state at the moment of the last
   *consumption*, not the current state. Live state comes from
   `/coffee/status` instead.
-- A counter reset is indistinguishable from "nothing happened", so it is never
-  recorded and the baseline stays at the pre-reset maximum. Deltas then clamp
-  to 0 until the counters climb past the old high.
+- A counter reset is persisted immediately and becomes the new baseline for
+  subsequent deltas.
 
 A composite index `(MachineId, Coffee, CoffeeAndMilk, Milk)` exists on
 `MachineSnapshots`. The current implementation does not query on that shape —
@@ -171,7 +175,7 @@ ending up somewhere they were not expected.
 | Gap | Reality |
 |-----|---------|
 | **The dashboard origin is an unauthenticated path to the writes** | The write endpoints now require the API key, which closes direct calls to the API port. The dashboard's nginx injects the key for everyone it serves, so anything that can reach the dashboard port can still actuate the machine. That is the same reach as pressing the button in the UI, which is the intended feature — closing it needs real user authentication, not a shared secret. The 07:00–18:00 lock in `coffeeTimeLock.ts` does not help: it is client-side. |
-| **Missing `ApiKey` disables write auth** | The middleware logs a warning and forwards the request. A configuration mistake in production silently removes authentication on every protected endpoint instead of failing loudly. |
+| **Development still allows writes without `ApiKey`** | In `Production`, a missing/whitespace-only key yields `503 Service Unavailable` on protected routes. In `Development` the middleware still forwards with a warning so local work stays unauthenticated by default. |
 | **Read endpoints are unauthenticated** | Every `GET` is open to anything that reaches the API port. Consumption counters are the only data at stake, and the LAN-only assumption is what carries this. |
 | **Rate limiting covers actuation only** | `POST /coffee/power` is throttled; the read endpoints are not. They hit local SQLite, so the exposure is CPU, not a third-party quota. |
 | **Forwarded headers are off unless configured** | Without `ForwardedHeaders:KnownNetworks` the logged address stays the proxy's. Configuring it on a deployment where the API port is directly reachable trades one wrong address for a spoofable one — which is why it is opt-in. |

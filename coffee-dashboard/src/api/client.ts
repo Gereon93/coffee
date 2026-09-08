@@ -20,8 +20,16 @@ export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T>
   });
 
   if (!res.ok) {
-    throw new ApiError(res.status, `API ${res.status}: ${res.statusText}`);
+    const body = (await res.json().catch(() => null)) as {
+      error?: string;
+      message?: string;
+    } | null;
+    throw new ApiError(
+      res.status,
+      body?.error ?? body?.message ?? `API ${res.status}: ${res.statusText}`,
+    );
   }
 
-  return res.json();
+  const text = await res.text();
+  return (text ? JSON.parse(text) : null) as T;
 }

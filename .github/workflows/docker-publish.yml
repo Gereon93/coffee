@@ -27,6 +27,10 @@ jobs:
               VITE_SENTRY_RELEASE=${{ github.sha }}
               VITE_SENTRY_ENVIRONMENT=production
               VITE_SENTRY_DSN=${{ vars.VITE_SENTRY_DSN }}
+          - image: coffee-backup
+            context: ./coffee-backup
+            build_args: |
+              BUILD_COMMIT=${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
 

@@ -143,4 +143,27 @@ public class SnapshotStatisticsHeatmapTests
 
         Assert.Empty(result);
     }
+
+    [Fact]
+    public async Task GetHeatmapData_PartialCounterReset_UsesResetAwareDelta()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = SnapshotServices.Statistics(db);
+
+        var monday = DateTime.UtcNow.Date;
+        while (monday.DayOfWeek != DayOfWeek.Monday) monday = monday.AddDays(-1);
+
+        db.MachineSnapshots.AddRange(
+            new SnapshotBuilder().At(monday.AddHours(10)).WithCoffee(100).WithMilk(50).Build(),
+            new SnapshotBuilder().At(monday.AddHours(11)).WithCoffee(0).WithMilk(52).Build()
+        );
+        await db.SaveChangesAsync();
+
+        var result = await service.GetHeatmapDataAsync(4);
+
+        Assert.Single(result);
+        Assert.Equal(1, result[0].DayOfWeek);
+        Assert.Equal(11, result[0].Hour);
+        Assert.Equal(2, result[0].Count);
+    }
 }

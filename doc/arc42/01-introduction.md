@@ -12,8 +12,8 @@ counters regularly, store the samples, and derive consumption as the delta
 between samples.**
 
 Everything else follows from that: the 15-minute polling cadence, the
-idempotency rule, the cross-day baseline handling, and the fact that a counter
-reset is a hard problem (see [ADR-005](09-design.md#adr-005-counter-based-idempotency)).
+idempotency rule, the cross-day baseline handling, and counter-reset detection
+(see [ADR-015](09-design.md#adr-015-counter-reset-detection)).
 
 ### Capabilities
 
@@ -33,7 +33,7 @@ reset is a hard problem (see [ADR-005](09-design.md#adr-005-counter-based-idempo
 | ID | Requirement | Realised by |
 |----|-------------|-------------|
 | FR-1 | Accept counter snapshots from n8n over HTTP | `IngestController` |
-| FR-2 | Never store two consecutive snapshots with unchanged counters | `SnapshotIngestService.HasCounterIncreased` |
+| FR-2 | Never store two consecutive snapshots with unchanged counters | `SnapshotIngestService.ShouldPersistReading` |
 | FR-3 | Report consumption per calendar day in the *user's* local timezone | `tz` query parameter, `GetLocalDayBoundsUtc` |
 | FR-4 | Count beverages brewed before the first sample of a day against that day | Cross-day baseline (previous day's last snapshot) |
 | FR-5 | Aggregate consumption into a weekday × hour heatmap | `SnapshotStatisticsService.GetHeatmapDataAsync` |
@@ -66,7 +66,7 @@ they conflict.
 |---|------|-----------|-------------------|
 | 1 | **Data correctness** | The system exists to produce numbers. A wrong number is worse than a missing one — it is silently wrong and nobody notices. | A coffee brewed at 06:40 CEST, before the first sample of the day, is counted against that day and not the previous one. |
 | 2 | **Idempotent, unattended ingest** | Nobody supervises the pipeline. n8n retries on its own. | The same payload delivered three times produces exactly one row. |
-| 3 | **Operational simplicity** | One person maintains this next to a day job. | Backup is `cp coffee.db coffee.db.bak`. Deployment is pulling two images. |
+| 3 | **Operational simplicity** | One person maintains this next to a day job. | Backup is automated by the `coffee-backup` sidecar (`sqlite3 .backup`) with retention; deployment is pulling three images. |
 
 Further goals, deliberately ranked lower:
 
