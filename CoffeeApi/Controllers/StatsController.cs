@@ -199,6 +199,7 @@ public class StatsController : ControllerBase
         {
             if (!await _snapshots.IsDatabaseReachableAsync())
             {
+                _logger.LogWarning("Database reachability probe returned false; reporting disconnected");
                 return Ok(response);
             }
         }

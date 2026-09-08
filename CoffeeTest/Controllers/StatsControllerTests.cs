@@ -3,6 +3,7 @@ using CoffeeApi.DTOs;
 using CoffeeApi.Infrastructure;
 using CoffeeTest.Helpers;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CoffeeTest.Controllers;
@@ -92,13 +93,14 @@ public class StatsControllerTests
     [Fact]
     public async Task Health_UnreachableDatabase_ReportsDisconnectedWithoutQuerying()
     {
-        var db = TestDbContextFactory.Create();
+        using var db = TestDbContextFactory.Create();
+        var logMessages = new List<string>();
         var snapshots = UnreachableSnapshotQueryService.ProbeReportsDisconnected();
         var controller = new StatsController(
             snapshots,
             SnapshotServices.Statistics(db),
             SnapshotServices.BeanHoppers(db),
-            NullLogger<StatsController>.Instance);
+            CreateCollectingLogger(logMessages));
 
         var result = await controller.Health();
 
@@ -107,12 +109,15 @@ public class StatsControllerTests
         Assert.Equal(HealthResponseDto.Disconnected, response.Database);
         Assert.Null(response.LastSnapshot);
         Assert.False(snapshots.LatestRequested);
+        Assert.Contains(
+            logMessages,
+            message => message.Contains("Database reachability probe returned false", StringComparison.Ordinal));
     }
 
     [Fact]
     public async Task Health_DatabaseProbeThrows_StillReportsDisconnected()
     {
-        var db = TestDbContextFactory.Create();
+        using var db = TestDbContextFactory.Create();
         var controller = new StatsController(
             UnreachableSnapshotQueryService.ProbeThrows(),
             SnapshotServices.Statistics(db),
@@ -129,7 +134,7 @@ public class StatsControllerTests
     [Fact]
     public async Task Health_ReachableButQueryThrows_ReportsDisconnected()
     {
-        var db = TestDbContextFactory.Create();
+        using var db = TestDbContextFactory.Create();
         var controller = new StatsController(
             UnreachableSnapshotQueryService.QueryFailsAfterReachableProbe(),
             SnapshotServices.Statistics(db),
@@ -292,4 +297,42 @@ public class StatsControllerTests
         Assert.Empty(response.Snapshots[0].BeanHoppers);
         Assert.Equal(2, Assert.Single(response.Snapshots[1].BeanHoppers).Count);
     }
+
+
+    private static ILogger<StatsController> CreateCollectingLogger(List<string> sink) =>
+        LoggerFactory.Create(builder => builder.AddProvider(new CollectingLoggerProvider(sink)))
+            .CreateLogger<StatsController>();
+
+    private sealed class CollectingLoggerProvider(List<string> sink) : ILoggerProvider
+    {
+        public ILogger CreateLogger(string categoryName) => new CollectingLogger(sink);
+
+        public void Dispose() { }
+
+        private sealed class CollectingLogger(List<string> sink) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Warning;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                if (!IsEnabled(logLevel))
+                {
+                    return;
+                }
+
+                lock (sink)
+                {
+                    sink.Add(formatter(state, exception));
+                }
+            }
+        }
+    }
 }
+
