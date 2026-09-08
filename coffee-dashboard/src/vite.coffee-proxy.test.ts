@@ -1,6 +1,12 @@
 import { createServer as createHttpServer, type IncomingMessage, type ServerResponse } from 'node:http'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createServer, type ViteDevServer } from 'vite'
+
+const PROXY_STARTUP_TIMEOUT_MS = 30_000
+const dashboardRoot = dirname(dirname(fileURLToPath(import.meta.url)))
+const viteConfigFile = join(dashboardRoot, 'vite.config.ts')
 
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -16,6 +22,7 @@ describe('vite /coffee proxy', () => {
   let backendPort: number
   let vite: ViteDevServer
   let vitePort: number
+  let previousProxyTarget: string | undefined
   const seen: { method: string; url: string; body: string }[] = []
 
   beforeAll(async () => {
@@ -48,20 +55,17 @@ describe('vite /coffee proxy', () => {
     }
     backendPort = address.port
 
+    previousProxyTarget = process.env.VITE_API_PROXY_TARGET
+    process.env.VITE_API_PROXY_TARGET = `http://127.0.0.1:${backendPort}`
+
     vite = await createServer({
-      configFile: false,
-      root: process.cwd(),
+      configFile: viteConfigFile,
+      root: dashboardRoot,
       logLevel: 'error',
       server: {
         host: '127.0.0.1',
         port: 0,
         strictPort: false,
-        proxy: {
-          '/coffee': {
-            target: `http://127.0.0.1:${backendPort}`,
-            changeOrigin: true,
-          },
-        },
       },
     })
     await vite.listen()
@@ -70,10 +74,15 @@ describe('vite /coffee proxy', () => {
       throw new Error('vite failed to expose a local URL')
     }
     vitePort = Number(new URL(urls[0]).port)
-  }, 30_000)
+  }, PROXY_STARTUP_TIMEOUT_MS)
 
   afterAll(async () => {
     await vite?.close()
+    if (previousProxyTarget === undefined) {
+      delete process.env.VITE_API_PROXY_TARGET
+    } else {
+      process.env.VITE_API_PROXY_TARGET = previousProxyTarget
+    }
     await new Promise<void>((resolve, reject) => {
       backend.close((err) => (err ? reject(err) : resolve()))
     })
