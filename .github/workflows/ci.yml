@@ -57,3 +57,17 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  backup:
+    name: Test (coffee-backup)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install sqlite3
+        run: sudo apt-get update && sudo apt-get install -y sqlite3
+
+      - name: Smoke test backup.sh
+        run: sh coffee-backup/test-backup.sh

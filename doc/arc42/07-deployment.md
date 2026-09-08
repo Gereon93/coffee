@@ -223,7 +223,7 @@ built image points at a commit. A working tree with uncommitted changes yields
 | Task | Procedure |
 |------|-----------|
 | **Deploy** | Portainer: pull the new image, recreate the container. The volume survives; migrations apply on startup. |
-| **Backup** | Automated: the `coffee-backup` sidecar runs `sqlite3 .backup` nightly and enforces `BACKUP_RETENTION_DAYS`. Manual one-off: `docker run --rm -v /path/to/coffee-data:/app/data:ro -v /path/to/coffee-backups:/backup ghcr.io/gereon93/coffee-backup:latest /usr/local/bin/backup.sh`. |
+| **Backup** | Automated: the `coffee-backup` sidecar runs `sqlite3 .backup` nightly and enforces `BACKUP_RETENTION_DAYS`. Manual one-off: `docker run --rm --entrypoint /usr/local/bin/backup.sh -v /path/to/coffee-data:/app/data:ro -v /path/to/coffee-backups:/backup ghcr.io/gereon93/coffee-backup:latest`. |
 | **Restore** | 1. Stop `coffee-api` and `coffee-backup`. 2. Pick a backup file `coffee-YYYYMMDD-HHMMSS.db`. 3. `sqlite3 /path/to/coffee-backups/coffee-YYYYMMDD-HHMMSS.db "PRAGMA integrity_check;"` 4. Replace `/path/to/coffee-data/coffee.db` with the backup. 5. Start the containers; `MigrationBaseliner` rewrites the baseliner row if needed. |
 | **Health check** | `curl http://<NAS-IP>:8089/api/health` — `lastSnapshot` far in the past means the n8n workflow, not the API, is broken. |
 | **Ingest alarm** | `IngestWatchdog` raises a GlitchTip event (`n8n ingest stalled: …`) once per outage and logs an `Information` line on recovery. Configured under `Watchdog` — see the table in [7.2](#configuration). |

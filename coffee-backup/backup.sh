@@ -3,55 +3,90 @@
 # Designed to run as a sidecar container; can also be invoked directly.
 set -eu
 
-SOURCE="${BACKUP_SOURCE:-/app/data/coffee.db}"
-DEST_DIR="${BACKUP_DIR:-/backup}"
-RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-14}"
-PREFIX="${BACKUP_PREFIX:-coffee}"
-TIMEOUT_MS="${BACKUP_TIMEOUT_MS:-30000}"
+load_config() {
+  if [ -f /etc/backup.env ]; then
+    # shellcheck disable=SC1091
+    . /etc/backup.env
+  fi
+  SOURCE="${BACKUP_SOURCE:-/app/data/coffee.db}"
+  DEST_DIR="${BACKUP_DIR:-/backup}"
+  RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-14}"
+  PREFIX="${BACKUP_PREFIX:-coffee}"
+  TIMEOUT_MS="${BACKUP_TIMEOUT_MS:-30000}"
+}
 
 log() {
   printf '%s %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"
 }
 
-mkdir -p "$DEST_DIR"
+require_source_database() {
+  mkdir -p "$DEST_DIR"
+  if [ ! -f "$SOURCE" ]; then
+    log "ERROR source database not found: $SOURCE"
+    exit 1
+  fi
+}
 
-if [ ! -f "$SOURCE" ]; then
-  log "ERROR source database not found: $SOURCE"
-  exit 1
-fi
+create_online_sqlite_backup() {
+  source_path=$1
+  dest_path=$2
+  timeout_ms=$3
+  tmp_path="${dest_path}.tmp.$$"
 
-timestamp=$(date -u +'%Y%m%d-%H%M%S')
-dest="${DEST_DIR}/${PREFIX}-${timestamp}.db"
-tmp="${dest}.tmp.$$"
+  trap 'rm -f "$tmp_path" 2>/dev/null || true' EXIT
 
-log "INFO starting backup $SOURCE -> $dest"
+  log "INFO starting backup $source_path -> $dest_path"
 
-# Use sqlite3 .backup, which creates a consistent online copy.
-# A busy timeout lets the backup wait for a short write lock.
-sqlite3 "$SOURCE" <<EOF
-.timeout ${TIMEOUT_MS}
-.backup '${tmp}'
+  sqlite3 "$source_path" <<EOF
+.timeout ${timeout_ms}
+.backup '${tmp_path}'
 EOF
 
-mv "$tmp" "$dest"
+  mv "$tmp_path" "$dest_path"
+  trap - EXIT
+}
 
-if ! sqlite3 "$dest" "PRAGMA integrity_check;" | grep -qx "ok"; then
-  log "ERROR integrity check failed for $dest"
-  rm -f "$dest"
-  exit 1
-fi
-
-# fsync the directory entry to reduce the chance of a half-written file on power loss.
-sync "$dest" 2>/dev/null || true
-
-log "OK backup created $dest"
-
-# Retention: keep at most BACKUP_RETENTION_DAYS daily backups.
-# -mtime is based on file modification time (UTC day boundaries on the host FS).
-if [ "$RETENTION_DAYS" -ge 0 ]; then
-  count=$(find "$DEST_DIR" -type f -name "${PREFIX}-*.db" -mtime +"$RETENTION_DAYS" | wc -l | tr -d ' ')
-  if [ "$count" -gt 0 ]; then
-    find "$DEST_DIR" -type f -name "${PREFIX}-*.db" -mtime +"$RETENTION_DAYS" -delete
-    log "INFO removed $count backup(s) older than $RETENTION_DAYS day(s)"
+verify_backup_integrity() {
+  backup_path=$1
+  if ! sqlite3 "$backup_path" "PRAGMA integrity_check;" | grep -qx "ok"; then
+    log "ERROR integrity check failed for $backup_path"
+    rm -f "$backup_path"
+    exit 1
   fi
-fi
+}
+
+flush_filesystem_buffers() {
+  sync 2>/dev/null || true
+}
+
+apply_retention_policy() {
+  dest_dir=$1
+  prefix=$2
+  retention_days=$3
+
+  if [ "$retention_days" -lt 0 ]; then
+    return
+  fi
+
+  count=$(find "$dest_dir" -type f -name "${prefix}-*.db" -mtime +"$retention_days" | wc -l | tr -d ' ')
+  if [ "$count" -gt 0 ]; then
+    find "$dest_dir" -type f -name "${prefix}-*.db" -mtime +"$retention_days" -delete
+    log "INFO removed $count backup(s) older than $retention_days day(s)"
+  fi
+}
+
+main() {
+  load_config
+  require_source_database
+
+  timestamp=$(date -u +'%Y%m%d-%H%M%S')
+  dest="${DEST_DIR}/${PREFIX}-${timestamp}.db"
+
+  create_online_sqlite_backup "$SOURCE" "$dest" "$TIMEOUT_MS"
+  verify_backup_integrity "$dest"
+  flush_filesystem_buffers
+  log "OK backup created $dest"
+  apply_retention_policy "$DEST_DIR" "$PREFIX" "$RETENTION_DAYS"
+}
+
+main "$@"
