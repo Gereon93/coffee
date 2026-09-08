@@ -55,7 +55,7 @@ public class BeanHopperService : IBeanHopperService
                 {
                     Counter = counter,
                     Count = count,
-                    BeanHopper = isManual ? stored!.BeanHopper : BeanCounters.DefaultHopper(counter),
+                    BeanHopper = isManual ? stored!.BeanHopper : BeanCounters.DefaultHopper(counter, count),
                     Source = isManual ? BeanHopperSources.Manual : BeanHopperSources.Auto
                 });
             }

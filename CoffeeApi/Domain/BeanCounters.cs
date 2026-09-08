@@ -13,7 +13,11 @@ public static class BeanCounters
     /// <summary>Hopper 1 holds the espresso beans. Milk drinks draw from it.</summary>
     public const int EspressoHopper = 1;
 
-    /// <summary>Plain coffee. <see cref="PrimaryHopper"/> by default.</summary>
+    /// <summary>
+    /// Plain coffee. A single cup is an espresso and draws from
+    /// <see cref="EspressoHopper"/>; two or more cups are the household's
+    /// double-shot of everyday coffee and draw from <see cref="PrimaryHopper"/>.
+    /// </summary>
     public const string Coffee = "coffee";
 
     /// <summary>
@@ -37,10 +41,14 @@ public static class BeanCounters
 
     /// <summary>
     /// Hopper a counter draws from when nothing was corrected manually.
-    /// Anything not explicitly mapped falls back to <see cref="PrimaryHopper"/>.
+    /// Milk drinks are always pulled with espresso beans. Plain coffee depends
+    /// on how many cups came out of one reading: a single cup is an espresso,
+    /// anything more is the two-cup everyday coffee. Two espressos inside the
+    /// same polling window therefore read as one coffee and need a manual
+    /// correction.
     /// </summary>
-    public static int DefaultHopper(string counter) =>
-        counter == CoffeeAndMilk ? EspressoHopper : PrimaryHopper;
+    public static int DefaultHopper(string counter, int count) =>
+        counter == CoffeeAndMilk || count == 1 ? EspressoHopper : PrimaryHopper;
 
     /// <summary>
     /// Drinks drawn on <paramref name="counter"/> between two cumulative
