@@ -3,6 +3,8 @@ using CoffeeApi.DTOs;
 using CoffeeApi.Infrastructure;
 using CoffeeTest.Helpers;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CoffeeTest.Controllers;
 
@@ -14,7 +16,8 @@ public class StatsControllerTests
         var controller = new StatsController(
             SnapshotServices.Query(db),
             SnapshotServices.Statistics(db),
-            SnapshotServices.BeanHoppers(db));
+            SnapshotServices.BeanHoppers(db),
+            NullLogger<StatsController>.Instance);
         return (controller, db);
     }
 
@@ -84,7 +87,65 @@ public class StatsControllerTests
 
         var ok = Assert.IsType<OkObjectResult>(result);
         var response = Assert.IsType<HealthResponseDto>(ok.Value);
-        Assert.Equal("connected", response.Database);
+        Assert.Equal(HealthResponseDto.Connected, response.Database);
+    }
+
+    [Fact]
+    public async Task Health_UnreachableDatabase_ReportsDisconnectedWithoutQuerying()
+    {
+        using var db = TestDbContextFactory.Create();
+        var logMessages = new List<string>();
+        var snapshots = UnreachableSnapshotQueryService.ProbeReportsDisconnected();
+        var controller = new StatsController(
+            snapshots,
+            SnapshotServices.Statistics(db),
+            SnapshotServices.BeanHoppers(db),
+            CreateCollectingLogger(logMessages));
+
+        var result = await controller.Health();
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<HealthResponseDto>(ok.Value);
+        Assert.Equal(HealthResponseDto.Disconnected, response.Database);
+        Assert.Null(response.LastSnapshot);
+        Assert.False(snapshots.LatestRequested);
+        Assert.Contains(
+            logMessages,
+            message => message.Contains("Database reachability probe returned false", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Health_DatabaseProbeThrows_StillReportsDisconnected()
+    {
+        using var db = TestDbContextFactory.Create();
+        var controller = new StatsController(
+            UnreachableSnapshotQueryService.ProbeThrows(),
+            SnapshotServices.Statistics(db),
+            SnapshotServices.BeanHoppers(db),
+            NullLogger<StatsController>.Instance);
+
+        var result = await controller.Health();
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<HealthResponseDto>(ok.Value);
+        Assert.Equal(HealthResponseDto.Disconnected, response.Database);
+    }
+
+    [Fact]
+    public async Task Health_ReachableButQueryThrows_ReportsDisconnected()
+    {
+        using var db = TestDbContextFactory.Create();
+        var controller = new StatsController(
+            UnreachableSnapshotQueryService.QueryFailsAfterReachableProbe(),
+            SnapshotServices.Statistics(db),
+            SnapshotServices.BeanHoppers(db),
+            NullLogger<StatsController>.Instance);
+
+        var result = await controller.Health();
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<HealthResponseDto>(ok.Value);
+        Assert.Equal(HealthResponseDto.Disconnected, response.Database);
     }
 
     [Fact]
@@ -236,4 +297,42 @@ public class StatsControllerTests
         Assert.Empty(response.Snapshots[0].BeanHoppers);
         Assert.Equal(2, Assert.Single(response.Snapshots[1].BeanHoppers).Count);
     }
+
+
+    private static ILogger<StatsController> CreateCollectingLogger(List<string> sink) =>
+        LoggerFactory.Create(builder => builder.AddProvider(new CollectingLoggerProvider(sink)))
+            .CreateLogger<StatsController>();
+
+    private sealed class CollectingLoggerProvider(List<string> sink) : ILoggerProvider
+    {
+        public ILogger CreateLogger(string categoryName) => new CollectingLogger(sink);
+
+        public void Dispose() { }
+
+        private sealed class CollectingLogger(List<string> sink) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Warning;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                if (!IsEnabled(logLevel))
+                {
+                    return;
+                }
+
+                lock (sink)
+                {
+                    sink.Add(formatter(state, exception));
+                }
+            }
+        }
+    }
 }
+

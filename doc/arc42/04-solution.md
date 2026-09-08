@@ -102,7 +102,7 @@ zone-aware fix would pass `Europe/Berlin` and use `TimeZoneInfo`. See
 | n8n unreachable for status | `GET /coffee/status` returns 200 with `reachable: false`, `label: "Offline"` — the dashboard degrades, it does not error |
 | n8n unreachable for power | `POST /coffee/power` returns 500 with a generic message; the exception is logged and sent to GlitchTip |
 | Ingest fails unexpectedly | 500 with a generic body; no internal detail is echoed to the caller |
-| Database unreachable | `GET /api/health` reports `database: "disconnected"` |
+| Database unreachable after startup | `GET /api/health` reports `database: "disconnected"` |
 | Sentry DSN not configured | Error tracking silently disables — local development needs no network |
 
 ## 4.6 Migration Strategy

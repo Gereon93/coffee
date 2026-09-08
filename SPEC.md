@@ -560,9 +560,11 @@ Das 07:00–18:00-Fenster ist eine reine UI-Sperre im Dashboard
 
 ### 13. GET /api/health
 
-**Zweck:** Healthcheck für Monitoring
+**Zweck:** Healthcheck für Monitoring. Der HTTP-Status bleibt `200`, auch wenn
+die Datenbank nach dem Start nicht mehr erreichbar ist — der Outage steckt in
+`database` / `lastSnapshot`, nicht im Statuscode.
 
-#### Response (200 OK)
+#### Response (200 OK) — Datenbank erreichbar
 
 ```json
 {
@@ -572,6 +574,26 @@ Das 07:00–18:00-Fenster ist eine reine UI-Sperre im Dashboard
   "lastSnapshot": "2025-01-25T10:00:00Z"
 }
 ```
+
+`lastSnapshot` ist der UTC-Zeitstempel des neuesten Snapshots oder `null`, wenn
+noch keiner existiert.
+
+#### Response (200 OK) — Datenbank nach Start nicht erreichbar
+
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-01-25T10:15:00Z",
+  "database": "disconnected",
+  "lastSnapshot": null
+}
+```
+
+Gilt für Probe-/Query-Fehler **nach** dem Start. Fehlt die SQLite-Datei beim
+Prozessstart und das Elternverzeichnis ist beschreibbar, legt SQLite eine leere
+Datei an und `Migrate()` wendet das Schema an — der Host startet gegen eine
+leere Datenbank. Start scheitert nur, wenn der Pfad nicht geöffnet/beschrieben
+werden kann (z. B. fehlendes Volume, fehlende Rechte).
 
 ---
 

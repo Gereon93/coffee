@@ -1,10 +1,13 @@
 using CoffeeApi.Domain;
+using CoffeeApi.DTOs;
 using CoffeeApi.Infrastructure;
+using CoffeeTest.Helpers;
 using System.Net;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -19,6 +22,8 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
         private readonly string _dbPath =
             Path.Combine(Path.GetTempPath(), $"coffee-it-{Guid.NewGuid():N}.db");
 
+        public string DbPath => _dbPath;
+
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("Development");
@@ -29,10 +34,7 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            if (File.Exists(_dbPath))
-            {
-                File.Delete(_dbPath);
-            }
+            SqliteOutageHelper.RestoreAccessAndDelete(_dbPath);
         }
     }
 
@@ -48,6 +50,29 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
         var response = await client.GetAsync("/api/health");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Health_PostStartupSqliteOutage_ReportsDisconnected()
+    {
+        await using var factory = new CoffeeApiFactory();
+        var client = factory.CreateClient();
+
+        var healthy = await client.GetAsync("/api/health");
+        healthy.EnsureSuccessStatusCode();
+        using (var baseline = JsonDocument.Parse(await healthy.Content.ReadAsStringAsync()))
+        {
+            Assert.Equal(HealthResponseDto.Connected, baseline.RootElement.GetProperty("database").GetString());
+        }
+
+        SqliteOutageHelper.DenyAccess(factory.DbPath);
+
+        var response = await client.GetAsync("/api/health");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(HealthResponseDto.Disconnected, document.RootElement.GetProperty("database").GetString());
+        Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("lastSnapshot").ValueKind);
     }
 
     [Fact]

@@ -116,8 +116,11 @@ public class HeatmapDataPointDto
 /// </summary>
 public class HealthResponseDto
 {
+    public const string Connected = "connected";
+    public const string Disconnected = "disconnected";
+
     public string Status { get; set; } = "healthy";
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
-    public string Database { get; set; } = "connected";
+    public string Database { get; set; } = Connected;
     public DateTime? LastSnapshot { get; set; }
 }

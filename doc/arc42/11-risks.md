@@ -29,7 +29,7 @@ generic CVSS-style score.
 | TD-09 | **Frontend write calls bypass the API client** | ~~Medium~~ **Resolved** | All writes now go through `fetchJson`/`BASE_URL` and throw `ApiError`; the duplicated error handling is gone. `fetchJson` surfaces the server-provided `error`/`message` and tolerates bodyless responses such as `204` on `DELETE`. |
 | TD-10 | **Vite dev proxy does not cover `/coffee`** | ~~Low~~ **Resolved** | `vite.config.ts` proxies `/coffee` to the same target as `/api`, so the power button and the live status widget work under `npm run dev`. |
 | TD-11 | **Fixed UTC offset is not DST-aware** | Low | `tz` is a single offset applied to every date in a request. Ranges spanning a CET/CEST transition shift by one hour on the far side. Accepted trade-off, see [ADR-004](09-design.md#adr-004-client-driven-timezone-offset). |
-| TD-27 | **`/api/health` cannot report a broken database** | Medium | `Health()` awaits `_snapshotService.GetLatestAsync()` *before* evaluating `CanConnectAsync()`, without a `try`/`catch`. If SQLite is unavailable the query throws and the endpoint answers 5xx — the `database: "disconnected"` branch is unreachable for precisely the failure it exists for. `ApiIntegrationTests.Health_ReturnsOk` only exercises a reachable database, so nothing catches this. Either wrap the probe or drop the field. |
+| TD-27 | **`/api/health` cannot report a broken database** | ~~Medium~~ **Resolved** | `StatsController.Health()` runs the reachability probe first and wraps probe plus `GetLatestAsync()` in `try`/`catch`. Post-startup probe/query failures return `200` with `database: "disconnected"`. At process start, a missing SQLite file with a writable parent is created empty and `Migrate()` applies the schema; only an unopenable or unwritable path fails startup (`Program` calls `Migrate()` before listening). Covered by unit and integration tests for the post-startup path. Closes #27. |
 
 ### Architecture and code quality
 
@@ -71,5 +71,4 @@ generic CVSS-style score.
 Ranked by risk removed per unit of effort, not by severity alone.
 
 1. **TD-03 / TD-23** — bump EF Core and OpenAPI packages to the .NET 10 line; clears the vulnerability warning as a side effect.
-2. **TD-27** — make the health probe survive a broken database. Small fix that removes a case where the system misreports its own state.
-3. **TD-22** — an error boundary around the routes, so a render-time exception in a chart cannot blank the page.
+2. **TD-22** — an error boundary around the routes, so a render-time exception in a chart cannot blank the page.
