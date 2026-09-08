@@ -350,3 +350,38 @@ insert catches the primary-key conflict and overwrites instead of failing. Delet
 would cascade its overrides away and silently merge two deltas; nothing deletes
 snapshots today. Grams, bean varieties and inventory stay out: this API reports
 draws per hopper, the dashboard values them (Murgbyte/dashboard-s7#235).
+
+---
+
+## ADR-014: Keep MachineId and Filter Consistently
+
+**Status.** Accepted · #32
+
+**Context.** `MachineSnapshot` carries a `MachineId` column, originally added as a
+seam for future multi-machine support. `GetLatestAsync` already filtered by it,
+but `GetAllAsync`, `GetByDateAsync`, `GetByDateRangeAsync`,
+`GetLastSnapshotBeforeAsync` and `GetHeatmapDataAsync` did not, creating a latent
+data-correctness bug: with a second machine in the database those queries would
+mix or ignore rows belonging to the requested machine (TD-08).
+
+**Decision.** Keep `MachineId` and consistently apply it as a predicate in every
+snapshot read path. All `ISnapshotQueryService` methods accept `machineId` with
+`EQ900-DEFAULT` as the default. `SnapshotStatisticsService` forwards the same
+`machineId` into the query service for daily summaries, range aggregates and the
+heatmap. The ingest and backfill paths write the correct `MachineId` for the row
+they handle.
+
+**Alternatives rejected.**
+- *Remove `MachineId` entirely.* Would require a migration to drop the column and
+  index, removal of query parameters from `StatsController`, and would close the
+  multi-machine seam permanently. Given the field is already modelled, indexed,
+  and wired through the service layer, the removal cost outweighs the YAGNI
+  benefit: the existing single-machine deployment is unchanged, and future
+  multi-machine support stays possible without a schema change.
+
+**Consequences.** Multi-machine reads are now correct if more than one
+`MachineId` is present, while the default keeps the single-machine deployment
+behaviour unchanged. `MarkedDay` remains global (not per-machine), so a
+`mass-import` exclusion still applies to all machines on the same calendar day;
+that is accepted because the current deployment has only one machine and the
+column is not present on `MarkedDay`.
