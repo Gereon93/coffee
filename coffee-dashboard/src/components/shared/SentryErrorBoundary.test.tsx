@@ -1,15 +1,17 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import * as Sentry from '@sentry/react';
 import { SentryErrorBoundary } from './SentryErrorBoundary';
 
 vi.mock('@sentry/react', async (importOriginal) => {
   const React = await import('react');
   const actual = await importOriginal<typeof import('@sentry/react')>();
+  const captureException = vi.fn();
 
   class MockErrorBoundary extends React.Component<{
     fallback: (data: { error: unknown; resetError: () => void }) => React.ReactNode;
-    onError?: (error: unknown, info: { componentStack?: string }) => void;
+    onError?: (error: unknown, componentStack: string | undefined, eventId: string) => void;
     children: React.ReactNode;
   }> {
     state: { hasError: boolean; error: unknown } = { hasError: false, error: null };
@@ -19,7 +21,8 @@ vi.mock('@sentry/react', async (importOriginal) => {
     }
 
     componentDidCatch(error: unknown, info: { componentStack?: string }) {
-      this.props.onError?.(error, info);
+      captureException(error);
+      this.props.onError?.(error, info.componentStack, 'mock-event-id');
     }
 
     render() {
@@ -36,7 +39,7 @@ vi.mock('@sentry/react', async (importOriginal) => {
   return {
     ...actual,
     ErrorBoundary: MockErrorBoundary,
-    captureException: vi.fn(),
+    captureException,
   };
 });
 
@@ -73,6 +76,21 @@ describe('SentryErrorBoundary', () => {
 
     expect(screen.getByText('Die Ansicht konnte nicht geladen werden.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Erneut versuchen' })).toBeInTheDocument();
+  });
+
+  it('reports render errors to Sentry', () => {
+    vi.mocked(Sentry.captureException).mockClear();
+
+    render(
+      <SentryErrorBoundary>
+        <Thrower />
+      </SentryErrorBoundary>,
+    );
+
+    expect(Sentry.captureException).toHaveBeenCalledOnce();
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'render error' }),
+    );
   });
 
   it('offers a way back to the start page', () => {

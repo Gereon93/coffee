@@ -8,15 +8,22 @@ import { AppShell } from './AppShell';
 vi.mock('@sentry/react', async (importOriginal) => {
   const React = await import('react');
   const actual = await importOriginal<typeof import('@sentry/react')>();
+  const captureException = vi.fn();
 
   class MockErrorBoundary extends React.Component<{
     fallback: (data: { error: unknown; resetError: () => void }) => React.ReactNode;
+    onError?: (error: unknown, componentStack: string | undefined, eventId: string) => void;
     children: React.ReactNode;
   }> {
     state: { hasError: boolean; error: unknown } = { hasError: false, error: null };
 
     static getDerivedStateFromError(error: unknown) {
       return { hasError: true, error };
+    }
+
+    componentDidCatch(error: unknown, info: { componentStack?: string }) {
+      captureException(error);
+      this.props.onError?.(error, info.componentStack, 'mock-event-id');
     }
 
     render() {
@@ -33,7 +40,7 @@ vi.mock('@sentry/react', async (importOriginal) => {
   return {
     ...actual,
     ErrorBoundary: MockErrorBoundary,
-    captureException: vi.fn(),
+    captureException,
   };
 });
 
