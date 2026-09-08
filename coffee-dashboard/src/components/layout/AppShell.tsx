@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { NavBar } from './NavBar';
 import { SentryErrorBoundary } from '../shared/SentryErrorBoundary';
 
@@ -25,6 +25,7 @@ function getInitialTheme(): Theme {
 
 export function AppShell() {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const { pathname } = useLocation();
 
   useEffect(() => {
     const isDarkMode = theme === 'dark';
@@ -46,7 +47,7 @@ export function AppShell() {
     <div className="flex min-h-screen flex-col bg-stone-50 text-stone-900 dark:bg-stone-950 dark:text-stone-100">
       <NavBar isDarkMode={theme === 'dark'} onToggleTheme={toggleTheme} />
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
-        <SentryErrorBoundary>
+        <SentryErrorBoundary key={pathname}>
           <Outlet />
         </SentryErrorBoundary>
       </main>
