@@ -197,16 +197,26 @@ public class StatsController : ControllerBase
 
         try
         {
-            if (await _snapshots.IsDatabaseReachableAsync())
+            if (!await _snapshots.IsDatabaseReachableAsync())
             {
-                response.LastSnapshot = (await _snapshots.GetLatestAsync())?.Timestamp;
-                response.Database = HealthResponseDto.Connected;
+                return Ok(response);
             }
         }
         catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Database reachability probe failed; reporting disconnected");
+            return Ok(response);
+        }
+
+        try
+        {
+            response.LastSnapshot = (await _snapshots.GetLatestAsync())?.Timestamp;
+            response.Database = HealthResponseDto.Connected;
+        }
+        catch (Exception ex)
+        {
             response.Database = HealthResponseDto.Disconnected;
-            _logger.LogWarning(ex, "Database probe failed; reporting disconnected");
+            _logger.LogWarning(ex, "Latest snapshot query failed; reporting disconnected");
         }
 
         return Ok(response);
