@@ -77,7 +77,7 @@ that pins the behaviour, or states that it is unverified.
 | Q-12 | Container restarts against an existing pre-migration database | `MigrationBaseliner` seeds the history; only pending migrations apply; no data loss | `MigrationBaselinerTests` |
 | Q-13 | Ingest arrives with an empty `data.status` | `400` with `{ error, details[] }`; nothing written | `IngestControllerTests` |
 | Q-14 | Database file is unreachable | **Known deviation:** `Health()` awaits `GetLatestAsync()` *before* `CanConnectAsync()`, so the query throws and the endpoint answers 5xx. The `database: "disconnected"` payload is unreachable for exactly the failure it was written for | not covered — `ApiIntegrationTests.Health_ReturnsOk` only exercises a reachable database |
-| Q-15 | The machine's counters reset to 0 after maintenance | **Known deviation:** treated as "no increase", not stored; deltas clamp to 0 until counters pass the old maximum | [11](11-risks.md) |
+| Q-15 | The machine's counters reset to 0 after maintenance | The reset snapshot is stored; daily totals re-anchor at the first post-reset reading | `ApiIntegrationTests.Ingest_CounterReset_PersistsEpochAndDailySummaryUsesNewBaseline`, `SnapshotIngestServiceTests` |
 
 ### Security
 
@@ -87,7 +87,7 @@ that pins the behaviour, or states that it is unverified.
 | Q-17 | `POST /api/ingest` with a wrong key | `401`; comparison is constant-time | `ApiIntegrationTests` |
 | Q-18 | An unexpected exception occurs in a controller | The response body contains no exception message, stack trace, or internal path | controller tests |
 | Q-16a | `POST /coffee/power` and the marked-day writes without `X-API-Key` | `401`; `GET /coffee/status` and `GET /api/stats/marked-days` stay reachable | `ApiIntegrationTests` |
-| Q-19 | `ApiKey` is not configured | **Known deviation:** the request is forwarded with a warning; the protected endpoints are effectively unauthenticated | [11](11-risks.md) |
+| Q-19 | `ApiKey` is not configured | In `Production`: `503 Service Unavailable` on protected endpoints (fail-closed). In `Development`: request is forwarded with a warning | [11](11-risks.md) |
 | Q-20 | A third-party website open in a LAN browser posts to `/coffee/power` | The request is rejected by CORS: only the origins in `Cors:AllowedOrigins` are allowed. A direct (non-browser) LAN client still succeeds — the endpoint itself is unauthenticated | [11](11-risks.md) |
 
 ### Performance

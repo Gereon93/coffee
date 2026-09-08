@@ -96,7 +96,7 @@ Five concerns, five types — cut along the reason to change (ADR-012):
 | `LocalDay` | `BoundsUtc`, `ToLocal`, `DateOf` | Local date + offset → half-open UTC interval. The single definition of the day rule |
 | `SnapshotPayloadMapper` | `Map` | Maps Home Connect key strings to entity properties; tolerates `JsonElement`, boxed primitives, and strings. Pure — the caller supplies the timestamp |
 | `SnapshotQueryService` | `GetLatestAsync`, `GetAllAsync`, `GetByDateAsync`, `GetByDateRangeAsync`, `GetSinceAsync`, `GetLastSnapshotBeforeAsync`, `IsDatabaseReachableAsync` | `GetAllAsync` caps `pageSize` at 100 |
-| `SnapshotIngestService` | `ProcessIngestAsync`, `HasCounterIncreased` | Idempotency gate; returns `(Created, Snapshot)` |
+| `SnapshotIngestService` | `ProcessIngestAsync`, `ShouldPersistReading` | Idempotency gate; persists increases and counter resets; returns `(Created, Snapshot)` |
 | `SnapshotStatisticsService` | `GetDailySummaryAsync`, `GetRangeAggregateAsync`, `GetHeatmapDataAsync` | Delta computation, peak-hour detection, mass-import exclusion |
 
 `SnapshotStatisticsService.GetDailySummaryAsync` in detail:
@@ -132,7 +132,7 @@ forward day by day. Same delta rule as the daily summary, applied per day.
 **`IngestController`** — Rejects payloads whose `data.status` is null or
 empty (400). Delegates to `SnapshotIngestService`. `201 Created` with a `Location`
 of `/api/stats/{id}` when a row was written, `200 OK` when the payload carried
-no counter increase. Unexpected exceptions are logged and answered with a
+no counter change. Unexpected exceptions are logged and answered with a
 generic 500 body.
 
 **`StatsController`** — Read-only endpoints plus `/api/health`. Validates
@@ -178,9 +178,10 @@ path to configure. A failing snapshot read logs a warning instead and does not
 alarm: a broken database is not an ingest outage.
 
 **`ApiKeyMiddleware`** — Path-prefix allowlist, method-aware: `/api/ingest` (all methods), `POST /coffee/power`, `POST` and `DELETE` on `/api/stats/marked-days` and `/api/stats/snapshots`. Reads on those paths are deliberately left open. With no
-configured key it logs a warning and lets the request through — deliberate
-development affordance, and a production risk if the key is ever unset.
-Comparison uses `CryptographicOperations.FixedTimeEquals`.
+configured key the behaviour depends on the environment: in `Development` it
+logs a warning and lets the request through; in `Production` it answers `503
+Service Unavailable` and logs an error instead of silently disabling
+authentication. Comparison uses `CryptographicOperations.FixedTimeEquals`.
 
 **`AppDbContext`** — Model configuration, four indexes (timestamp, machine id,
 a composite idempotency index, plus the primary keys), `DateOnly ↔ string`
@@ -290,10 +291,6 @@ Pages own composition and local UI state (selected period, open modal, current
 page). Hooks own server state. `lib/` holds pure, framework-free functions —
 which also makes them the natural first candidates for unit tests the project
 does not yet have.
-
-> Note: `addMarkedDay`, `removeMarkedDay`, and `setCoffeePower` call `fetch`
-> directly with hardcoded relative paths instead of going through
-> `fetchJson`/`BASE_URL`. Recorded in [11](11-risks.md).
 
 ## 5.4 Level 2 — CoffeeTest
 

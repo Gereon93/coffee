@@ -23,13 +23,18 @@ public partial class SnapshotIngestService : ISnapshotIngestService
 
     public async Task<(bool Created, MachineSnapshot Snapshot)> ProcessIngestAsync(IngestPayloadDto payload)
     {
+        if (!IngestPayloadValidator.TryValidateCupCounters(payload.Data.Status, out var details))
+        {
+            throw new InvalidIngestPayloadException(details);
+        }
+
         var newSnapshot = SnapshotPayloadMapper.Map(payload, DateTime.UtcNow);
 
         var lastSnapshot = await _snapshots.GetLatestAsync(newSnapshot.MachineId);
 
-        if (lastSnapshot != null && !HasCounterIncreased(lastSnapshot, newSnapshot))
+        if (lastSnapshot != null && !ShouldPersistReading(lastSnapshot, newSnapshot))
         {
-            _logger.LogDebug("Snapshot skipped - no counter increase detected");
+            _logger.LogDebug("Snapshot skipped - no counter change detected");
             return (false, lastSnapshot);
         }
 
@@ -41,13 +46,20 @@ public partial class SnapshotIngestService : ISnapshotIngestService
         return (true, newSnapshot);
     }
 
-    private static bool HasCounterIncreased(MachineSnapshot last, MachineSnapshot current)
-    {
-        return current.BeverageCounterCoffee > last.BeverageCounterCoffee
-            || current.BeverageCounterCoffeeAndMilk > last.BeverageCounterCoffeeAndMilk
-            || current.BeverageCounterMilk > last.BeverageCounterMilk
-            || current.BeverageCounterHotWaterCups > last.BeverageCounterHotWaterCups;
-    }
+    private static bool ShouldPersistReading(MachineSnapshot last, MachineSnapshot current) =>
+        HasCounterIncrease(last, current) || HasCounterReset(last, current);
+
+    private static bool HasCounterIncrease(MachineSnapshot last, MachineSnapshot current) =>
+        current.BeverageCounterCoffee > last.BeverageCounterCoffee
+        || current.BeverageCounterCoffeeAndMilk > last.BeverageCounterCoffeeAndMilk
+        || current.BeverageCounterMilk > last.BeverageCounterMilk
+        || current.BeverageCounterHotWaterCups > last.BeverageCounterHotWaterCups;
+
+    private static bool HasCounterReset(MachineSnapshot last, MachineSnapshot current) =>
+        current.BeverageCounterCoffee < last.BeverageCounterCoffee
+        || current.BeverageCounterCoffeeAndMilk < last.BeverageCounterCoffeeAndMilk
+        || current.BeverageCounterMilk < last.BeverageCounterMilk
+        || current.BeverageCounterHotWaterCups < last.BeverageCounterHotWaterCups;
 
     [LoggerMessage(
         EventId = 2001,

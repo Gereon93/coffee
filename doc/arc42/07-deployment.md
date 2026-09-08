@@ -60,7 +60,7 @@ underscore maps to the configuration separator: `ConnectionStrings__Default`.
 | Key / variable | Purpose | Behaviour when unset |
 |----------------|---------|----------------------|
 | `ConnectionStrings__Default` | SQLite path | Falls back to `Data Source=coffee.db` in the working directory. The Dockerfile sets `/app/data/coffee.db`. |
-| `ApiKey` | Shared secret for the protected endpoints: `POST /api/ingest`, `POST /coffee/power`, `POST` and `DELETE /api/stats/marked-days` | **Those endpoints become unauthenticated**; a warning is logged per request |
+| `ApiKey` | Shared secret for the protected endpoints: `POST /api/ingest`, `POST /coffee/power`, `POST` and `DELETE /api/stats/marked-days` | In `Production`, protected endpoints answer `503 Service Unavailable` and log an error; in `Development` they stay unauthenticated with a warning logged |
 | `ForwardedHeaders__KnownNetworks__0` | CIDR (or plain IP) of the reverse proxy, e.g. `172.16.0.0/12` for the Docker bridge. Enables `X-Forwarded-For`, so a rejected request logs the caller's address instead of the proxy's | The forwarded-headers middleware is not registered; logs show the proxy address |
 | `N8n__PowerWebhookUrl` | Power/status webhook | `HomeConnectService` throws on construction → 500 on the first `/coffee/*` request |
 | `N8n__BasicAuthUser` / `N8n__BasicAuthPassword` | Webhook credentials | No `Authorization` header is sent |
@@ -128,7 +128,38 @@ public).
 `Europe/Berlin` — meaning the timestamp shown in the UI reflects the build
 host's clock rendered in Berlin time.
 
-## 7.4 Local Development
+## 7.4 Automated SQLite Backup
+
+A dedicated sidecar container performs an online backup of the SQLite file.
+The backup is triggered by `cron` inside the container, so it does not require
+the NAS host to run `crond` or expose SSH.
+
+| Property | Value |
+|----------|-------|
+| Image | `ghcr.io/gereon93/coffee-backup:latest` and `:sha-<short>` |
+| Source | `/app/data/coffee.db` (read-only mount of the API data volume) |
+| Destination | `/backup` (separate volume or NAS share) |
+| Schedule | `BACKUP_CRON` (default `0 3 * * *` — 03:00 UTC, outside the n8n write window) |
+| Retention | `BACKUP_RETENTION_DAYS` (default `14`) |
+| Method | `sqlite3 .backup` (consistent online copy, not a plain `cp`) |
+
+### Configuration
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `BACKUP_SOURCE` | `/app/data/coffee.db` | Absolute path to the live SQLite file |
+| `BACKUP_DIR` | `/backup` | Directory for backup files |
+| `BACKUP_PREFIX` | `coffee` | Filename prefix for backups |
+| `BACKUP_CRON` | `0 3 * * *` | Cron expression in the container's timezone |
+| `BACKUP_RETENTION_DAYS` | `14` | Delete backups older than N days (set `-1` to keep all) |
+| `BACKUP_TIMEOUT_MS` | `30000` | Busy-timeout while waiting for the API to release a write lock |
+| `BACKUP_RUN_ON_START` | `false` | Run a backup immediately on container start |
+
+> **Important:** `/backup` should be stored on a different physical path or
+> share than the live database. A single-drive or single-volume failure must not
+> destroy both the database and its backups.
+
+## 7.5 Local Development
 
 ```bash
 dotnet build Coffee.sln -c Release   # build everything
@@ -137,21 +168,17 @@ cd CoffeeApi && dotnet run           # API + Scalar UI at /scalar/v1
 cd coffee-dashboard && npm run dev    # dashboard on :5173
 ```
 
-The Vite dev server proxies `/api` to `http://localhost:8089`, overridable via
-`VITE_API_PROXY_TARGET`.
+The Vite dev server proxies `/api` and `/coffee` to `http://localhost:8089`,
+overridable via `VITE_API_PROXY_TARGET`.
 
-> The dev proxy covers **only** `/api`. `/coffee/status` and `/coffee/power`
-> are not proxied, so the power button and live status do not work under
-> `npm run dev` without extra configuration. Recorded in [11](11-risks.md).
-
-## 7.5 CI/CD
+## 7.6 CI/CD
 
 ```mermaid
 graph LR
     PR["Pull request"] --> CI1["ci.yml<br/>restore · build · test<br/>.NET 10"]
     MAIN["push to main"] --> CI1
     MAIN --> SON["sonar.yml<br/>SonarQube scan<br/>(skipped without secrets)"]
-    MAIN --> PUB["docker-publish.yml<br/>build + push both images"]
+    MAIN --> PUB["docker-publish.yml<br/>build + push all images"]
     PUB --> GHCR["ghcr.io<br/>:latest · :sha-short"]
     GHCR -.->|manual pull in Portainer| NAS["Synology NAS"]
 ```
@@ -160,7 +187,7 @@ graph LR
 |----------|---------|------|
 | `ci.yml` | push to `main`/`dev`, every PR | `dotnet restore` → `build -c Release` → `dotnet test` |
 | `sonar.yml` | push to `main` | SonarQube scan. No-ops without `SONAR_HOST_URL` + `SONAR_TOKEN` |
-| `docker-publish.yml` | push to `main`, manual | Matrix build of both images, push to GHCR with GitHub Actions layer cache |
+| `docker-publish.yml` | push to `main`, manual | Matrix build of all images, push to GHCR with GitHub Actions layer cache |
 
 Dependabot keeps npm and NuGet dependencies current; recent history shows
 regular automated dependency PRs.
@@ -177,7 +204,8 @@ regular automated dependency PRs.
 ```bash
 ./build.sh api             # build + push coffee-api
 ./build.sh dashboard       # build + push coffee-dashboard
-./build.sh all             # both
+./build.sh backup          # build + push coffee-backup
+./build.sh all             # all
 ./build.sh api --no-push   # build only
 DOCKER=docker ./build.sh all
 ```
@@ -186,29 +214,31 @@ It tags `:latest` and `:sha-<short>`, the same scheme CI uses, so a locally
 built image points at a commit. A working tree with uncommitted changes yields
 `:sha-<short>-dirty`.
 
-## 7.6 Operations
+## 7.7 Operations
 
 | Task | Procedure |
 |------|-----------|
 | **Deploy** | Portainer: pull the new image, recreate the container. The volume survives; migrations apply on startup. |
-| **Backup** | Stop the API container (SQLite is single-writer), copy `coffee.db` from the volume, restart. |
-| **Restore** | Replace the file and restart; `MigrationBaseliner` handles a pre-migration file. |
+| **Backup** | Automated: the `coffee-backup` sidecar runs `sqlite3 .backup` nightly and enforces `BACKUP_RETENTION_DAYS`. Manual one-off: `docker run --rm --entrypoint /usr/local/bin/backup.sh -v /path/to/coffee-data:/app/data:ro -v /path/to/coffee-backups:/backup ghcr.io/gereon93/coffee-backup:latest`. |
+| **Restore** | 1. Stop `coffee-api` and `coffee-backup`. 2. Pick a backup file `coffee-YYYYMMDD-HHMMSS.db`. 3. `sqlite3 /path/to/coffee-backups/coffee-YYYYMMDD-HHMMSS.db "PRAGMA integrity_check;"` 4. Replace `/path/to/coffee-data/coffee.db` with the backup. 5. Start the containers; `MigrationBaseliner` rewrites the baseliner row if needed. |
 | **Health check** | `curl http://<NAS-IP>:8089/api/health` — `lastSnapshot` far in the past means the n8n workflow, not the API, is broken. |
 | **Ingest alarm** | `IngestWatchdog` raises a GlitchTip event (`n8n ingest stalled: …`) once per outage and logs an `Information` line on recovery. Configured under `Watchdog` — see the table in [7.2](#configuration). |
-| **Log inspection** | `docker logs coffee-api` — structured logs including skipped-snapshot debug lines and API-key warnings. |
-| **Error triage** | GlitchTip, tagged `service=coffee-api` / `service=coffee-dashboard`. |
+| **Log inspection** | `docker logs coffee-api` — structured logs including skipped-snapshot debug lines and API-key warnings. `docker logs coffee-backup` — backup and retention output. |
+| **Error triage** | GlitchTip, tagged `service=coffee-api` / `service=coffee-dashboard`. Backup sidecar failures are visible in `docker logs coffee-backup`. |
 | **API exploration** | `SPEC.md`, or `http://localhost:5000/scalar/v1` against a locally running API. |
 
 > Scalar and the raw OpenAPI document are mapped in `Development` only and are
 > no longer proxied by nginx: in production both answer `404`.
 
-## 7.7 Mapping Building Blocks to Infrastructure
+## 7.8 Mapping Building Blocks to Infrastructure
 
 | Building block | Artifact | Runs on |
 |----------------|----------|---------|
 | CoffeeApi | `ghcr.io/gereon93/coffee-api` | Docker container, Synology NAS |
 | coffee-dashboard | `ghcr.io/gereon93/coffee-dashboard` | Docker container, Synology NAS |
+| coffee-backup | `ghcr.io/gereon93/coffee-backup` | Docker container, Synology NAS |
 | SQLite database | `/app/data/coffee.db` | Docker volume on the NAS |
+| SQLite backups | `/backup/coffee-*.db` | Separate Docker volume or NAS share |
 | n8n workflow | External n8n instance | Self-hosted, internet-connected |
 | CoffeeTest | Not deployed | GitHub Actions runner |
 | CI/CD | GitHub Actions | GitHub-hosted |

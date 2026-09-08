@@ -10,12 +10,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CoffeeTest.Integration;
 
-/// <summary>
-/// End-to-end tests that boot the real ASP.NET Core pipeline via
-/// <see cref="WebApplicationFactory{TEntryPoint}"/> — routing, middleware,
-/// EF Core migrations and SQLite all run for real against an isolated,
-/// throwaway database file.
-/// </summary>
 public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFactory>
 {
     private const string ApiKey = "integration-test-key";
@@ -387,7 +381,7 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
     {
         var client = _factory.CreateClient();
         const string payload =
-            """{"data":{"status":[{"key":"ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee","value":42}]}}""";
+            """{"data":{"status":[{"key":"ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee","value":42},{"key":"ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffeeAndMilk","value":0},{"key":"ConsumerProducts.CoffeeMaker.Status.BeverageCounterMilk","value":0},{"key":"ConsumerProducts.CoffeeMaker.Status.BeverageCounterHotWaterCups","value":0}]}}""";
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/ingest")
         {
@@ -398,7 +392,6 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
         var ingestResponse = await client.SendAsync(request);
         Assert.Equal(HttpStatusCode.Created, ingestResponse.StatusCode);
 
-        // The persisted snapshot must be visible through the read API.
         var statsResponse = await client.GetAsync("/api/stats");
         statsResponse.EnsureSuccessStatusCode();
         var body = await statsResponse.Content.ReadAsStringAsync();
@@ -418,7 +411,7 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
     }
 
     [Fact]
-    public async Task Power_WithValidApiKey_PassesAuthentication()
+    public async Task Power_WithValidApiKey_InvalidStateReturnsBadRequestWithoutActuatingWebhook()
     {
         var client = _factory.CreateClient();
 
@@ -430,9 +423,6 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
 
         var response = await client.SendAsync(request);
 
-        // An invalid state reaches the action and is rejected there, which proves
-        // the request got past the API key middleware. Asserting on 400 rather
-        // than 200 keeps the test from actuating the n8n webhook.
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
@@ -443,7 +433,6 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
 
         var response = await client.GetAsync("/coffee/status");
 
-        // Reads stay open — only /coffee/power is protected.
         Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
@@ -479,7 +468,6 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
 
         var response = await client.GetAsync("/api/stats/marked-days");
 
-        // Same path as the protected writes — the read must stay open.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
@@ -533,8 +521,6 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
     [Fact]
     public async Task BeanHopper_OverrideSurvivesTheRoundTripThroughTheReadApi()
     {
-        // Ingesting raises the counter for good, and the class fixture's database
-        // is shared, so this test brings its own to keep out of the others' way.
         await using var factory = new CoffeeApiFactory();
         var client = factory.CreateClient();
 
@@ -591,10 +577,138 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
         Assert.Equal(0, totals.GetProperty("hopper2").GetInt32());
     }
 
-    private static async Task<int> IngestCoffeeCounterAsync(HttpClient client, int counter)
+    [Fact]
+    public async Task Ingest_InvalidCupCounters_Returns400AndDoesNotPersist()
+    {
+        await using var factory = new CoffeeApiFactory();
+        var client = factory.CreateClient();
+
+        var cases = new (string Name, string Payload)[]
+        {
+            (
+                "missing counter",
+                """
+                {
+                  "data": {
+                    "status": [
+                      { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee", "value": 1 },
+                      { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffeeAndMilk", "value": 0 },
+                      { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterMilk", "value": 0 }
+                    ]
+                  }
+                }
+                """
+            ),
+            (
+                "negative counter",
+                """
+                {
+                  "data": {
+                    "status": [
+                      { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee", "value": -1 },
+                      { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffeeAndMilk", "value": 0 },
+                      { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterMilk", "value": 0 },
+                      { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterHotWaterCups", "value": 0 }
+                    ]
+                  }
+                }
+                """
+            ),
+            (
+                "fractional counter",
+                """
+                {
+                  "data": {
+                    "status": [
+                      { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee", "value": 1.5 },
+                      { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffeeAndMilk", "value": 0 },
+                      { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterMilk", "value": 0 },
+                      { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterHotWaterCups", "value": 0 }
+                    ]
+                  }
+                }
+                """
+            ),
+            (
+                "out-of-range counter",
+                """
+                {
+                  "data": {
+                    "status": [
+                      { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee", "value": 2147483648 },
+                      { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffeeAndMilk", "value": 0 },
+                      { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterMilk", "value": 0 },
+                      { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterHotWaterCups", "value": 0 }
+                    ]
+                  }
+                }
+                """
+            ),
+        };
+
+        foreach (var (_, payload) in cases)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, "/api/ingest")
+            {
+                Content = new StringContent(payload, Encoding.UTF8, "application/json"),
+            };
+            request.Headers.Add("X-API-Key", ApiKey);
+
+            var response = await client.SendAsync(request);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+            using var scope = factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            Assert.Equal(0, await db.MachineSnapshots.CountAsync());
+        }
+    }
+
+    [Fact]
+    public async Task Ingest_CounterReset_PersistsEpochAndDailySummaryUsesNewBaseline()
+    {
+        await using var factory = new CoffeeApiFactory();
+        var client = factory.CreateClient();
+
+        await IngestCupCountersAsync(client, coffee: 100);
+        await IngestCupCountersAsync(client, coffee: 0);
+        var lastId = await IngestCupCountersAsync(client, coffee: 5);
+
+        var statsResponse = await client.GetAsync("/api/stats?pageSize=100");
+        statsResponse.EnsureSuccessStatusCode();
+        using (var statsDocument = JsonDocument.Parse(await statsResponse.Content.ReadAsStringAsync()))
+        {
+            var rows = statsDocument.RootElement.GetProperty("data").EnumerateArray().ToArray();
+            Assert.Equal(3, rows.Length);
+        }
+
+        var snapshot = await ReadSnapshotAsync(client, lastId);
+        var day = snapshot.GetProperty("timestamp").GetDateTime();
+        var dailyResponse = await client.GetAsync($"/api/stats/daily/{day:yyyy-MM-dd}");
+        dailyResponse.EnsureSuccessStatusCode();
+
+        using var daily = JsonDocument.Parse(await dailyResponse.Content.ReadAsStringAsync());
+        Assert.Equal(5, daily.RootElement.GetProperty("summary").GetProperty("coffeeToday").GetInt32());
+    }
+
+    private static async Task<int> IngestCupCountersAsync(
+        HttpClient client,
+        int coffee,
+        int coffeeAndMilk = 0,
+        int milk = 0,
+        int hotWaterCups = 0)
     {
         var payload = $$"""
-            { "data": { "status": [ { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee", "value": {{counter}} } ] } }
+            {
+              "data": {
+                "status": [
+                  { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee", "value": {{coffee}} },
+                  { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffeeAndMilk", "value": {{coffeeAndMilk}} },
+                  { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterMilk", "value": {{milk}} },
+                  { "key": "ConsumerProducts.CoffeeMaker.Status.BeverageCounterHotWaterCups", "value": {{hotWaterCups}} }
+                ]
+              }
+            }
             """;
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/ingest")
@@ -609,6 +723,9 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         return document.RootElement.GetProperty("id").GetInt32();
     }
+
+    private static Task<int> IngestCoffeeCounterAsync(HttpClient client, int counter) =>
+        IngestCupCountersAsync(client, counter);
 
     private static async Task<JsonElement> ReadSnapshotAsync(HttpClient client, int snapshotId)
     {

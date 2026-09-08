@@ -33,11 +33,16 @@ public class IngestController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Ingest([FromBody] IngestPayloadDto payload)
     {
-        // Validation
         if (payload?.Data?.Status == null || payload.Data.Status.Count == 0)
         {
             _logger.LogWarning("Invalid ingest payload: data.status is required");
             return BadRequest(new { error = "Invalid payload", details = PayloadDetails });
+        }
+
+        if (!IngestPayloadValidator.TryValidateCupCounters(payload.Data.Status, out var validationDetails))
+        {
+            _logger.LogWarning("Invalid ingest payload: cup counter validation failed");
+            return BadRequest(new { error = "Invalid payload", details = validationDetails });
         }
 
         try
@@ -51,7 +56,7 @@ public class IngestController : ControllerBase
                 Timestamp = snapshot.Timestamp,
                 Message = created
                     ? "Snapshot created"
-                    : "No counter increase detected, snapshot skipped"
+                    : "No counter change detected, snapshot skipped"
             };
 
             if (created)
@@ -60,6 +65,11 @@ public class IngestController : ControllerBase
             }
 
             return Ok(response);
+        }
+        catch (InvalidIngestPayloadException ex)
+        {
+            _logger.LogWarning("Invalid ingest payload: {Details}", ex.Details);
+            return BadRequest(new { error = "Invalid payload", details = ex.Details });
         }
         catch (Exception ex)
         {

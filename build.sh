@@ -6,7 +6,8 @@
 # Examples:
 #   ./build.sh api          # Build + Push API
 #   ./build.sh dashboard    # Build + Push Dashboard
-#   ./build.sh all          # Build + Push both
+#   ./build.sh backup       # Build + Push SQLite backup sidecar
+#   ./build.sh all          # Build + Push all
 #   ./build.sh api --no-push # Build only, no push
 # =============================================================================
 
@@ -22,6 +23,7 @@ DOCKER="${DOCKER:-podman}"
 declare -A SERVICES=(
   [api]="CoffeeApi:coffee-api"
   [dashboard]="coffee-dashboard:coffee-dashboard"
+  [backup]="coffee-backup:coffee-backup"
 )
 # Format: [name]="build_context:image_name"
 # -------------------------------------------------
