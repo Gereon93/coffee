@@ -38,12 +38,9 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
         var (startOfDay, _) = LocalDay.BoundsUtc(date, tzOffsetMinutes);
         var previousSnapshot = await _snapshots.GetLastSnapshotBeforeAsync(startOfDay, machineId);
 
-        var baseline = previousSnapshot ?? snapshots[0];
-        var last = snapshots[^1];
-
-        var (coffeeToday, milkDrinksToday) = BeverageDeltas(baseline, last);
-
         var sequence = PrecededBy(previousSnapshot, snapshots);
+
+        var (coffeeToday, milkDrinksToday) = BeverageDeltas(sequence);
 
         return new DailySummaryDto
         {
@@ -74,10 +71,10 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
 
         foreach (var (localDate, daySnapshots) in days)
         {
-            var dayBaseline = baseline ?? daySnapshots[0];
+            var daySequence = PrecededBy(baseline, daySnapshots);
             var last = daySnapshots[^1];
 
-            var (coffee, milk) = BeverageDeltas(dayBaseline, last);
+            var (coffee, milk) = BeverageDeltas(daySequence);
 
             var dayUsages = daySnapshots
                 .Where(s => usageBySnapshot.ContainsKey(s.Id))
@@ -88,7 +85,7 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
                 Date = localDate.ToString("yyyy-MM-dd"),
                 CoffeeCount = Math.Max(0, coffee),
                 MilkCount = Math.Max(0, milk),
-                Total = Math.Max(0, last.TotalBeverages - dayBaseline.TotalBeverages),
+                Total = Math.Max(0, coffee + milk),
                 BeanHoppers = _beanHoppers.SumUsage(dayUsages)
             });
 
@@ -150,14 +147,25 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
     }
 
     /// <summary>
-    /// Coffee and milk-drink deltas between two cumulative readings.
+    /// Coffee and milk-drink deltas across a sequence of cumulative readings.
+    /// A decrease in any counter is treated as a reset; only positive per-pair
+    /// increments are summed, so the first snapshot after a reset becomes the new
+    /// baseline for subsequent drinks (ADR-014).
     /// </summary>
-    private static (int Coffee, int MilkDrinks) BeverageDeltas(MachineSnapshot baseline, MachineSnapshot last)
+    private static (int Coffee, int MilkDrinks) BeverageDeltas(IReadOnlyList<MachineSnapshot> sequence)
     {
-        var coffee = last.BeverageCounterCoffee - baseline.BeverageCounterCoffee;
-        var milkDrinks = (last.BeverageCounterCoffeeAndMilk - baseline.BeverageCounterCoffeeAndMilk) +
-                         (last.BeverageCounterMilk - baseline.BeverageCounterMilk);
-        return (coffee, milkDrinks);
+        var coffee = 0;
+        var coffeeAndMilk = 0;
+        var milk = 0;
+
+        for (int i = 1; i < sequence.Count; i++)
+        {
+            coffee += Math.Max(0, sequence[i].BeverageCounterCoffee - sequence[i - 1].BeverageCounterCoffee);
+            coffeeAndMilk += Math.Max(0, sequence[i].BeverageCounterCoffeeAndMilk - sequence[i - 1].BeverageCounterCoffeeAndMilk);
+            milk += Math.Max(0, sequence[i].BeverageCounterMilk - sequence[i - 1].BeverageCounterMilk);
+        }
+
+        return (coffee, coffeeAndMilk + milk);
     }
 
     /// <summary>

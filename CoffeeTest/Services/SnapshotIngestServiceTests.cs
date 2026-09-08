@@ -82,4 +82,46 @@ public class SnapshotIngestServiceTests
 
         Assert.Equal("Ready", snapshot.OperationState);
     }
+
+    [Fact]
+    public async Task ProcessIngest_CounterReset_CreatesNewSnapshot()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = SnapshotServices.Ingest(db);
+
+        await service.ProcessIngestAsync(MakePayload(10));
+        var (created, snapshot) = await service.ProcessIngestAsync(MakePayload(0));
+
+        Assert.True(created);
+        Assert.Equal(0, snapshot.BeverageCounterCoffee);
+        Assert.Equal(2, db.MachineSnapshots.Count());
+    }
+
+    [Fact]
+    public async Task ProcessIngest_PartialReset_CreatesNewSnapshot()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = SnapshotServices.Ingest(db);
+
+        await service.ProcessIngestAsync(MakePayload(10, coffeeAndMilk: 5, milk: 2));
+        var (created, _) = await service.ProcessIngestAsync(MakePayload(0, coffeeAndMilk: 5, milk: 2));
+
+        Assert.True(created);
+        Assert.Equal(2, db.MachineSnapshots.Count());
+    }
+
+    [Fact]
+    public async Task ProcessIngest_AfterReset_IncreaseUsesNewBaseline()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = SnapshotServices.Ingest(db);
+
+        await service.ProcessIngestAsync(MakePayload(100));
+        await service.ProcessIngestAsync(MakePayload(0));
+        var (created, snapshot) = await service.ProcessIngestAsync(MakePayload(5));
+
+        Assert.True(created);
+        Assert.Equal(5, snapshot.BeverageCounterCoffee);
+        Assert.Equal(3, db.MachineSnapshots.Count());
+    }
 }

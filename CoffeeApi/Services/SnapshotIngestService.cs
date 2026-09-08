@@ -27,9 +27,9 @@ public partial class SnapshotIngestService : ISnapshotIngestService
 
         var lastSnapshot = await _snapshots.GetLatestAsync(newSnapshot.MachineId);
 
-        if (lastSnapshot != null && !HasCounterIncreased(lastSnapshot, newSnapshot))
+        if (lastSnapshot != null && !HasCounterChanged(lastSnapshot, newSnapshot))
         {
-            _logger.LogDebug("Snapshot skipped - no counter increase detected");
+            _logger.LogDebug("Snapshot skipped - no counter change detected");
             return (false, lastSnapshot);
         }
 
@@ -41,12 +41,18 @@ public partial class SnapshotIngestService : ISnapshotIngestService
         return (true, newSnapshot);
     }
 
-    private static bool HasCounterIncreased(MachineSnapshot last, MachineSnapshot current)
+    /// <summary>
+    /// A new snapshot is persisted when at least one beverage counter differs from
+    /// the previous reading. An increase is normal consumption; a decrease is treated
+    /// as a counter reset (ADR-014). Equal counters mean the payload is a duplicate,
+    /// even if the machine status changed.
+    /// </summary>
+    private static bool HasCounterChanged(MachineSnapshot last, MachineSnapshot current)
     {
-        return current.BeverageCounterCoffee > last.BeverageCounterCoffee
-            || current.BeverageCounterCoffeeAndMilk > last.BeverageCounterCoffeeAndMilk
-            || current.BeverageCounterMilk > last.BeverageCounterMilk
-            || current.BeverageCounterHotWaterCups > last.BeverageCounterHotWaterCups;
+        return current.BeverageCounterCoffee != last.BeverageCounterCoffee
+            || current.BeverageCounterCoffeeAndMilk != last.BeverageCounterCoffeeAndMilk
+            || current.BeverageCounterMilk != last.BeverageCounterMilk
+            || current.BeverageCounterHotWaterCups != last.BeverageCounterHotWaterCups;
     }
 
     [LoggerMessage(

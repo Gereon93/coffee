@@ -160,4 +160,46 @@ public class SnapshotStatisticsDailySummaryTests
         var resultCet = await service.GetDailySummaryAsync(new DateOnly(2026, 2, 7), tzOffsetMinutes: 60);
         Assert.Equal(0, resultCet.TotalToday); // Only one snapshot, no delta possible
     }
+
+    [Fact]
+    public async Task GetDailySummary_CounterDrop_ResetsBaseline()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = SnapshotServices.Statistics(db);
+
+        db.MachineSnapshots.AddRange(
+            new SnapshotBuilder().At(new DateTime(2026, 2, 6, 23, 0, 0, DateTimeKind.Utc)).WithCoffee(100).Build(),
+            new SnapshotBuilder().At(new DateTime(2026, 2, 7, 10, 0, 0, DateTimeKind.Utc)).WithCoffee(0).Build(),
+            new SnapshotBuilder().At(new DateTime(2026, 2, 7, 14, 0, 0, DateTimeKind.Utc)).WithCoffee(5).Build()
+        );
+        await db.SaveChangesAsync();
+
+        var result = await service.GetDailySummaryAsync(new DateOnly(2026, 2, 7));
+
+        Assert.Equal(5, result.CoffeeToday);
+        Assert.Equal(5, result.TotalToday);
+    }
+
+    [Fact]
+    public async Task GetDailySummary_PartialCounterDrop_ResetsOnlyThatCounter()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = SnapshotServices.Statistics(db);
+
+        db.MachineSnapshots.AddRange(
+            new SnapshotBuilder().At(new DateTime(2026, 2, 6, 23, 0, 0, DateTimeKind.Utc))
+                .WithCoffee(100).WithMilk(50).Build(),
+            new SnapshotBuilder().At(new DateTime(2026, 2, 7, 10, 0, 0, DateTimeKind.Utc))
+                .WithCoffee(0).WithMilk(50).Build(),
+            new SnapshotBuilder().At(new DateTime(2026, 2, 7, 14, 0, 0, DateTimeKind.Utc))
+                .WithCoffee(3).WithMilk(52).Build()
+        );
+        await db.SaveChangesAsync();
+
+        var result = await service.GetDailySummaryAsync(new DateOnly(2026, 2, 7));
+
+        Assert.Equal(3, result.CoffeeToday);
+        Assert.Equal(2, result.MilkDrinksToday);
+        Assert.Equal(5, result.TotalToday);
+    }
 }

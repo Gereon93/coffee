@@ -607,14 +607,16 @@ interface StatusItemDto {
 
 ### Regel 1: Counter-Vergleich
 
-Ein neuer Snapshot wird **nur** gespeichert, wenn mindestens ein Getränke-Counter größer ist als im letzten Snapshot:
+Ein neuer Snapshot wird **nur** gespeichert, wenn mindestens ein Getränke-Counter sich gegenüber dem letzten Snapshot verändert hat:
 
 ```
-NEW.BeverageCounterCoffee > OLD.BeverageCounterCoffee
-OR NEW.BeverageCounterCoffeeAndMilk > OLD.BeverageCounterCoffeeAndMilk
-OR NEW.BeverageCounterMilk > OLD.BeverageCounterMilk
-OR NEW.BeverageCounterHotWaterCups > OLD.BeverageCounterHotWaterCups
+NEW.BeverageCounterCoffee != OLD.BeverageCounterCoffee
+OR NEW.BeverageCounterCoffeeAndMilk != OLD.BeverageCounterCoffeeAndMilk
+OR NEW.BeverageCounterMilk != OLD.BeverageCounterMilk
+OR NEW.BeverageCounterHotWaterCups != OLD.BeverageCounterHotWaterCups
 ```
+
+Eine Verringerung wird als Zähler-Reset interpretiert und bewusst gespeichert, damit die nachfolgende Berechnung eine neue Epoche beginnen kann.
 
 ### Regel 2: Erster Snapshot
 

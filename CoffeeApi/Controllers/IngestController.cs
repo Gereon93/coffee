@@ -51,7 +51,7 @@ public class IngestController : ControllerBase
                 Timestamp = snapshot.Timestamp,
                 Message = created
                     ? "Snapshot created"
-                    : "No counter increase detected, snapshot skipped"
+                    : "No counter change detected, snapshot skipped"
             };
 
             if (created)

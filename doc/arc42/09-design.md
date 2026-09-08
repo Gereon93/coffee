@@ -103,14 +103,15 @@ the dates on the other side of the transition.
 
 ## ADR-005: Counter-Based Idempotency
 
-**Status:** accepted, with a known limitation
+**Status:** accepted, counter reset handled by ADR-014
 
 **Context.** n8n delivers a payload every 15 minutes regardless of activity,
 retries on failure, and can replay. Storing every payload would produce ~76
 rows/day, most of them identical.
 
-**Decision.** Persist a snapshot only when at least one beverage counter has
-strictly increased.
+**Decision.** Persist a snapshot when at least one beverage counter differs from
+ the previous reading. An increase is normal consumption; a decrease is treated
+as a counter reset and starts a new epoch (see ADR-014).
 
 **Alternatives rejected.**
 - *Idempotency key from n8n* — pushes state into the workflow and does not
@@ -124,11 +125,8 @@ strictly increased.
 - Retries are inherently safe; the response returns the stored snapshot's id.
 - Status-only changes are never recorded after the first snapshot.
 - Hot water drawn without a cup count change writes nothing.
-- **A counter reset is invisible.** After a reset all counters are lower, so
-  nothing is written and the baseline stays at the old maximum; deltas clamp
-  to 0 until the counters climb past it. Handling this would mean detecting a
-  decrease and treating it as a new epoch — currently unimplemented, tracked
-  in [11](11-risks.md).
+- Counter resets are now persisted and do not lock the baseline at the old
+  maximum.
 
 ---
 
@@ -350,3 +348,44 @@ insert catches the primary-key conflict and overwrites instead of failing. Delet
 would cascade its overrides away and silently merge two deltas; nothing deletes
 snapshots today. Grams, bean varieties and inventory stay out: this API reports
 draws per hopper, the dashboard values them (Murgbyte/dashboard-s7#235).
+
+---
+
+## ADR-014: Counter Reset Detection
+
+**Status:** accepted · #31
+
+**Context.** The EQ900 beverage counters are cumulative. After a service reset or
+factory reset the machine reports lower values, so the previous idempotency rule
+(`strictly increased`) would skip every post-reset payload until the old maximum
+was exceeded. Deltas would clamp to 0 and produce plausible but wrong numbers.
+
+**Decision.** Treat any decrease in one of the four cup counters as a counter
+reset and persist the snapshot. Statistics compute deltas by summing only
+positive per-pair increments; a drop resets the implicit baseline for that
+counter, so the next higher reading starts a new epoch.
+
+**Assumption.** A single counter going backwards is enough to declare a reset.
+This covers both full resets and partial resets, and is the only legitimate way
+a cumulative counter can decrease. If a malformed payload lowers one counter, it
+will be interpreted as a reset; the next correct payload will resume from the
+new baseline. Hot water in millilitres (`BeverageCounterHotWater`) is not a cup
+counter and is not part of the idempotency or reset calculation.
+
+**Alternatives rejected.**
+- *Store a separate `IsReset` flag on the snapshot* — would require a schema
+  migration and only records the fact; the per-pair delta rule is sufficient.
+- *Detect reset only when all four counters decrease* — would miss partial resets
+  where service or maintenance resets a single counter.
+- *Keep a global baseline per machine and offset all reads* — would require extra
+  state and complicates backfill and overrides; the stored reset snapshot is
+  enough to re-anchor the timeline.
+
+**Consequences.**
+- Reset payloads are stored and immediately become the new baseline.
+- Daily and range totals are correct from the reset onward, even if the counters
+  never reach the old maximum again.
+- A reset that happens inside a day is handled by the same per-pair rule; the
+  first snapshot after the reset becomes the baseline for the rest of the day.
+- Reversibility: if a future design wants to store explicit reset snapshots or
+  flag them, the per-pair rule still works and the data shape is unchanged.
