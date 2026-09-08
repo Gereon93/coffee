@@ -71,3 +71,6 @@ jobs:
 
       - name: Smoke test backup.sh
         run: sh coffee-backup/test-backup.sh
+
+      - name: Smoke test coffee-backup image
+        run: sh coffee-backup/test-docker-backup.sh

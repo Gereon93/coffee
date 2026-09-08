@@ -2,6 +2,7 @@
 # Coffee Analytics Hub — automated SQLite backup via sqlite3 .backup
 # Designed to run as a sidecar container; can also be invoked directly.
 set -eu
+set -o pipefail
 
 load_config() {
   if [ -f /etc/backup.env ]; then
@@ -55,8 +56,28 @@ verify_backup_integrity() {
   fi
 }
 
+validate_retention_days() {
+  retention_days=$1
+
+  if [ -z "$retention_days" ]; then
+    log "ERROR invalid BACKUP_RETENTION_DAYS: (empty)"
+    exit 1
+  fi
+
+  case "$retention_days" in
+    -1) ;;
+    *[!0-9]*)
+      log "ERROR invalid BACKUP_RETENTION_DAYS: $retention_days"
+      exit 1
+      ;;
+  esac
+}
+
 flush_filesystem_buffers() {
-  sync 2>/dev/null || true
+  if ! sync; then
+    log "ERROR filesystem sync failed"
+    exit 1
+  fi
 }
 
 apply_retention_policy() {
@@ -64,12 +85,13 @@ apply_retention_policy() {
   prefix=$2
   retention_days=$3
 
-  if [ "$retention_days" -lt 0 ]; then
+  if [ "$retention_days" = "-1" ]; then
     return
   fi
 
-  count=$(find "$dest_dir" -type f -name "${prefix}-*.db" -mtime +"$retention_days" | wc -l | tr -d ' ')
-  if [ "$count" -gt 0 ]; then
+  stale_files=$(find "$dest_dir" -type f -name "${prefix}-*.db" -mtime +"$retention_days")
+  if [ -n "$stale_files" ]; then
+    count=$(printf '%s\n' "$stale_files" | wc -l | tr -d ' ')
     find "$dest_dir" -type f -name "${prefix}-*.db" -mtime +"$retention_days" -delete
     log "INFO removed $count backup(s) older than $retention_days day(s)"
   fi
@@ -77,6 +99,7 @@ apply_retention_policy() {
 
 main() {
   load_config
+  validate_retention_days "$RETENTION_DAYS"
   require_source_database
 
   timestamp=$(date -u +'%Y%m%d-%H%M%S')
