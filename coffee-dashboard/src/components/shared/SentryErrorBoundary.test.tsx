@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { SentryErrorBoundary } from './SentryErrorBoundary';
 
 vi.mock('@sentry/react', async (importOriginal) => {
@@ -43,6 +44,15 @@ function Thrower(): React.ReactNode {
   throw new Error('render error');
 }
 
+const flakyChild = { shouldThrow: true };
+
+function FlakyChild(): React.ReactNode {
+  if (flakyChild.shouldThrow) {
+    throw new Error('one-time render error');
+  }
+  return <p>Erholter Inhalt</p>;
+}
+
 describe('SentryErrorBoundary', () => {
   it('renders children when no error is thrown', () => {
     render(
@@ -63,5 +73,32 @@ describe('SentryErrorBoundary', () => {
 
     expect(screen.getByText('Die Ansicht konnte nicht geladen werden.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Erneut versuchen' })).toBeInTheDocument();
+  });
+
+  it('offers a way back to the start page', () => {
+    render(
+      <SentryErrorBoundary>
+        <Thrower />
+      </SentryErrorBoundary>,
+    );
+
+    expect(screen.getByRole('link', { name: 'Zur Startseite' })).toHaveAttribute('href', '/');
+  });
+
+  it('recovers the children when retry succeeds after a one-time error', async () => {
+    flakyChild.shouldThrow = true;
+    render(
+      <SentryErrorBoundary>
+        <FlakyChild />
+      </SentryErrorBoundary>,
+    );
+
+    expect(screen.getByText('Die Ansicht konnte nicht geladen werden.')).toBeInTheDocument();
+
+    flakyChild.shouldThrow = false;
+    await userEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' }));
+
+    expect(screen.getByText('Erholter Inhalt')).toBeInTheDocument();
+    expect(screen.queryByText('Die Ansicht konnte nicht geladen werden.')).not.toBeInTheDocument();
   });
 });
