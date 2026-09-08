@@ -37,7 +37,7 @@ mkdir -p /var/log
 touch /var/log/backup.log
 
 if [ "$RUN_ON_START" = "true" ]; then
-  /usr/local/bin/backup.sh >> /var/log/backup.log 2>&1 || true
+  /usr/local/bin/backup.sh >> /var/log/backup.log 2>&1
 fi
 
 install_backup_cron_job "$BACKUP_CRON"

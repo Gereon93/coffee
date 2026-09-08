@@ -6,7 +6,30 @@ ROOT="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 BACKUP_SH="${ROOT}/backup.sh"
 
 TMP=$(mktemp -d)
-trap 'rm -rf "$TMP"' EXIT
+ENV_TEST_RESTORE_PATH=""
+ENV_TEST_HAD_PRIOR=0
+
+restore_system_backup_env_if_needed() {
+  [ -n "$ENV_TEST_RESTORE_PATH" ] || return 0
+  if [ "$ENV_TEST_HAD_PRIOR" = "1" ]; then
+    if [ "$(id -u)" -eq 0 ]; then
+      cp "$ENV_TEST_RESTORE_PATH" /etc/backup.env
+    else
+      sudo cp "$ENV_TEST_RESTORE_PATH" /etc/backup.env
+    fi
+  else
+    if [ "$(id -u)" -eq 0 ]; then
+      rm -f /etc/backup.env
+    else
+      sudo rm -f /etc/backup.env
+    fi
+  fi
+  rm -f "$ENV_TEST_RESTORE_PATH"
+  ENV_TEST_RESTORE_PATH=""
+  ENV_TEST_HAD_PRIOR=0
+}
+
+trap 'restore_system_backup_env_if_needed; rm -rf "$TMP"' EXIT
 
 SOURCE_DB="${TMP}/coffee.db"
 BACKUP_DIR="${TMP}/backups"
@@ -84,7 +107,18 @@ BACKUP_DIR='${CUSTOM_BACKUP_DIR}'
 BACKUP_PREFIX='envtest'
 BACKUP_RETENTION_DAYS='14'"
 
+  ENV_TEST_RESTORE_PATH=$(mktemp)
+  if [ -f /etc/backup.env ]; then
+    cp /etc/backup.env "$ENV_TEST_RESTORE_PATH"
+    ENV_TEST_HAD_PRIOR=1
+  else
+    ENV_TEST_HAD_PRIOR=0
+  fi
+
   if ! write_backup_env_file "$env_content"; then
+    rm -f "$ENV_TEST_RESTORE_PATH"
+    ENV_TEST_RESTORE_PATH=""
+    ENV_TEST_HAD_PRIOR=0
     return 0
   fi
 
@@ -95,6 +129,8 @@ BACKUP_RETENTION_DAYS='14'"
     echo "FAIL: /etc/backup.env values were not applied" >&2
     exit 1
   fi
+
+  restore_system_backup_env_if_needed
 }
 
 test_retention_deletes_old_backups() {
