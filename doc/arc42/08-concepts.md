@@ -171,7 +171,7 @@ ending up somewhere they were not expected.
 | Gap | Reality |
 |-----|---------|
 | **The dashboard origin is an unauthenticated path to the writes** | The write endpoints now require the API key, which closes direct calls to the API port. The dashboard's nginx injects the key for everyone it serves, so anything that can reach the dashboard port can still actuate the machine. That is the same reach as pressing the button in the UI, which is the intended feature — closing it needs real user authentication, not a shared secret. The 07:00–18:00 lock in `coffeeTimeLock.ts` does not help: it is client-side. |
-| **Missing `ApiKey` disables write auth** | `ApiKeyMiddleware` now rejects protected requests with `503 Service Unavailable` in `Production` when no key is configured, while still allowing them in `Development`. |
+| **Development still allows writes without `ApiKey`** | In `Production`, a missing/whitespace-only key yields `503 Service Unavailable` on protected routes. In `Development` the middleware still forwards with a warning so local work stays unauthenticated by default. |
 | **Read endpoints are unauthenticated** | Every `GET` is open to anything that reaches the API port. Consumption counters are the only data at stake, and the LAN-only assumption is what carries this. |
 | **Rate limiting covers actuation only** | `POST /coffee/power` is throttled; the read endpoints are not. They hit local SQLite, so the exposure is CPU, not a third-party quota. |
 | **Forwarded headers are off unless configured** | Without `ForwardedHeaders:KnownNetworks` the logged address stays the proxy's. Configuring it on a deployment where the API port is directly reachable trades one wrong address for a spoofable one — which is why it is opt-in. |
