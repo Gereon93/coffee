@@ -14,7 +14,7 @@ public static class BeanCounters
     public const int EspressoHopper = 1;
 
     /// <summary>A coffee delta of this size is one cup, and one cup is an espresso.</summary>
-    public const int SingleCupCount = 1;
+    private const int SingleCupCount = 1;
 
     /// <summary>
     /// Plain coffee. A single cup is an espresso and draws from

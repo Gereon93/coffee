@@ -5,6 +5,9 @@ internal static class HistoricalBackfillDefaults
     internal const string MachineId = "EQ900-DEFAULT";
 }
 
+// ReSharper disable AutoPropertyCanBeMadeGetOnly.Global
+// Request body: the setters are used by the JSON deserializer of the model
+// binder, not by code in this solution. Get-only would silently bind nothing.
 public class HistoricalBackfillRequestDto
 {
     public string CommissionedAt { get; init; } = string.Empty;
@@ -12,6 +15,7 @@ public class HistoricalBackfillRequestDto
     /// <summary>Machine whose first real snapshot defines the backfill target.</summary>
     public string MachineId { get; init; } = HistoricalBackfillDefaults.MachineId;
 }
+// ReSharper restore AutoPropertyCanBeMadeGetOnly.Global
 
 public class HistoricalBackfillPlanDto
 {
