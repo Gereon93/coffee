@@ -26,8 +26,8 @@ generic CVSS-style score.
 |----|------|----------|--------|
 | TD-07 | **Counter reset is not handled** | Medium | After a reset all counters are lower, never higher, so `HasCounterIncreased` returns false and nothing is stored. The baseline stays at the pre-reset maximum and every delta clamps to 0 until the counters climb past it. Detecting a decrease and starting a new epoch is the fix. See [ADR-005](09-design.md#adr-005-counter-based-idempotency). |
 | TD-08 | **`MachineId` filtering is inconsistent** | Medium (latent) | `GetLatestAsync` filters by `MachineId`; `GetAllAsync`, `GetByDateAsync`, `GetByDateRangeAsync`, `GetLastSnapshotBeforeAsync`, and `GetHeatmapDataAsync` do not. Harmless while exactly one machine exists — and silently wrong the first time a second one ingests. Either filter consistently or drop the field and the seam it implies. |
-| TD-09 | **Frontend write calls bypass the API client** | Medium | `addMarkedDay`, `removeMarkedDay` (`src/api/stats.ts`) and `setCoffeePower` (`src/api/coffee.ts`) call `fetch` directly with hardcoded relative paths, ignoring `fetchJson` and `BASE_URL`. Reads honour `VITE_API_BASE_URL`, writes do not — so in any split-origin setup reads work and writes 404. They also duplicate error handling and throw a bare `Error` instead of `ApiError`. |
-| TD-10 | **Vite dev proxy does not cover `/coffee`** | Low | `vite.config.ts` proxies only `/api`. Under `npm run dev` the power button and the live status widget hit the dev server and fail. Local development of those features needs undocumented extra configuration. |
+| TD-09 | **Frontend write calls bypass the API client** | ~~Medium~~ **Resolved** | All writes now go through `fetchJson`/`BASE_URL` and throw `ApiError`; the duplicated error handling is gone. `fetchJson` surfaces the server-provided `error`/`message` and tolerates bodyless responses such as `204` on `DELETE`. |
+| TD-10 | **Vite dev proxy does not cover `/coffee`** | ~~Low~~ **Resolved** | `vite.config.ts` proxies `/coffee` to the same target as `/api`, so the power button and the live status widget work under `npm run dev`. |
 | TD-11 | **Fixed UTC offset is not DST-aware** | Low | `tz` is a single offset applied to every date in a request. Ranges spanning a CET/CEST transition shift by one hour on the far side. Accepted trade-off, see [ADR-004](09-design.md#adr-004-client-driven-timezone-offset). |
 | TD-27 | **`/api/health` cannot report a broken database** | Medium | `Health()` awaits `_snapshotService.GetLatestAsync()` *before* evaluating `CanConnectAsync()`, without a `try`/`catch`. If SQLite is unavailable the query throws and the endpoint answers 5xx — the `database: "disconnected"` branch is unreachable for precisely the failure it exists for. `ApiIntegrationTests.Health_ReturnsOk` only exercises a reachable database, so nothing catches this. Either wrap the probe or drop the field. |
 
@@ -71,6 +71,6 @@ generic CVSS-style score.
 Ranked by risk removed per unit of effort, not by severity alone.
 
 1. **TD-03 / TD-23** — bump EF Core and OpenAPI packages to the .NET 10 line; clears the vulnerability warning as a side effect.
-2. **TD-09 / TD-10 / TD-27** — route frontend writes through `fetchJson`, extend the dev proxy to `/coffee`, and make the health probe survive a broken database. All three are small and each removes a case where the system misreports its own state.
+2. **TD-27** — make the health probe survive a broken database. Small fix that removes a case where the system misreports its own state.
 3. **TD-22** — an error boundary around the routes, so a render-time exception in a chart cannot blank the page.
 4. **TD-02, TD-07** — deeper changes with real design questions attached; worth their own discussion rather than a drive-by fix.

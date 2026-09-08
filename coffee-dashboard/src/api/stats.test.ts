@@ -109,12 +109,10 @@ describe('stats api', () => {
       jsonResponse({ error: 'Day already marked' }, { status: 409 }),
     );
 
-    await expect(
-      addMarkedDay({ date: '2026-08-15', kind: 'event', reason: 'x' }),
-    ).rejects.toMatchObject({ name: 'ApiError', status: 409 });
-    await expect(
-      addMarkedDay({ date: '2026-08-15', kind: 'event', reason: 'x' }),
-    ).rejects.toBeInstanceOf(ApiError);
+    const request = addMarkedDay({ date: '2026-08-15', kind: 'event', reason: 'x' });
+
+    await expect(request).rejects.toMatchObject({ name: 'ApiError', status: 409 });
+    await expect(request).rejects.toBeInstanceOf(ApiError);
   });
 
   it('deletes a marked day and tolerates 204', async () => {
