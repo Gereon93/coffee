@@ -11,6 +11,8 @@ namespace CoffeeApi.Infrastructure;
 /// <c>database update</c> does — override it with <c>--connection</c> to point
 /// a command at a different file.
 /// </summary>
+// ReSharper disable once UnusedType.Global
+// Instantiated by reflection by the 'dotnet ef' tooling, never from code in this solution.
 public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 {
     public AppDbContext CreateDbContext(string[] args)

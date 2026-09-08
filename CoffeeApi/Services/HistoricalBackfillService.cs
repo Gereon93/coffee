@@ -7,7 +7,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CoffeeApi.Services;
 
-public class HistoricalBackfillService : IHistoricalBackfillService
+public class HistoricalBackfillService(
+    AppDbContext context,
+    ILogger<HistoricalBackfillService> logger) : IHistoricalBackfillService
 {
     private const string DateFormat = "yyyy-MM-dd";
     private const string EstimatedOperationState = "Estimated";
@@ -15,15 +17,6 @@ public class HistoricalBackfillService : IHistoricalBackfillService
     private const int MaxEstimatedSnapshotCount = 366;
     private const int SnapshotHourUtc = 12;
     private static readonly SemaphoreSlim ApplyGate = new(1, 1);
-
-    private readonly AppDbContext _context;
-    private readonly ILogger<HistoricalBackfillService> _logger;
-
-    public HistoricalBackfillService(AppDbContext context, ILogger<HistoricalBackfillService> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
 
     public async Task<(bool Success, HistoricalBackfillPlanDto? Plan, string? Error)> PreviewAsync(
         string commissionedAt,
@@ -45,8 +38,8 @@ public class HistoricalBackfillService : IHistoricalBackfillService
         await ApplyGate.WaitAsync();
         try
         {
-            await using var transaction = _context.Database.IsRelational()
-                ? await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable)
+            await using var transaction = context.Database.IsRelational()
+                ? await context.Database.BeginTransactionAsync(IsolationLevel.Serializable)
                 : null;
 
             var preparation = await PrepareAsync(commissionedAt, machineId);
@@ -63,23 +56,25 @@ public class HistoricalBackfillService : IHistoricalBackfillService
 
             var target = preparation.FirstSnapshot;
             var days = plan.EndDate.DayNumber - preparation.CommissionedAt.DayNumber;
-            var snapshots = new List<MachineSnapshot>(plan.EstimatedSnapshotCount);
+            var snapshots = new List<MachineSnapshot>(plan.EstimatedSnapshotCount)
+            {
+                CreateEstimatedSnapshot(preparation.CommissionedAt, target, 0, days)
+            };
 
-            snapshots.Add(CreateEstimatedSnapshot(preparation.CommissionedAt, target, 0, days));
             for (var day = 1; day <= days; day++)
             {
                 snapshots.Add(CreateEstimatedSnapshot(
                     preparation.CommissionedAt.AddDays(day), target, day, days));
             }
 
-            _context.MachineSnapshots.AddRange(snapshots);
-            await _context.SaveChangesAsync();
+            context.MachineSnapshots.AddRange(snapshots);
+            await context.SaveChangesAsync();
             if (transaction != null)
             {
                 await transaction.CommitAsync();
             }
 
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Created {Count} estimated historical snapshots through {EndDate} from first real snapshot {SnapshotId}",
                 snapshots.Count,
                 plan.EndDate,
@@ -110,7 +105,7 @@ public class HistoricalBackfillService : IHistoricalBackfillService
             return Preparation.Failed("commissionedAt must use yyyy-MM-dd format.");
         }
 
-        var firstSnapshot = await _context.MachineSnapshots
+        var firstSnapshot = await context.MachineSnapshots
             .Where(snapshot => !snapshot.IsEstimated && snapshot.MachineId == machineId)
             .OrderBy(snapshot => snapshot.Timestamp)
             .ThenBy(snapshot => snapshot.Id)
@@ -137,7 +132,7 @@ public class HistoricalBackfillService : IHistoricalBackfillService
                 $"Backfill period exceeds the maximum of {MaxEstimatedSnapshotCount} daily snapshots.");
         }
 
-        var alreadyApplied = await _context.MachineSnapshots
+        var alreadyApplied = await context.MachineSnapshots
             .AnyAsync(snapshot => snapshot.IsEstimated && snapshot.MachineId == machineId);
         return new Preparation(machineId, commissionedDate, endDate, firstSnapshot, alreadyApplied, null);
     }

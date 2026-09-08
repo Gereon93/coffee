@@ -1,5 +1,4 @@
 using CoffeeApi.Domain;
-using CoffeeApi.Infrastructure;
 using CoffeeApi.Services;
 using CoffeeTest.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +11,7 @@ public class HistoricalBackfillServiceTests
     [Fact]
     public async Task Preview_UsesFirstRealSnapshotAndReturnsDailyPlan()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         db.MachineSnapshots.Add(FirstRealSnapshot());
         await db.SaveChangesAsync();
         var service = new HistoricalBackfillService(db, NullLogger<HistoricalBackfillService>.Instance);
@@ -30,7 +29,7 @@ public class HistoricalBackfillServiceTests
     [Fact]
     public async Task Apply_CreatesEstimatedRowsWithExactTargetAndIsIdempotent()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         db.MachineSnapshots.Add(FirstRealSnapshot());
         await db.SaveChangesAsync();
         var service = new HistoricalBackfillService(db, NullLogger<HistoricalBackfillService>.Instance);
@@ -52,7 +51,7 @@ public class HistoricalBackfillServiceTests
     [Fact]
     public async Task Preview_UsesBerlinCalendarYearForUtcBoundary()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         db.MachineSnapshots.Add(FirstRealSnapshot(
             new DateTime(2025, 12, 31, 23, 30, 0, DateTimeKind.Utc)));
         await db.SaveChangesAsync();
@@ -70,7 +69,7 @@ public class HistoricalBackfillServiceTests
     [InlineData("0001-01-01")]
     public async Task Preview_RejectsInvalidOrUnsafePeriodsWithoutWriting(string commissionedAt)
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         db.MachineSnapshots.Add(FirstRealSnapshot());
         await db.SaveChangesAsync();
         var service = new HistoricalBackfillService(db, NullLogger<HistoricalBackfillService>.Instance);
@@ -84,7 +83,7 @@ public class HistoricalBackfillServiceTests
     [Fact]
     public async Task Preview_RejectsWhenNoRealSnapshotExists()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var service = new HistoricalBackfillService(db, NullLogger<HistoricalBackfillService>.Instance);
 
         var preview = await service.PreviewAsync("2025-07-10");
@@ -96,7 +95,7 @@ public class HistoricalBackfillServiceTests
     [Fact]
     public async Task Preview_UsesFirstRealSnapshotOfRequestedMachine()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         db.MachineSnapshots.Add(FirstRealSnapshot(machineId: "EQ900-A"));
         db.MachineSnapshots.Add(FirstRealSnapshot(
             new DateTime(2026, 2, 1, 16, 10, 0, DateTimeKind.Utc), "EQ900-B", 2));
@@ -113,7 +112,7 @@ public class HistoricalBackfillServiceTests
     [Fact]
     public async Task Apply_AllowsIndependentBackfillsPerMachine()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         db.MachineSnapshots.Add(FirstRealSnapshot(machineId: "EQ900-A"));
         db.MachineSnapshots.Add(FirstRealSnapshot(
             new DateTime(2026, 2, 1, 16, 10, 0, DateTimeKind.Utc), "EQ900-B", 2));

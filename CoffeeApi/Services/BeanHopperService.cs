@@ -6,19 +6,10 @@ using Microsoft.EntityFrameworkCore;
 namespace CoffeeApi.Services;
 
 /// <inheritdoc cref="IBeanHopperService"/>
-public class BeanHopperService : IBeanHopperService
+public class BeanHopperService(AppDbContext context, ISnapshotQueryService snapshots) : IBeanHopperService
 {
     private const string CounterDetail = "counter must be 'coffee' or 'coffeeAndMilk'";
     private const string HopperDetail = "beanHopper must be 1, 2 or null";
-
-    private readonly AppDbContext _context;
-    private readonly ISnapshotQueryService _snapshots;
-
-    public BeanHopperService(AppDbContext context, ISnapshotQueryService snapshots)
-    {
-        _context = context;
-        _snapshots = snapshots;
-    }
 
     public async Task<Dictionary<int, List<BeanHopperUsageDto>>> GetUsageAsync(IReadOnlyList<MachineSnapshot> sequence)
     {
@@ -110,13 +101,13 @@ public class BeanHopperService : IBeanHopperService
             return (false, BeanHopperError.InvalidHopper, HopperDetail);
         }
 
-        var snapshot = await _context.MachineSnapshots.FindAsync(snapshotId);
+        var snapshot = await context.MachineSnapshots.FindAsync(snapshotId);
         if (snapshot == null)
         {
             return (false, BeanHopperError.SnapshotNotFound, $"No snapshot with id {snapshotId}");
         }
 
-        var previous = await _snapshots.GetLastSnapshotBeforeAsync(snapshot.Timestamp, snapshot.MachineId);
+        var previous = await snapshots.GetLastSnapshotBeforeAsync(snapshot.Timestamp, snapshot.MachineId);
         if (previous == null
             || previous.IsEstimated
             || snapshot.IsEstimated
@@ -130,7 +121,7 @@ public class BeanHopperService : IBeanHopperService
         if (existing != null)
         {
             Apply(existing, dto.BeanHopper);
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             return (true, BeanHopperError.None, null);
         }
 
@@ -152,8 +143,8 @@ public class BeanHopperService : IBeanHopperService
                 $"Snapshot {snapshotId} has no {counter} override");
         }
 
-        _context.BeanHopperOverrides.Remove(existing);
-        await _context.SaveChangesAsync();
+        context.BeanHopperOverrides.Remove(existing);
+        await context.SaveChangesAsync();
         return (true, BeanHopperError.None, null);
     }
 
@@ -166,15 +157,15 @@ public class BeanHopperService : IBeanHopperService
     {
         var fresh = new BeanHopperOverride { SnapshotId = snapshotId, Counter = dto.Counter };
         Apply(fresh, dto.BeanHopper);
-        _context.BeanHopperOverrides.Add(fresh);
+        context.BeanHopperOverrides.Add(fresh);
 
         try
         {
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
         catch (DbUpdateException)
         {
-            _context.Entry(fresh).State = EntityState.Detached;
+            context.Entry(fresh).State = EntityState.Detached;
 
             var winner = await FindOverrideAsync(snapshotId, dto.Counter);
             if (winner == null)
@@ -183,7 +174,7 @@ public class BeanHopperService : IBeanHopperService
             }
 
             Apply(winner, dto.BeanHopper);
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
     }
 
@@ -195,7 +186,7 @@ public class BeanHopperService : IBeanHopperService
 
     private Task<BeanHopperOverride?> FindOverrideAsync(int snapshotId, string counter)
     {
-        return _context.BeanHopperOverrides
+        return context.BeanHopperOverrides
             .FirstOrDefaultAsync(o => o.SnapshotId == snapshotId && o.Counter == counter);
     }
 
@@ -204,7 +195,7 @@ public class BeanHopperService : IBeanHopperService
     {
         var ids = sequence.Skip(1).Select(s => s.Id).ToList();
 
-        var stored = await _context.BeanHopperOverrides
+        var stored = await context.BeanHopperOverrides
             .Where(o => ids.Contains(o.SnapshotId))
             .ToListAsync();
 

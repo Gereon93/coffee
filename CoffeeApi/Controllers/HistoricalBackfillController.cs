@@ -6,21 +6,14 @@ namespace CoffeeApi.Controllers;
 
 [ApiController]
 [Route("api/admin/historical-backfill")]
-public class HistoricalBackfillController : ControllerBase
+public class HistoricalBackfillController(IHistoricalBackfillService service) : ControllerBase
 {
-    private readonly IHistoricalBackfillService _service;
-
-    public HistoricalBackfillController(IHistoricalBackfillService service)
-    {
-        _service = service;
-    }
-
     [HttpPost("preview")]
     [ProducesResponseType(typeof(HistoricalBackfillPlanDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Preview([FromBody] HistoricalBackfillRequestDto request)
     {
-        var result = await _service.PreviewAsync(request.CommissionedAt, request.MachineId);
+        var result = await service.PreviewAsync(request.CommissionedAt, request.MachineId);
         return result.Success
             ? Ok(result.Plan)
             : BadRequest(new { error = result.Error });
@@ -32,7 +25,7 @@ public class HistoricalBackfillController : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Apply([FromBody] HistoricalBackfillRequestDto request)
     {
-        var result = await _service.ApplyAsync(request.CommissionedAt, request.MachineId);
+        var result = await service.ApplyAsync(request.CommissionedAt, request.MachineId);
         if (result.Success)
         {
             return Ok(result.Plan);
