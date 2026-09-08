@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -247,6 +248,15 @@ public class PipelineHardeningTests
             new StringContent("""{"data":{"status":[]}}""", Encoding.UTF8, "application/json"));
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        using var document = JsonDocument.Parse(body);
+        var root = document.RootElement;
+        Assert.Equal("ServiceUnavailable", root.GetProperty("error").GetString());
+        Assert.Equal("Service unavailable.", root.GetProperty("message").GetString());
+        Assert.DoesNotContain("ApiKey", body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("not configured", body, StringComparison.OrdinalIgnoreCase);
+
         Assert.Contains(factory.LogMessages, m => m.Contains("ApiKey is not configured", StringComparison.OrdinalIgnoreCase));
     }
 

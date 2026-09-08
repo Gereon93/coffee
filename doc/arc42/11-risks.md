@@ -73,4 +73,4 @@ Ranked by risk removed per unit of effort, not by severity alone.
 1. **TD-03 / TD-23** — bump EF Core and OpenAPI packages to the .NET 10 line; clears the vulnerability warning as a side effect.
 2. **TD-09 / TD-10 / TD-27** — route frontend writes through `fetchJson`, extend the dev proxy to `/coffee`, and make the health probe survive a broken database. All three are small and each removes a case where the system misreports its own state.
 3. **TD-22** — an error boundary around the routes, so a render-time exception in a chart cannot blank the page.
-4. **TD-02, TD-07** — deeper changes with real design questions attached; worth their own discussion rather than a drive-by fix.
+4. **TD-07** — deeper changes with real design questions attached; worth their own discussion rather than a drive-by fix.

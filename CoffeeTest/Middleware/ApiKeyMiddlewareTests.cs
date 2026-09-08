@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CoffeeApi.Middleware;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -31,6 +32,7 @@ public class ApiKeyMiddlewareTests
 
         Assert.False(nextCalled);
         Assert.Equal(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
+        await AssertGenericServiceUnavailableBodyAsync(context.Response);
     }
 
     [Fact]
@@ -134,6 +136,21 @@ public class ApiKeyMiddlewareTests
         await middleware.InvokeAsync(context, CreateConfiguration(apiKey: "   "));
 
         Assert.Equal(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
+        await AssertGenericServiceUnavailableBodyAsync(context.Response);
+    }
+
+    private static async Task AssertGenericServiceUnavailableBodyAsync(HttpResponse response)
+    {
+        response.Body.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(response.Body, leaveOpen: true);
+        var body = await reader.ReadToEndAsync();
+        using var document = JsonDocument.Parse(body);
+        var root = document.RootElement;
+
+        Assert.Equal("ServiceUnavailable", root.GetProperty("error").GetString());
+        Assert.Equal("Service unavailable.", root.GetProperty("message").GetString());
+        Assert.DoesNotContain("ApiKey", body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("not configured", body, StringComparison.OrdinalIgnoreCase);
     }
 
     private static ApiKeyMiddleware CreateMiddleware(RequestDelegate next) =>
