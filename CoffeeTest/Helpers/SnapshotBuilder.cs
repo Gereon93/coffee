@@ -46,5 +46,11 @@ public class SnapshotBuilder
         return this;
     }
 
+    public SnapshotBuilder WithMachineId(string machineId)
+    {
+        _snapshot.MachineId = machineId;
+        return this;
+    }
+
     public MachineSnapshot Build() => _snapshot;
 }
