@@ -9,7 +9,7 @@ ADRs in [09 — Design Decisions](09-design.md).
 | Area | Choice | Driving quality goal |
 |------|--------|---------------------|
 | Backend | ASP.NET Core (.NET 10), controller-based | Correctness (static typing, analyzers), operational simplicity (single self-contained container) |
-| Persistence | SQLite via EF Core 9 | Operational simplicity — one file, no server, backup by copy |
+| Persistence | SQLite via EF Core 9 | Operational simplicity — one file, no server, backup by `sqlite3 .backup` sidecar |
 | Cloud access | Delegated entirely to n8n | Security (no inbound ports, no OAuth2 secrets in the API), simplicity |
 | API docs | Scalar over Swashbuckle | Developer experience; native OpenAPI via `Microsoft.AspNetCore.OpenApi` |
 | Frontend | React 19 + Vite + TypeScript | Charting ecosystem (Recharts), fast iteration |

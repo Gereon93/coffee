@@ -66,7 +66,7 @@ they conflict.
 |---|------|-----------|-------------------|
 | 1 | **Data correctness** | The system exists to produce numbers. A wrong number is worse than a missing one — it is silently wrong and nobody notices. | A coffee brewed at 06:40 CEST, before the first sample of the day, is counted against that day and not the previous one. |
 | 2 | **Idempotent, unattended ingest** | Nobody supervises the pipeline. n8n retries on its own. | The same payload delivered three times produces exactly one row. |
-| 3 | **Operational simplicity** | One person maintains this next to a day job. | Backup is `cp coffee.db coffee.db.bak`. Deployment is pulling two images. |
+| 3 | **Operational simplicity** | One person maintains this next to a day job. | Backup is automated by the `coffee-backup` sidecar (`sqlite3 .backup`) with retention; deployment is pulling three images. |
 
 Further goals, deliberately ranked lower:
 
