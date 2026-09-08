@@ -9,13 +9,19 @@ fi
 BACKUP_CRON="${BACKUP_CRON:-0 3 * * *}"
 RUN_ON_START="${BACKUP_RUN_ON_START:-false}"
 
+shell_quote() {
+  value=$1
+  quoted=$(printf '%s' "$value" | sed "s/'/'\\\\''/g")
+  printf "'%s'" "$quoted"
+}
+
 write_backup_env_file() {
   {
-    echo "BACKUP_SOURCE='${BACKUP_SOURCE:-/app/data/coffee.db}'"
-    echo "BACKUP_DIR='${BACKUP_DIR:-/backup}'"
-    echo "BACKUP_RETENTION_DAYS='${BACKUP_RETENTION_DAYS:-14}'"
-    echo "BACKUP_PREFIX='${BACKUP_PREFIX:-coffee}'"
-    echo "BACKUP_TIMEOUT_MS='${BACKUP_TIMEOUT_MS:-30000}'"
+    echo "BACKUP_SOURCE=$(shell_quote "${BACKUP_SOURCE:-/app/data/coffee.db}")"
+    echo "BACKUP_DIR=$(shell_quote "${BACKUP_DIR:-/backup}")"
+    echo "BACKUP_RETENTION_DAYS=$(shell_quote "${BACKUP_RETENTION_DAYS:-14}")"
+    echo "BACKUP_PREFIX=$(shell_quote "${BACKUP_PREFIX:-coffee}")"
+    echo "BACKUP_TIMEOUT_MS=$(shell_quote "${BACKUP_TIMEOUT_MS:-30000}")"
   } >/etc/backup.env
 }
 

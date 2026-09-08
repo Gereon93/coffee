@@ -141,6 +141,14 @@ test_invalid_retention_fails() {
   fi
 }
 
+test_invalid_timeout_fails() {
+  echo "test_invalid_timeout_fails"
+  if BACKUP_SOURCE="$SOURCE_DB" BACKUP_DIR="$BACKUP_DIR" BACKUP_TIMEOUT_MS=oops sh "$BACKUP_SH" >/dev/null 2>&1; then
+    echo "FAIL: expected invalid timeout to fail" >&2
+    exit 1
+  fi
+}
+
 test_retention_deletes_old_backups() {
   echo "test_retention_deletes_old_backups"
   rm -rf "$BACKUP_DIR"
@@ -164,6 +172,7 @@ test_retention_deletes_old_backups() {
 test_successful_backup
 test_missing_source_fails
 test_invalid_retention_fails
+test_invalid_timeout_fails
 test_env_file_sourcing
 test_retention_deletes_old_backups
 

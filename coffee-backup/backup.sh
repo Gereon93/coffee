@@ -77,6 +77,22 @@ validate_retention_days() {
   esac
 }
 
+validate_timeout_ms() {
+  timeout_ms=$1
+
+  if [ -z "$timeout_ms" ]; then
+    log "ERROR invalid BACKUP_TIMEOUT_MS: (empty)"
+    exit 1
+  fi
+
+  case "$timeout_ms" in
+    *[!0-9]*)
+      log "ERROR invalid BACKUP_TIMEOUT_MS: $timeout_ms"
+      exit 1
+      ;;
+  esac
+}
+
 flush_filesystem_buffers() {
   if ! sync; then
     log "ERROR filesystem sync failed"
@@ -112,6 +128,7 @@ apply_retention_policy() {
 main() {
   load_config
   validate_retention_days "$RETENTION_DAYS"
+  validate_timeout_ms "$TIMEOUT_MS"
   require_source_database
 
   timestamp=$(date -u +'%Y%m%d-%H%M%S')
