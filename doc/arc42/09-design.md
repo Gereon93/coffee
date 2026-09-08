@@ -24,9 +24,10 @@ data is flat and relational.
   megabytes.
 - *Flat files / JSON* — no query capability, no schema evolution path.
 
-**Consequences.** Backup is `cp coffee.db`. No server, no port, no
-credentials. In exchange: one writer at a time, no horizontal scaling, and
-aggregation happens in application memory rather than in the database. All
+**Consequences.** Backup is `sqlite3 .backup` via the `coffee-backup` sidecar
+(the ad-hoc manual copy is `cp coffee.db`, the automated job is not). No server,
+no port, no credentials. In exchange: one writer at a time, no horizontal scaling,
+and aggregation happens in application memory rather than in the database. All
 acceptable at this scale.
 
 ---
