@@ -114,7 +114,7 @@ Content-Type: application/json
   "id": 41,
   "created": false,
   "timestamp": "2025-01-25T10:00:00Z",
-  "message": "No counter increase detected, snapshot skipped"
+  "message": "No counter change detected, snapshot skipped"
 }
 ```
 

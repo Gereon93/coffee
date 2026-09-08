@@ -66,12 +66,13 @@ day's baseline is the previous day's last snapshot.
 
 n8n delivers a payload every 15 minutes whether or not anyone drank coffee.
 Persisting all of them would mean ~76 rows/day of which most are identical.
-A row is written only if at least one beverage counter increased.
+A row is written only when at least one cup counter differs from the latest
+stored snapshot: an increase is normal consumption; a decrease is treated as a
+counter reset and starts a new epoch (see
+[ADR-015](09-design.md#adr-015-counter-reset-detection)).
 
 The trade-off: status-only changes (`OperationState`, illumination) are never
-recorded after the first snapshot, and a **counter reset is invisible** —
-after a reset all counters are lower, never higher, so nothing is written and
-the stored baseline stays at the old maximum. See
+recorded after the first snapshot. See
 [ADR-005](09-design.md#adr-005-counter-based-idempotency).
 
 ## 4.4 Time Strategy

@@ -24,9 +24,10 @@ A point-in-time reading of the machine's lifetime counters and status.
 | `CreatedAt` | `DateTime` (UTC) | Row creation time |
 | `TotalBeverages` | `int` (computed) | `Coffee + CoffeeAndMilk + Milk + HotWaterCups`. EF-`Ignore`d. Deliberately excludes hot-water **ml**, which is not a beverage count. |
 
-**Invariant (assumed, not enforced):** counters increase monotonically. The
-machine can break this after a factory reset or mainboard replacement, and the
-system has no defence — see [ADR-005](09-design.md#adr-005-counter-based-idempotency).
+**Invariant (assumed at the machine):** counters increase monotonically between
+resets. After a factory reset or mainboard replacement the machine reports lower
+values; a decrease in any cup counter is persisted and re-anchors statistics.
+See [ADR-015](09-design.md#adr-015-counter-reset-detection).
 
 ### 8.1.2 MarkedDay
 
@@ -63,16 +64,20 @@ code and HTTP status:
 
 ## 8.2 Idempotency
 
-`POST /api/ingest` is idempotent by construction: a row is written only if at
-least one *beverage* counter is strictly greater than in the latest stored
-snapshot for the same machine.
+`POST /api/ingest` is idempotent by construction: a row is written only when at
+least one cup counter differs from the latest stored snapshot for the same
+machine.
 
 ```
-write ⟺  new.Coffee          > last.Coffee
-      ∨  new.CoffeeAndMilk   > last.CoffeeAndMilk
-      ∨  new.Milk            > last.Milk
-      ∨  new.HotWaterCups    > last.HotWaterCups
+write ⟺  new.Coffee          ≠ last.Coffee
+      ∨  new.CoffeeAndMilk   ≠ last.CoffeeAndMilk
+      ∨  new.Milk            ≠ last.Milk
+      ∨  new.HotWaterCups    ≠ last.HotWaterCups
 ```
+
+An increase is normal consumption; a decrease is treated as a counter reset
+and starts a new epoch (see
+[ADR-015](09-design.md#adr-015-counter-reset-detection)).
 
 Consequences worth stating explicitly:
 
@@ -84,9 +89,8 @@ Consequences worth stating explicitly:
   `OperationState` shown in the log is the state at the moment of the last
   *consumption*, not the current state. Live state comes from
   `/coffee/status` instead.
-- A counter reset is indistinguishable from "nothing happened", so it is never
-  recorded and the baseline stays at the pre-reset maximum. Deltas then clamp
-  to 0 until the counters climb past the old high.
+- A counter reset is persisted immediately and becomes the new baseline for
+  subsequent deltas.
 
 A composite index `(MachineId, Coffee, CoffeeAndMilk, Milk)` exists on
 `MachineSnapshots`. The current implementation does not query on that shape —

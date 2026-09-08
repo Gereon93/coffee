@@ -96,7 +96,7 @@ Five concerns, five types — cut along the reason to change (ADR-012):
 | `LocalDay` | `BoundsUtc`, `ToLocal`, `DateOf` | Local date + offset → half-open UTC interval. The single definition of the day rule |
 | `SnapshotPayloadMapper` | `Map` | Maps Home Connect key strings to entity properties; tolerates `JsonElement`, boxed primitives, and strings. Pure — the caller supplies the timestamp |
 | `SnapshotQueryService` | `GetLatestAsync`, `GetAllAsync`, `GetByDateAsync`, `GetByDateRangeAsync`, `GetSinceAsync`, `GetLastSnapshotBeforeAsync`, `IsDatabaseReachableAsync` | `GetAllAsync` caps `pageSize` at 100 |
-| `SnapshotIngestService` | `ProcessIngestAsync`, `HasCounterIncreased` | Idempotency gate; returns `(Created, Snapshot)` |
+| `SnapshotIngestService` | `ProcessIngestAsync`, `ShouldPersistReading` | Idempotency gate; persists increases and counter resets; returns `(Created, Snapshot)` |
 | `SnapshotStatisticsService` | `GetDailySummaryAsync`, `GetRangeAggregateAsync`, `GetHeatmapDataAsync` | Delta computation, peak-hour detection, mass-import exclusion |
 
 `SnapshotStatisticsService.GetDailySummaryAsync` in detail:
@@ -132,7 +132,7 @@ forward day by day. Same delta rule as the daily summary, applied per day.
 **`IngestController`** — Rejects payloads whose `data.status` is null or
 empty (400). Delegates to `SnapshotIngestService`. `201 Created` with a `Location`
 of `/api/stats/{id}` when a row was written, `200 OK` when the payload carried
-no counter increase. Unexpected exceptions are logged and answered with a
+no counter change. Unexpected exceptions are logged and answered with a
 generic 500 body.
 
 **`StatsController`** — Read-only endpoints plus `/api/health`. Validates
