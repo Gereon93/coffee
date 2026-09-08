@@ -127,6 +127,23 @@ public class StatsControllerTests
     }
 
     [Fact]
+    public async Task Health_ReachableButQueryThrows_ReportsDisconnected()
+    {
+        var db = TestDbContextFactory.Create();
+        var controller = new StatsController(
+            new UnreachableSnapshotQueryService(reachable: true, queryThrows: true),
+            SnapshotServices.Statistics(db),
+            SnapshotServices.BeanHoppers(db),
+            NullLogger<StatsController>.Instance);
+
+        var result = await controller.Health();
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<HealthResponseDto>(ok.Value);
+        Assert.Equal("disconnected", response.Database);
+    }
+
+    [Fact]
     public async Task GetDaily_InvalidDate_ReturnsBadRequest()
     {
         var (controller, _) = Create();

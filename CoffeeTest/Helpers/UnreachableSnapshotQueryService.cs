@@ -4,22 +4,27 @@ using CoffeeApi.Services;
 namespace CoffeeTest.Helpers;
 
 /// <summary>
-/// Simulates an unreachable database: the probe either reports the connection
-/// as dead or throws, and any query fails.
+/// Simulates a database in various broken states: probe returns dead/throws,
+/// or the probe succeeds and the subsequent query fails.
 /// </summary>
-public sealed class UnreachableSnapshotQueryService(bool probeThrows) : ISnapshotQueryService
+public sealed class UnreachableSnapshotQueryService(
+    bool reachable = false,
+    bool queryThrows = true,
+    bool probeThrows = false) : ISnapshotQueryService
 {
     public bool LatestRequested { get; private set; }
 
     public Task<bool> IsDatabaseReachableAsync() =>
         probeThrows
             ? Task.FromException<bool>(new InvalidOperationException("database unreachable"))
-            : Task.FromResult(false);
+            : Task.FromResult(reachable);
 
     public Task<MachineSnapshot?> GetLatestAsync(string machineId = ISnapshotQueryService.DefaultMachineId)
     {
         LatestRequested = true;
-        return Task.FromException<MachineSnapshot?>(new InvalidOperationException("database unreachable"));
+        return queryThrows
+            ? Task.FromException<MachineSnapshot?>(new InvalidOperationException("database unreachable"))
+            : Task.FromResult<MachineSnapshot?>(null);
     }
 
     public Task<(List<MachineSnapshot> Items, int TotalCount)> GetAllAsync(

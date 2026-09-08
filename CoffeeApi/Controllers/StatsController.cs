@@ -199,12 +199,13 @@ public class StatsController : ControllerBase
         {
             if (await _snapshots.IsDatabaseReachableAsync())
             {
-                response.Database = "connected";
                 response.LastSnapshot = (await _snapshots.GetLatestAsync())?.Timestamp;
+                response.Database = "connected";
             }
         }
         catch (Exception ex)
         {
+            response.Database = "disconnected";
             _logger.LogWarning(ex, "Database probe failed; reporting disconnected");
         }
 
