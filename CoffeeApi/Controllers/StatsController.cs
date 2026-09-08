@@ -26,15 +26,18 @@ public class StatsController : ControllerBase
     private readonly ISnapshotQueryService _snapshots;
     private readonly ISnapshotStatisticsService _statistics;
     private readonly IBeanHopperService _beanHoppers;
+    private readonly ILogger<StatsController> _logger;
 
     public StatsController(
         ISnapshotQueryService snapshots,
         ISnapshotStatisticsService statistics,
-        IBeanHopperService beanHoppers)
+        IBeanHopperService beanHoppers,
+        ILogger<StatsController> logger)
     {
         _snapshots = snapshots;
         _statistics = statistics;
         _beanHoppers = beanHoppers;
+        _logger = logger;
     }
 
     /// <summary>
@@ -187,15 +190,23 @@ public class StatsController : ControllerBase
     [ProducesResponseType(typeof(HealthResponseDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Health()
     {
-        var lastSnapshot = await _snapshots.GetLatestAsync();
-
         var response = new HealthResponseDto
         {
-            Status = "healthy",
-            Timestamp = DateTime.UtcNow,
-            Database = await _snapshots.IsDatabaseReachableAsync() ? "connected" : "disconnected",
-            LastSnapshot = lastSnapshot?.Timestamp
+            Database = "disconnected"
         };
+
+        try
+        {
+            if (await _snapshots.IsDatabaseReachableAsync())
+            {
+                response.Database = "connected";
+                response.LastSnapshot = (await _snapshots.GetLatestAsync())?.Timestamp;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Database probe failed; reporting disconnected");
+        }
 
         return Ok(response);
     }

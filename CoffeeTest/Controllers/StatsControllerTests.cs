@@ -3,6 +3,7 @@ using CoffeeApi.DTOs;
 using CoffeeApi.Infrastructure;
 using CoffeeTest.Helpers;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CoffeeTest.Controllers;
 
@@ -14,7 +15,8 @@ public class StatsControllerTests
         var controller = new StatsController(
             SnapshotServices.Query(db),
             SnapshotServices.Statistics(db),
-            SnapshotServices.BeanHoppers(db));
+            SnapshotServices.BeanHoppers(db),
+            NullLogger<StatsController>.Instance);
         return (controller, db);
     }
 
@@ -85,6 +87,43 @@ public class StatsControllerTests
         var ok = Assert.IsType<OkObjectResult>(result);
         var response = Assert.IsType<HealthResponseDto>(ok.Value);
         Assert.Equal("connected", response.Database);
+    }
+
+    [Fact]
+    public async Task Health_UnreachableDatabase_ReportsDisconnectedWithoutQuerying()
+    {
+        var db = TestDbContextFactory.Create();
+        var snapshots = new UnreachableSnapshotQueryService(probeThrows: false);
+        var controller = new StatsController(
+            snapshots,
+            SnapshotServices.Statistics(db),
+            SnapshotServices.BeanHoppers(db),
+            NullLogger<StatsController>.Instance);
+
+        var result = await controller.Health();
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<HealthResponseDto>(ok.Value);
+        Assert.Equal("disconnected", response.Database);
+        Assert.Null(response.LastSnapshot);
+        Assert.False(snapshots.LatestRequested);
+    }
+
+    [Fact]
+    public async Task Health_DatabaseProbeThrows_StillReportsDisconnected()
+    {
+        var db = TestDbContextFactory.Create();
+        var controller = new StatsController(
+            new UnreachableSnapshotQueryService(probeThrows: true),
+            SnapshotServices.Statistics(db),
+            SnapshotServices.BeanHoppers(db),
+            NullLogger<StatsController>.Instance);
+
+        var result = await controller.Health();
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<HealthResponseDto>(ok.Value);
+        Assert.Equal("disconnected", response.Database);
     }
 
     [Fact]
