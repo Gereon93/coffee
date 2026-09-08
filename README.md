@@ -68,9 +68,10 @@ Zusaetzlich wird jeder Build mit `:sha-<short-sha>` getaggt fuer Rollbacks.
 **Fallback fuer lokale Builds** (wenn die CI nicht verfuegbar ist):
 
 ```bash
-./build.sh all           # Baut API + Dashboard lokal, pusht zur Registry
+./build.sh all           # Baut API + Dashboard + Backup lokal, pusht zur Registry
 ./build.sh api           # Nur API
 ./build.sh dashboard     # Nur Dashboard
+./build.sh backup        # Nur SQLite-Backup-Sidecar
 ./build.sh api --no-push # Nur bauen, nicht pushen
 ```
 
@@ -107,9 +108,26 @@ services:
       - "8090:80"
     depends_on:
       - coffee-api
+
+  coffee-backup:
+    image: ghcr.io/gereon93/coffee-backup:latest
+    container_name: coffee-backup
+    restart: unless-stopped
+    environment:
+      BACKUP_CRON: "0 3 * * *"      # 03:00 UTC = nachts, n8n schreibt zwischen 07-02 Uhr Berlin
+      BACKUP_RETENTION_DAYS: 14
+      BACKUP_SOURCE: "/app/data/coffee.db"
+      BACKUP_DIR: "/backup"
+      BACKUP_RUN_ON_START: "true"   # einmalig beim Start ausfuehren, um das Setup zu testen
+    volumes:
+      - /path/to/coffee-data:/app/data:ro
+      - /path/to/coffee-backups:/backup
 ```
 
-**Wichtig:** Das Volume `/path/to/coffee-data` speichert die SQLite-Datenbank persistent. Ohne dieses Volume gehen Daten bei Container-Neustarts verloren.
+**Wichtig:**
+- Das Volume `/path/to/coffee-data` speichert die SQLite-Datenbank persistent. Ohne dieses Volume gehen Daten bei Container-Neustarts verloren.
+- `/path/to/coffee-backups` sollte ein anderer physikalischer Speicher sein (anderes NAS-Volume, USB-Laufwerk oder Cloud-Sync-Ordner), damit ein Ausfall des primären Datenlaufwerks die Backups nicht mitnimmt.
+- Der Sidecar nutzt `sqlite3 .backup`, um einen konsistenten Online-Dump zu erzeugen — kein `cp` auf die geöffnete Datenbank.
 
 ### Lokale Entwicklung
 
