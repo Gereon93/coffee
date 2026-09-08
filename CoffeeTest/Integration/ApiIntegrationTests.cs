@@ -113,6 +113,20 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
             db.MachineSnapshots.AddRange(
                 new MachineSnapshot
                 {
+                    MachineId = "EQ900-B",
+                    Timestamp = new DateTime(2026, 2, 6, 22, 0, 0, DateTimeKind.Utc),
+                    BeverageCounterCoffee = 200,
+                    OperationState = "Ready"
+                },
+                new MachineSnapshot
+                {
+                    MachineId = "EQ900-A",
+                    Timestamp = new DateTime(2026, 2, 6, 23, 0, 0, DateTimeKind.Utc),
+                    BeverageCounterCoffee = 999,
+                    OperationState = "Ready"
+                },
+                new MachineSnapshot
+                {
                     MachineId = "EQ900-A",
                     Timestamp = new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc),
                     BeverageCounterCoffee = 100,
@@ -153,9 +167,10 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
         Assert.Equal(5, summary.GetProperty("totalToday").GetInt32());
 
         var snapshots = document.RootElement.GetProperty("snapshots").EnumerateArray().ToArray();
-        Assert.Equal(2, snapshots.Length);
+        Assert.Equal(3, snapshots.Length);
         Assert.Equal(200, snapshots[0].GetProperty("beverageCounterCoffee").GetInt32());
-        Assert.Equal(205, snapshots[1].GetProperty("beverageCounterCoffee").GetInt32());
+        Assert.Equal(200, snapshots[1].GetProperty("beverageCounterCoffee").GetInt32());
+        Assert.Equal(205, snapshots[2].GetProperty("beverageCounterCoffee").GetInt32());
     }
 
     [Fact]
@@ -186,6 +201,13 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
                 BeverageCounterCoffee = 17,
                 OperationState = "Ready"
             };
+            var interferingMachineBaseline = new MachineSnapshot
+            {
+                MachineId = "EQ900-A",
+                Timestamp = new DateTime(2026, 2, 5, 23, 30, 0, DateTimeKind.Utc),
+                BeverageCounterCoffee = 500,
+                OperationState = "Ready"
+            };
             var interferingMachineFeb6 = new MachineSnapshot
             {
                 MachineId = "EQ900-A",
@@ -202,6 +224,7 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
             };
             db.MachineSnapshots.AddRange(
                 requestedMachineBaseline,
+                interferingMachineBaseline,
                 requestedMachineFeb6,
                 requestedMachineFeb7,
                 interferingMachineFeb6,
