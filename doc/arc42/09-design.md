@@ -103,7 +103,7 @@ the dates on the other side of the transition.
 
 ## ADR-005: Counter-Based Idempotency
 
-**Status:** accepted, counter reset handled by ADR-014
+**Status:** accepted, counter reset handled by ADR-015
 
 **Context.** n8n delivers a payload every 15 minutes regardless of activity,
 retries on failure, and can replay. Storing every payload would produce ~76
@@ -111,7 +111,7 @@ rows/day, most of them identical.
 
 **Decision.** Persist a snapshot when at least one beverage counter differs from
  the previous reading. An increase is normal consumption; a decrease is treated
-as a counter reset and starts a new epoch (see ADR-014).
+as a counter reset and starts a new epoch (see ADR-015).
 
 **Alternatives rejected.**
 - *Idempotency key from n8n* — pushes state into the workflow and does not
@@ -351,7 +351,7 @@ draws per hopper, the dashboard values them (Murgbyte/dashboard-s7#235).
 
 ---
 
-## ADR-014: Counter Reset Detection
+## ADR-015: Counter Reset Detection
 
 **Status:** accepted · #31
 

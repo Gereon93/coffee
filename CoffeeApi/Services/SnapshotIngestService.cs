@@ -44,7 +44,7 @@ public partial class SnapshotIngestService : ISnapshotIngestService
     /// <summary>
     /// A new snapshot is persisted when at least one beverage counter differs from
     /// the previous reading. An increase is normal consumption; a decrease is treated
-    /// as a counter reset (ADR-014). Equal counters mean the payload is a duplicate,
+    /// as a counter reset (ADR-015). Equal counters mean the payload is a duplicate,
     /// even if the machine status changed.
     /// </summary>
     private static bool HasCounterChanged(MachineSnapshot last, MachineSnapshot current)

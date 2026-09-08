@@ -150,7 +150,7 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
     /// Coffee and milk-drink deltas across a sequence of cumulative readings.
     /// A decrease in any counter is treated as a reset; only positive per-pair
     /// increments are summed, so the first snapshot after a reset becomes the new
-    /// baseline for subsequent drinks (ADR-014).
+    /// baseline for subsequent drinks (ADR-015).
     /// </summary>
     private static (int Coffee, int MilkDrinks) BeverageDeltas(IReadOnlyList<MachineSnapshot> sequence)
     {
