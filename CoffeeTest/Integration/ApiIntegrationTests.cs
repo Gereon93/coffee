@@ -165,44 +165,47 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var requestedMachineBaseline = new MachineSnapshot
+            {
+                MachineId = "EQ900-B",
+                Timestamp = new DateTime(2026, 2, 5, 23, 0, 0, DateTimeKind.Utc),
+                BeverageCounterCoffee = 10,
+                OperationState = "Ready"
+            };
+            var requestedMachineFeb6 = new MachineSnapshot
+            {
+                MachineId = "EQ900-B",
+                Timestamp = new DateTime(2026, 2, 6, 10, 0, 0, DateTimeKind.Utc),
+                BeverageCounterCoffee = 13,
+                OperationState = "Ready"
+            };
+            var requestedMachineFeb7 = new MachineSnapshot
+            {
+                MachineId = "EQ900-B",
+                Timestamp = new DateTime(2026, 2, 7, 10, 0, 0, DateTimeKind.Utc),
+                BeverageCounterCoffee = 17,
+                OperationState = "Ready"
+            };
+            var interferingMachineFeb6 = new MachineSnapshot
+            {
+                MachineId = "EQ900-A",
+                Timestamp = new DateTime(2026, 2, 6, 10, 0, 0, DateTimeKind.Utc),
+                BeverageCounterCoffee = 200,
+                OperationState = "Ready"
+            };
+            var interferingMachineFeb7 = new MachineSnapshot
+            {
+                MachineId = "EQ900-A",
+                Timestamp = new DateTime(2026, 2, 7, 10, 0, 0, DateTimeKind.Utc),
+                BeverageCounterCoffee = 300,
+                OperationState = "Ready"
+            };
             db.MachineSnapshots.AddRange(
-                // Baseline and requested-machine readings for EQ900-B
-                new MachineSnapshot
-                {
-                    MachineId = "EQ900-B",
-                    Timestamp = new DateTime(2026, 2, 5, 23, 0, 0, DateTimeKind.Utc),
-                    BeverageCounterCoffee = 10,
-                    OperationState = "Ready"
-                },
-                new MachineSnapshot
-                {
-                    MachineId = "EQ900-B",
-                    Timestamp = new DateTime(2026, 2, 6, 10, 0, 0, DateTimeKind.Utc),
-                    BeverageCounterCoffee = 13,
-                    OperationState = "Ready"
-                },
-                new MachineSnapshot
-                {
-                    MachineId = "EQ900-B",
-                    Timestamp = new DateTime(2026, 2, 7, 10, 0, 0, DateTimeKind.Utc),
-                    BeverageCounterCoffee = 17,
-                    OperationState = "Ready"
-                },
-                // Interfering readings for EQ900-A inside the same date range
-                new MachineSnapshot
-                {
-                    MachineId = "EQ900-A",
-                    Timestamp = new DateTime(2026, 2, 6, 10, 0, 0, DateTimeKind.Utc),
-                    BeverageCounterCoffee = 200,
-                    OperationState = "Ready"
-                },
-                new MachineSnapshot
-                {
-                    MachineId = "EQ900-A",
-                    Timestamp = new DateTime(2026, 2, 7, 10, 0, 0, DateTimeKind.Utc),
-                    BeverageCounterCoffee = 300,
-                    OperationState = "Ready"
-                });
+                requestedMachineBaseline,
+                requestedMachineFeb6,
+                requestedMachineFeb7,
+                interferingMachineFeb6,
+                interferingMachineFeb7);
             await db.SaveChangesAsync();
         }
 
@@ -230,37 +233,39 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var interferingMachineMondayMorning = new MachineSnapshot
+            {
+                MachineId = "EQ900-A",
+                Timestamp = monday.AddHours(10),
+                BeverageCounterCoffee = 100,
+                OperationState = "Ready"
+            };
+            var interferingMachineMondayLater = new MachineSnapshot
+            {
+                MachineId = "EQ900-A",
+                Timestamp = monday.AddHours(11),
+                BeverageCounterCoffee = 102,
+                OperationState = "Ready"
+            };
+            var requestedMachineMondayMorning = new MachineSnapshot
+            {
+                MachineId = "EQ900-B",
+                Timestamp = monday.AddHours(10),
+                BeverageCounterCoffee = 10,
+                OperationState = "Ready"
+            };
+            var requestedMachineMondayLater = new MachineSnapshot
+            {
+                MachineId = "EQ900-B",
+                Timestamp = monday.AddHours(11),
+                BeverageCounterCoffee = 15,
+                OperationState = "Ready"
+            };
             db.MachineSnapshots.AddRange(
-                // EQ900-A: Monday 10 -> 11 = +2 coffees
-                new MachineSnapshot
-                {
-                    MachineId = "EQ900-A",
-                    Timestamp = monday.AddHours(10),
-                    BeverageCounterCoffee = 100,
-                    OperationState = "Ready"
-                },
-                new MachineSnapshot
-                {
-                    MachineId = "EQ900-A",
-                    Timestamp = monday.AddHours(11),
-                    BeverageCounterCoffee = 102,
-                    OperationState = "Ready"
-                },
-                // EQ900-B: Monday 10 -> 11 = +5 coffees
-                new MachineSnapshot
-                {
-                    MachineId = "EQ900-B",
-                    Timestamp = monday.AddHours(10),
-                    BeverageCounterCoffee = 10,
-                    OperationState = "Ready"
-                },
-                new MachineSnapshot
-                {
-                    MachineId = "EQ900-B",
-                    Timestamp = monday.AddHours(11),
-                    BeverageCounterCoffee = 15,
-                    OperationState = "Ready"
-                });
+                interferingMachineMondayMorning,
+                interferingMachineMondayLater,
+                requestedMachineMondayMorning,
+                requestedMachineMondayLater);
             await db.SaveChangesAsync();
         }
 
