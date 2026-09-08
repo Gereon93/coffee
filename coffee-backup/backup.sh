@@ -2,7 +2,6 @@
 # Coffee Analytics Hub — automated SQLite backup via sqlite3 .backup
 # Designed to run as a sidecar container; can also be invoked directly.
 set -eu
-set -o pipefail
 
 load_config() {
   if [ -f /etc/backup.env ]; then
@@ -49,7 +48,12 @@ EOF
 
 verify_backup_integrity() {
   backup_path=$1
-  if ! sqlite3 "$backup_path" "PRAGMA integrity_check;" | grep -qx "ok"; then
+  integrity_result=$(sqlite3 "$backup_path" "PRAGMA integrity_check;") || {
+    log "ERROR integrity check command failed for $backup_path"
+    rm -f "$backup_path"
+    exit 1
+  }
+  if [ "$integrity_result" != "ok" ]; then
     log "ERROR integrity check failed for $backup_path"
     rm -f "$backup_path"
     exit 1
@@ -89,12 +93,20 @@ apply_retention_policy() {
     return
   fi
 
-  stale_files=$(find "$dest_dir" -type f -name "${prefix}-*.db" -mtime +"$retention_days")
-  if [ -n "$stale_files" ]; then
-    count=$(printf '%s\n' "$stale_files" | wc -l | tr -d ' ')
-    find "$dest_dir" -type f -name "${prefix}-*.db" -mtime +"$retention_days" -delete
+  stale_list=$(mktemp) || exit 1
+  if ! find "$dest_dir" -type f -name "${prefix}-*.db" -mtime +"$retention_days" >"$stale_list"; then
+    rm -f "$stale_list"
+    log "ERROR retention scan failed in $dest_dir"
+    exit 1
+  fi
+  if [ -s "$stale_list" ]; then
+    count=$(wc -l < "$stale_list" | tr -d ' ')
+    while IFS= read -r stale_file; do
+      rm -f "$stale_file"
+    done < "$stale_list"
     log "INFO removed $count backup(s) older than $retention_days day(s)"
   fi
+  rm -f "$stale_list"
 }
 
 main() {
