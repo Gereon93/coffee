@@ -104,6 +104,180 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
     }
 
     [Fact]
+    public async Task GetDailyStats_MachineIdQueryScopesTheSqliteRead()
+    {
+        await using var factory = new CoffeeApiFactory();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.MachineSnapshots.AddRange(
+                new MachineSnapshot
+                {
+                    MachineId = "EQ900-A",
+                    Timestamp = new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc),
+                    BeverageCounterCoffee = 100,
+                    OperationState = "Ready"
+                },
+                new MachineSnapshot
+                {
+                    MachineId = "EQ900-A",
+                    Timestamp = new DateTime(2026, 2, 7, 10, 0, 0, DateTimeKind.Utc),
+                    BeverageCounterCoffee = 101,
+                    OperationState = "Ready"
+                },
+                new MachineSnapshot
+                {
+                    MachineId = "EQ900-B",
+                    Timestamp = new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc),
+                    BeverageCounterCoffee = 200,
+                    OperationState = "Ready"
+                },
+                new MachineSnapshot
+                {
+                    MachineId = "EQ900-B",
+                    Timestamp = new DateTime(2026, 2, 7, 10, 0, 0, DateTimeKind.Utc),
+                    BeverageCounterCoffee = 205,
+                    OperationState = "Ready"
+                });
+            await db.SaveChangesAsync();
+        }
+
+        var response = await factory.CreateClient().GetAsync(
+            "/api/stats/daily/2026-02-07?machineId=EQ900-B");
+
+        response.EnsureSuccessStatusCode();
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var summary = document.RootElement.GetProperty("summary");
+
+        Assert.Equal(5, summary.GetProperty("coffeeToday").GetInt32());
+        Assert.Equal(5, summary.GetProperty("totalToday").GetInt32());
+
+        var snapshots = document.RootElement.GetProperty("snapshots").EnumerateArray().ToArray();
+        Assert.Equal(2, snapshots.Length);
+        Assert.Equal(200, snapshots[0].GetProperty("beverageCounterCoffee").GetInt32());
+        Assert.Equal(205, snapshots[1].GetProperty("beverageCounterCoffee").GetInt32());
+    }
+
+    [Fact]
+    public async Task GetRangeStats_MachineIdQueryScopesTheSqliteRead()
+    {
+        await using var factory = new CoffeeApiFactory();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.MachineSnapshots.AddRange(
+                // Baseline and requested-machine readings for EQ900-B
+                new MachineSnapshot
+                {
+                    MachineId = "EQ900-B",
+                    Timestamp = new DateTime(2026, 2, 5, 23, 0, 0, DateTimeKind.Utc),
+                    BeverageCounterCoffee = 10,
+                    OperationState = "Ready"
+                },
+                new MachineSnapshot
+                {
+                    MachineId = "EQ900-B",
+                    Timestamp = new DateTime(2026, 2, 6, 10, 0, 0, DateTimeKind.Utc),
+                    BeverageCounterCoffee = 13,
+                    OperationState = "Ready"
+                },
+                new MachineSnapshot
+                {
+                    MachineId = "EQ900-B",
+                    Timestamp = new DateTime(2026, 2, 7, 10, 0, 0, DateTimeKind.Utc),
+                    BeverageCounterCoffee = 17,
+                    OperationState = "Ready"
+                },
+                // Interfering readings for EQ900-A inside the same date range
+                new MachineSnapshot
+                {
+                    MachineId = "EQ900-A",
+                    Timestamp = new DateTime(2026, 2, 6, 10, 0, 0, DateTimeKind.Utc),
+                    BeverageCounterCoffee = 200,
+                    OperationState = "Ready"
+                },
+                new MachineSnapshot
+                {
+                    MachineId = "EQ900-A",
+                    Timestamp = new DateTime(2026, 2, 7, 10, 0, 0, DateTimeKind.Utc),
+                    BeverageCounterCoffee = 300,
+                    OperationState = "Ready"
+                });
+            await db.SaveChangesAsync();
+        }
+
+        var response = await factory.CreateClient().GetAsync(
+            "/api/stats/range?from=2026-02-06&to=2026-02-07&machineId=EQ900-B");
+
+        response.EnsureSuccessStatusCode();
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var data = document.RootElement.GetProperty("data").EnumerateArray().ToArray();
+
+        Assert.Equal(2, data.Length);
+        Assert.Equal("2026-02-06", data[0].GetProperty("date").GetString());
+        Assert.Equal(3, data[0].GetProperty("coffeeCount").GetInt32());
+        Assert.Equal("2026-02-07", data[1].GetProperty("date").GetString());
+        Assert.Equal(4, data[1].GetProperty("coffeeCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task GetHeatmap_MachineIdQueryScopesTheSqliteRead()
+    {
+        await using var factory = new CoffeeApiFactory();
+        var monday = DateTime.UtcNow.Date;
+        while (monday.DayOfWeek != DayOfWeek.Monday) monday = monday.AddDays(-1);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.MachineSnapshots.AddRange(
+                // EQ900-A: Monday 10 -> 11 = +2 coffees
+                new MachineSnapshot
+                {
+                    MachineId = "EQ900-A",
+                    Timestamp = monday.AddHours(10),
+                    BeverageCounterCoffee = 100,
+                    OperationState = "Ready"
+                },
+                new MachineSnapshot
+                {
+                    MachineId = "EQ900-A",
+                    Timestamp = monday.AddHours(11),
+                    BeverageCounterCoffee = 102,
+                    OperationState = "Ready"
+                },
+                // EQ900-B: Monday 10 -> 11 = +5 coffees
+                new MachineSnapshot
+                {
+                    MachineId = "EQ900-B",
+                    Timestamp = monday.AddHours(10),
+                    BeverageCounterCoffee = 10,
+                    OperationState = "Ready"
+                },
+                new MachineSnapshot
+                {
+                    MachineId = "EQ900-B",
+                    Timestamp = monday.AddHours(11),
+                    BeverageCounterCoffee = 15,
+                    OperationState = "Ready"
+                });
+            await db.SaveChangesAsync();
+        }
+
+        var response = await factory.CreateClient().GetAsync(
+            "/api/stats/heatmap?machineId=EQ900-B");
+
+        response.EnsureSuccessStatusCode();
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var heatmap = document.RootElement.GetProperty("heatmap").EnumerateArray().ToArray();
+
+        var point = Assert.Single(heatmap);
+        Assert.Equal(1, point.GetProperty("dayOfWeek").GetInt32());
+        Assert.Equal(11, point.GetProperty("hour").GetInt32());
+        Assert.Equal(5, point.GetProperty("count").GetInt32());
+    }
+
+    [Fact]
     public async Task Ingest_WithoutApiKey_Returns401()
     {
         var client = _factory.CreateClient();

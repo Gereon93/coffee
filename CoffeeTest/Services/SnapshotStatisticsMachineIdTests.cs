@@ -4,6 +4,8 @@ namespace CoffeeTest.Services;
 
 public class SnapshotStatisticsMachineIdTests
 {
+    private const int HeatmapWindowWeeks = 4;
+
     [Fact]
     public async Task GetDailySummary_ScopesResultsToRequestedMachine()
     {
@@ -11,11 +13,11 @@ public class SnapshotStatisticsMachineIdTests
         var service = SnapshotServices.Statistics(db);
 
         var baseTime = new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc);
-        db.MachineSnapshots.AddRange(
-            new SnapshotBuilder().At(baseTime).WithCoffee(100).WithMachineId("EQ900-A").Build(),
-            new SnapshotBuilder().At(baseTime).WithCoffee(200).WithMachineId("EQ900-B").Build(),
-            new SnapshotBuilder().At(baseTime.AddHours(2)).WithCoffee(205).WithMachineId("EQ900-B").Build()
-        );
+        var machineAMorning = new SnapshotBuilder().At(baseTime).WithCoffee(100).WithMachineId("EQ900-A").Build();
+        var machineBMorning = new SnapshotBuilder().At(baseTime).WithCoffee(200).WithMachineId("EQ900-B").Build();
+        var machineBAfternoon = new SnapshotBuilder().At(baseTime.AddHours(2)).WithCoffee(205).WithMachineId("EQ900-B").Build();
+
+        db.MachineSnapshots.AddRange(machineAMorning, machineBMorning, machineBAfternoon);
         await db.SaveChangesAsync();
 
         var result = await service.GetDailySummaryAsync(new DateOnly(2026, 2, 7), machineId: "EQ900-B");
@@ -31,21 +33,18 @@ public class SnapshotStatisticsMachineIdTests
         using var db = TestDbContextFactory.Create();
         var service = SnapshotServices.Statistics(db);
 
-        db.MachineSnapshots.AddRange(
-            // Baseline for machine B before the requested range
-            new SnapshotBuilder().At(new DateTime(2026, 2, 5, 23, 0, 0, DateTimeKind.Utc))
-                .WithCoffee(10).WithMachineId("EQ900-B").Build(),
-            // Machine B snapshots inside the range
-            new SnapshotBuilder().At(new DateTime(2026, 2, 6, 10, 0, 0, DateTimeKind.Utc))
-                .WithCoffee(13).WithMachineId("EQ900-B").Build(),
-            new SnapshotBuilder().At(new DateTime(2026, 2, 7, 10, 0, 0, DateTimeKind.Utc))
-                .WithCoffee(17).WithMachineId("EQ900-B").Build(),
-            // Machine A snapshots with the same timestamps but different deltas
-            new SnapshotBuilder().At(new DateTime(2026, 2, 6, 10, 0, 0, DateTimeKind.Utc))
-                .WithCoffee(200).WithMachineId("EQ900-A").Build(),
-            new SnapshotBuilder().At(new DateTime(2026, 2, 7, 10, 0, 0, DateTimeKind.Utc))
-                .WithCoffee(300).WithMachineId("EQ900-A").Build()
-        );
+        var machineBBaseline = new SnapshotBuilder().At(new DateTime(2026, 2, 5, 23, 0, 0, DateTimeKind.Utc))
+            .WithCoffee(10).WithMachineId("EQ900-B").Build();
+        var machineBFeb6 = new SnapshotBuilder().At(new DateTime(2026, 2, 6, 10, 0, 0, DateTimeKind.Utc))
+            .WithCoffee(13).WithMachineId("EQ900-B").Build();
+        var machineBFeb7 = new SnapshotBuilder().At(new DateTime(2026, 2, 7, 10, 0, 0, DateTimeKind.Utc))
+            .WithCoffee(17).WithMachineId("EQ900-B").Build();
+        var machineAFeb6 = new SnapshotBuilder().At(new DateTime(2026, 2, 6, 10, 0, 0, DateTimeKind.Utc))
+            .WithCoffee(200).WithMachineId("EQ900-A").Build();
+        var machineAFeb7 = new SnapshotBuilder().At(new DateTime(2026, 2, 7, 10, 0, 0, DateTimeKind.Utc))
+            .WithCoffee(300).WithMachineId("EQ900-A").Build();
+
+        db.MachineSnapshots.AddRange(machineBBaseline, machineBFeb6, machineBFeb7, machineAFeb6, machineAFeb7);
         await db.SaveChangesAsync();
 
         var result = await service.GetRangeAggregateAsync(
@@ -69,21 +68,19 @@ public class SnapshotStatisticsMachineIdTests
         var monday = DateTime.UtcNow.Date;
         while (monday.DayOfWeek != DayOfWeek.Monday) monday = monday.AddDays(-1);
 
-        db.MachineSnapshots.AddRange(
-            // Machine A: Monday 10:00 -> 11:00, +2 coffees
-            new SnapshotBuilder().At(monday.AddHours(10))
-                .WithCoffee(100).WithMachineId("EQ900-A").Build(),
-            new SnapshotBuilder().At(monday.AddHours(11))
-                .WithCoffee(102).WithMachineId("EQ900-A").Build(),
-            // Machine B: Monday 10:00 -> 11:00, +5 coffees
-            new SnapshotBuilder().At(monday.AddHours(10))
-                .WithCoffee(10).WithMachineId("EQ900-B").Build(),
-            new SnapshotBuilder().At(monday.AddHours(11))
-                .WithCoffee(15).WithMachineId("EQ900-B").Build()
-        );
+        var machineAMondayMorning = new SnapshotBuilder().At(monday.AddHours(10))
+            .WithCoffee(100).WithMachineId("EQ900-A").Build();
+        var machineAMondayLater = new SnapshotBuilder().At(monday.AddHours(11))
+            .WithCoffee(102).WithMachineId("EQ900-A").Build();
+        var machineBMondayMorning = new SnapshotBuilder().At(monday.AddHours(10))
+            .WithCoffee(10).WithMachineId("EQ900-B").Build();
+        var machineBMondayLater = new SnapshotBuilder().At(monday.AddHours(11))
+            .WithCoffee(15).WithMachineId("EQ900-B").Build();
+
+        db.MachineSnapshots.AddRange(machineAMondayMorning, machineAMondayLater, machineBMondayMorning, machineBMondayLater);
         await db.SaveChangesAsync();
 
-        var result = await service.GetHeatmapDataAsync(4, machineId: "EQ900-B");
+        var result = await service.GetHeatmapDataAsync(HeatmapWindowWeeks, machineId: "EQ900-B");
 
         Assert.Single(result);
         Assert.Equal(1, result[0].DayOfWeek);
