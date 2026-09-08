@@ -590,7 +590,10 @@ noch keiner existiert.
 ```
 
 Gilt für Probe-/Query-Fehler **nach** dem Start. Fehlt die SQLite-Datei beim
-Prozessstart, schlägt `Migrate()` fehl und der Host lauscht nicht.
+Prozessstart und das Elternverzeichnis ist beschreibbar, legt SQLite eine leere
+Datei an und `Migrate()` wendet das Schema an — der Host startet gegen eine
+leere Datenbank. Start scheitert nur, wenn der Pfad nicht geöffnet/beschrieben
+werden kann (z. B. fehlendes Volume, fehlende Rechte).
 
 ---
 

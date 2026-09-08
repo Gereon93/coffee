@@ -76,7 +76,7 @@ that pins the behaviour, or states that it is unverified.
 | Q-11 | n8n rejects a power command | `500` with a generic message; the exception is logged and reported to GlitchTip | `PowerControllerTests` |
 | Q-12 | Container restarts against an existing pre-migration database | `MigrationBaseliner` seeds the history; only pending migrations apply; no data loss | `MigrationBaselinerTests` |
 | Q-13 | Ingest arrives with an empty `data.status` | `400` with `{ error, details[] }`; nothing written | `IngestControllerTests` |
-| Q-14 | Database becomes unreachable **after** the host has started | `200 OK` with `database: "disconnected"` and `lastSnapshot: null`; probe or query failures are caught and logged. A missing/unopenable database at process start still fails `Migrate()` and prevents the host from listening | `StatsControllerTests`, `ApiIntegrationTests.Health_DatabaseUnreachable_StillAnswersDisconnected` |
+| Q-14 | Database becomes unreachable **after** the host has started | `200 OK` with `database: "disconnected"` and `lastSnapshot: null`; probe or query failures are caught and logged. At process start, a missing SQLite file with a writable parent is created empty and `Migrate()` applies the schema; only an unopenable or unwritable path fails `Migrate()` and prevents the host from listening | `StatsControllerTests`, `ApiIntegrationTests.Health_DatabaseUnreachable_StillAnswersDisconnected` |
 | Q-15 | The machine's counters reset to 0 after maintenance | **Known deviation:** treated as "no increase", not stored; deltas clamp to 0 until counters pass the old maximum | [11](11-risks.md) |
 
 ### Security
