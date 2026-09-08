@@ -9,15 +9,8 @@ namespace CoffeeApi.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/stats/snapshots")]
-public class BeanHoppersController : ControllerBase
+public class BeanHoppersController(IBeanHopperService beanHoppers) : ControllerBase
 {
-    private readonly IBeanHopperService _beanHoppers;
-
-    public BeanHoppersController(IBeanHopperService beanHoppers)
-    {
-        _beanHoppers = beanHoppers;
-    }
-
     /// <summary>
     /// Correct the hopper of one counter within one snapshot delta
     /// </summary>
@@ -29,7 +22,7 @@ public class BeanHoppersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> SetBeanHopper(int id, [FromBody] SetBeanHopperDto dto)
     {
-        var (success, error, detail) = await _beanHoppers.SetOverrideAsync(id, dto);
+        var (success, error, detail) = await beanHoppers.SetOverrideAsync(id, dto);
 
         return success ? NoContent() : ToErrorResult(error, detail);
     }
@@ -45,7 +38,7 @@ public class BeanHoppersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ClearBeanHopper(int id, [FromQuery] string counter)
     {
-        var (success, error, detail) = await _beanHoppers.ClearOverrideAsync(id, counter);
+        var (success, error, detail) = await beanHoppers.ClearOverrideAsync(id, counter);
 
         return success ? NoContent() : ToErrorResult(error, detail);
     }

@@ -8,16 +8,16 @@ namespace CoffeeApi.DTOs;
 public class BeanHopperUsageDto
 {
     /// <summary>"coffee" or "coffeeAndMilk".</summary>
-    public string Counter { get; set; } = string.Empty;
+    public string Counter { get; init; } = string.Empty;
 
     /// <summary>Drinks drawn on this counter since the previous snapshot.</summary>
-    public int Count { get; set; }
+    public int Count { get; init; }
 
     /// <summary>Hopper 1, hopper 2, or <c>null</c> for "no bean consumption".</summary>
-    public int? BeanHopper { get; set; }
+    public int? BeanHopper { get; init; }
 
     /// <summary>"auto" for the default rule, "manual" for a stored override.</summary>
-    public string Source { get; set; } = BeanHopperSources.Auto;
+    public string Source { get; init; } = BeanHopperSources.Auto;
 }
 
 /// <summary>Values of <see cref="BeanHopperUsageDto.Source"/>.</summary>
@@ -46,12 +46,12 @@ public class SetBeanHopperDto
 {
     /// <summary>"coffee" or "coffeeAndMilk".</summary>
     [JsonRequired]
-    public string Counter { get; set; } = string.Empty;
+    public string Counter { get; init; } = string.Empty;
 
     /// <summary>
     /// 1, 2, or <c>null</c> for "no bean consumption". Required in the body —
     /// omitting it is rejected rather than silently read as null.
     /// </summary>
     [JsonRequired]
-    public int? BeanHopper { get; set; }
+    public int? BeanHopper { get; init; }
 }

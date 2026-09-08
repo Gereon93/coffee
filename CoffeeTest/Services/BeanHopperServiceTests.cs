@@ -14,7 +14,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task GetUsage_TwoCupsOfCoffee_DefaultsToEverydayHopper()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
             new SnapshotBuilder().At(Noon).WithCoffee(102).Build());
@@ -31,7 +31,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task GetUsage_SingleCupOfCoffee_DefaultsToEspressoHopper()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
             new SnapshotBuilder().At(Noon).WithCoffee(101).Build());
@@ -48,7 +48,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task GetUsage_MoreThanTwoCupsOfCoffee_DefaultsToEverydayHopper()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
             new SnapshotBuilder().At(Noon).WithCoffee(103).Build());
@@ -63,7 +63,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task GetUsage_CoffeeAndMilkDelta_DefaultsToHopperOne()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithCoffeeAndMilk(40).Build(),
             new SnapshotBuilder().At(Noon).WithCoffeeAndMilk(43).Build());
@@ -79,7 +79,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task GetUsage_MilkAndHotWaterOnly_ProducesNoBeanDraw()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithMilk(5).WithHotWaterCups(3).Build(),
             new SnapshotBuilder().At(Noon).WithMilk(7).WithHotWaterCups(6).Build());
@@ -92,7 +92,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task GetUsage_MixedDelta_SplitsPerCounter()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithCoffee(100).WithCoffeeAndMilk(40).Build(),
             new SnapshotBuilder().At(Noon).WithCoffee(102).WithCoffeeAndMilk(41).Build());
@@ -113,7 +113,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task GetUsage_FirstSnapshotOfSequence_HasNoDelta()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
             new SnapshotBuilder().At(Noon).WithCoffee(102).Build());
@@ -126,7 +126,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task GetUsage_CounterReset_ReadsAsZero()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
             new SnapshotBuilder().At(Noon).WithCoffee(3).Build());
@@ -139,7 +139,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task SetOverride_MixedDelta_MovesOnlyTheNamedCounter()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithCoffee(100).WithCoffeeAndMilk(40).Build(),
             new SnapshotBuilder().At(Noon).WithCoffee(102).WithCoffeeAndMilk(41).Build());
@@ -165,7 +165,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task SetOverride_NullHopper_TakesDrawOutOfBeanAccounting()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
             new SnapshotBuilder().At(Noon).WithCoffee(102).Build());
@@ -184,7 +184,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task SetOverride_Twice_RefreshesUpdatedAt()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
             new SnapshotBuilder().At(Noon).WithCoffee(102).Build());
@@ -204,7 +204,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task SetOverride_Twice_KeepsOneRowAndTakesTheLastValue()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
             new SnapshotBuilder().At(Noon).WithCoffee(102).Build());
@@ -224,7 +224,7 @@ public class BeanHopperServiceTests
     [InlineData("")]
     public async Task SetOverride_UnknownCounter_IsRejected(string counter)
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
             new SnapshotBuilder().At(Noon).WithCoffee(102).Build());
@@ -243,7 +243,7 @@ public class BeanHopperServiceTests
     [InlineData(-1)]
     public async Task SetOverride_HopperOutOfRange_IsRejected(int hopper)
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
             new SnapshotBuilder().At(Noon).WithCoffee(102).Build());
@@ -259,7 +259,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task SetOverride_UnknownSnapshot_IsRejected()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
 
         var (success, error, _) = await SnapshotServices.BeanHoppers(db).SetOverrideAsync(
             4711,
@@ -272,7 +272,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task SetOverride_CounterDidNotMove_IsRejected()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
             new SnapshotBuilder().At(Noon).WithCoffee(102).Build());
@@ -289,7 +289,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task SetOverride_EstimatedCurrentSnapshot_IsRejected()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
             new SnapshotBuilder().At(Noon).WithCoffee(102).Build());
@@ -308,7 +308,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task SetOverride_EstimatedPreviousSnapshot_IsRejected()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
             new SnapshotBuilder().At(Noon).WithCoffee(102).Build());
@@ -327,7 +327,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task SetOverride_FirstSnapshotEver_IsRejected()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db, new SnapshotBuilder().At(Morning).WithCoffee(100).Build());
 
         var (success, error, _) = await SnapshotServices.BeanHoppers(db).SetOverrideAsync(
@@ -341,7 +341,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task ClearOverride_RestoresTheAutomaticRule()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
             new SnapshotBuilder().At(Noon).WithCoffee(102).Build());
@@ -361,7 +361,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task ClearOverride_WithoutStoredOverride_IsRejected()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithCoffee(100).Build(),
             new SnapshotBuilder().At(Noon).WithCoffee(102).Build());
@@ -376,7 +376,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task ClearOverride_UnknownCounter_IsRejected()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
 
         var (success, error, _) = await SnapshotServices.BeanHoppers(db).ClearOverrideAsync(1, "espresso");
 
@@ -387,7 +387,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task GetTotals_SumsBothHoppersAcrossSnapshots()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db,
             new SnapshotBuilder().At(Morning).WithCoffee(100).WithCoffeeAndMilk(40).Build(),
             new SnapshotBuilder().At(Noon).WithCoffee(102).WithCoffeeAndMilk(41).Build(),
@@ -403,7 +403,7 @@ public class BeanHopperServiceTests
     [Fact]
     public async Task GetTotals_SingleSnapshot_IsAllZero()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var sequence = await SeedAsync(db, new SnapshotBuilder().At(Morning).WithCoffee(100).Build());
 
         var totals = await SnapshotServices.BeanHoppers(db).GetTotalsAsync(sequence);

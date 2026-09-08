@@ -15,7 +15,7 @@ public class SnapshotStatisticsBeanHopperTests
     [Fact]
     public async Task GetDailySummary_NoSnapshots_HasEmptyHopperTotals()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
 
         var result = await SnapshotServices.Statistics(db).GetDailySummaryAsync(Day);
 
@@ -27,7 +27,7 @@ public class SnapshotStatisticsBeanHopperTests
     [Fact]
     public async Task GetDailySummary_SplitsDrawsByDefaultRules()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         db.MachineSnapshots.AddRange(
             new SnapshotBuilder().At(new DateTime(2026, 2, 6, 23, 0, 0, DateTimeKind.Utc)).WithCoffee(100).WithCoffeeAndMilk(40).Build(),
             new SnapshotBuilder().At(new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(102).WithCoffeeAndMilk(40).Build(),
@@ -45,7 +45,7 @@ public class SnapshotStatisticsBeanHopperTests
     [Fact]
     public async Task GetDailySummary_HotWaterAndMilk_DoNotCountAsBeanDraw()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         db.MachineSnapshots.AddRange(
             new SnapshotBuilder().At(new DateTime(2026, 2, 6, 23, 0, 0, DateTimeKind.Utc)).WithMilk(5).WithHotWaterCups(3).Build(),
             new SnapshotBuilder().At(new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc)).WithMilk(8).WithHotWaterCups(9).Build()
@@ -63,7 +63,7 @@ public class SnapshotStatisticsBeanHopperTests
     [Fact]
     public async Task GetDailySummary_ManualOverride_MovesDrawToOtherHopper()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var corrected = new SnapshotBuilder().At(new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(102).Build();
         db.MachineSnapshots.AddRange(
             new SnapshotBuilder().At(new DateTime(2026, 2, 6, 23, 0, 0, DateTimeKind.Utc)).WithCoffee(100).Build(),
@@ -85,7 +85,7 @@ public class SnapshotStatisticsBeanHopperTests
     [Fact]
     public async Task GetRangeAggregate_SplitsEachDaySeparately()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         db.MachineSnapshots.AddRange(
             new SnapshotBuilder().At(new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(100).WithCoffeeAndMilk(40).Build(),
             new SnapshotBuilder().At(new DateTime(2026, 2, 7, 18, 0, 0, DateTimeKind.Utc)).WithCoffee(103).WithCoffeeAndMilk(41).Build(),
@@ -108,7 +108,7 @@ public class SnapshotStatisticsBeanHopperTests
     [Fact]
     public async Task GetRangeAggregate_OverrideCountsOnItsOwnDayOnly()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var corrected = new SnapshotBuilder().At(new DateTime(2026, 2, 8, 9, 0, 0, DateTimeKind.Utc)).WithCoffee(104).Build();
         db.MachineSnapshots.AddRange(
             new SnapshotBuilder().At(new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(100).Build(),
@@ -136,7 +136,7 @@ public class SnapshotStatisticsBeanHopperTests
     [Fact]
     public async Task GetDailySummary_TiedTimestamps_WalksTheSnapshotsInIdOrder()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var tied = new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc);
         db.MachineSnapshots.AddRange(
             new SnapshotBuilder().At(new DateTime(2026, 2, 6, 23, 0, 0, DateTimeKind.Utc)).WithCoffee(100).Build(),
@@ -155,7 +155,7 @@ public class SnapshotStatisticsBeanHopperTests
     [Fact]
     public async Task GetRangeAggregate_TiedTimestamps_WalksTheSnapshotsInIdOrder()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var tied = new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc);
         db.MachineSnapshots.AddRange(
             new SnapshotBuilder().At(tied).WithCoffee(100).Build(),
@@ -175,30 +175,30 @@ public class SnapshotStatisticsBeanHopperTests
     [Fact]
     public async Task GetRangeAggregate_DoesNotCreateHopperUsageAcrossEstimatedRows()
     {
-        using var db = TestDbContextFactory.Create();
-        const int InitialCoffee = 100;
-        const int EstimatedCoffee = 105;
-        const int SubsequentCoffee = 106;
+        await using var db = TestDbContextFactory.Create();
+        const int initialCoffee = 100;
+        const int estimatedCoffee = 105;
+        const int subsequentCoffee = 106;
         var estimated = new SnapshotBuilder()
             .At(new DateTime(2026, 2, 7, 12, 0, 0, DateTimeKind.Utc))
-            .WithCoffee(EstimatedCoffee)
+            .WithCoffee(estimatedCoffee)
             .Build();
         estimated.IsEstimated = true;
         db.MachineSnapshots.AddRange(
-            new SnapshotBuilder().At(new DateTime(2026, 2, 6, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(InitialCoffee).Build(),
+            new SnapshotBuilder().At(new DateTime(2026, 2, 6, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(initialCoffee).Build(),
             estimated,
-            new SnapshotBuilder().At(new DateTime(2026, 2, 8, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(SubsequentCoffee).Build());
+            new SnapshotBuilder().At(new DateTime(2026, 2, 8, 8, 0, 0, DateTimeKind.Utc)).WithCoffee(subsequentCoffee).Build());
         await db.SaveChangesAsync();
 
         var result = await SnapshotServices.Statistics(db).GetRangeAggregateAsync(
             new DateOnly(2026, 2, 6), new DateOnly(2026, 2, 8));
 
         Assert.Equal(3, result.Count);
-        Assert.All(result, aggregate =>
-        {
-            Assert.Equal(0, aggregate.BeanHoppers.Hopper1);
-            Assert.Equal(0, aggregate.BeanHoppers.Hopper2);
-            Assert.Equal(0, aggregate.BeanHoppers.Excluded);
-        });
+        Assert.Equal(
+            Enumerable.Repeat((Hopper1: 0, Hopper2: 0, Excluded: 0), 3),
+            result.Select(aggregate => (
+                aggregate.BeanHoppers.Hopper1,
+                aggregate.BeanHoppers.Hopper2,
+                aggregate.BeanHoppers.Excluded)));
     }
 }

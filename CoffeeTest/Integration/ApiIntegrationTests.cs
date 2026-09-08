@@ -69,7 +69,7 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
     [Fact]
     public async Task GetStats_MachineIdQueryScopesTheSqliteRead()
     {
-        using var factory = new CoffeeApiFactory();
+        await using var factory = new CoffeeApiFactory();
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -156,10 +156,8 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
         });
 
         using var firstRequest = new HttpRequestMessage(
-            HttpMethod.Post, "/api/admin/historical-backfill/apply")
-        {
-            Content = new StringContent(requestBody, Encoding.UTF8, "application/json")
-        };
+            HttpMethod.Post, "/api/admin/historical-backfill/apply");
+        firstRequest.Content = new StringContent(requestBody, Encoding.UTF8, "application/json");
         firstRequest.Headers.Add("X-API-Key", ApiKey);
 
         var firstResponse = await client.SendAsync(firstRequest);
@@ -173,10 +171,8 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
         }
 
         using var secondRequest = new HttpRequestMessage(
-            HttpMethod.Post, "/api/admin/historical-backfill/apply")
-        {
-            Content = new StringContent(requestBody, Encoding.UTF8, "application/json")
-        };
+            HttpMethod.Post, "/api/admin/historical-backfill/apply");
+        secondRequest.Content = new StringContent(requestBody, Encoding.UTF8, "application/json");
         secondRequest.Headers.Add("X-API-Key", ApiKey);
 
         var secondResponse = await client.SendAsync(secondRequest);
@@ -337,7 +333,7 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
     {
         // Ingesting raises the counter for good, and the class fixture's database
         // is shared, so this test brings its own to keep out of the others' way.
-        using var factory = new CoffeeApiFactory();
+        await using var factory = new CoffeeApiFactory();
         var client = factory.CreateClient();
 
         await IngestCoffeeCounterAsync(client, 500);
@@ -370,7 +366,7 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
     [Fact]
     public async Task BeanHopper_SingleCupOfCoffee_ReachesTheReadApiAsEspressoDraw()
     {
-        using var factory = new CoffeeApiFactory();
+        await using var factory = new CoffeeApiFactory();
         var client = factory.CreateClient();
 
         await IngestCoffeeCounterAsync(client, 700);

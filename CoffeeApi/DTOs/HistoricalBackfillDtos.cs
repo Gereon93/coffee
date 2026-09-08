@@ -7,23 +7,23 @@ internal static class HistoricalBackfillDefaults
 
 public class HistoricalBackfillRequestDto
 {
-    public string CommissionedAt { get; set; } = string.Empty;
+    public string CommissionedAt { get; init; } = string.Empty;
 
     /// <summary>Machine whose first real snapshot defines the backfill target.</summary>
-    public string MachineId { get; set; } = HistoricalBackfillDefaults.MachineId;
+    public string MachineId { get; init; } = HistoricalBackfillDefaults.MachineId;
 }
 
 public class HistoricalBackfillPlanDto
 {
-    public string CommissionedAt { get; set; } = string.Empty;
+    public string CommissionedAt { get; init; } = string.Empty;
 
     /// <summary>Machine to which the plan and generated snapshots belong.</summary>
-    public string MachineId { get; set; } = string.Empty;
-    public DateOnly EndDate { get; set; }
-    public int FirstSnapshotId { get; set; }
-    public DateTime FirstSnapshotTimestamp { get; set; }
-    public int EstimatedSnapshotCount { get; set; }
-    public int TargetBeverageCount { get; set; }
-    public int TargetTotalBeverages { get; set; }
-    public bool AlreadyApplied { get; set; }
+    public string MachineId { get; init; } = string.Empty;
+    public DateOnly EndDate { get; init; }
+    public int FirstSnapshotId { get; init; }
+    public DateTime FirstSnapshotTimestamp { get; init; }
+    public int EstimatedSnapshotCount { get; init; }
+    public int TargetBeverageCount { get; init; }
+    public int TargetTotalBeverages { get; init; }
+    public bool AlreadyApplied { get; init; }
 }

@@ -15,7 +15,7 @@ public class BeanHoppersControllerTests
     [Fact]
     public async Task SetBeanHopper_ValidCorrection_ReturnsNoContentAndPersists()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var (controller, snapshots) = await CreateAsync(db);
 
         var result = await controller.SetBeanHopper(
@@ -30,7 +30,7 @@ public class BeanHoppersControllerTests
     [Fact]
     public async Task SetBeanHopper_UnknownCounter_ReturnsBadRequest()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var (controller, snapshots) = await CreateAsync(db);
 
         var result = await controller.SetBeanHopper(
@@ -43,7 +43,7 @@ public class BeanHoppersControllerTests
     [Fact]
     public async Task SetBeanHopper_HopperOutOfRange_ReturnsBadRequest()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var (controller, snapshots) = await CreateAsync(db);
 
         var result = await controller.SetBeanHopper(
@@ -56,7 +56,7 @@ public class BeanHoppersControllerTests
     [Fact]
     public async Task SetBeanHopper_CounterDidNotMove_ReturnsBadRequest()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var (controller, snapshots) = await CreateAsync(db);
 
         var result = await controller.SetBeanHopper(
@@ -69,7 +69,7 @@ public class BeanHoppersControllerTests
     [Fact]
     public async Task SetBeanHopper_UnknownSnapshot_ReturnsNotFound()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var (controller, _) = await CreateAsync(db);
 
         var result = await controller.SetBeanHopper(
@@ -82,7 +82,7 @@ public class BeanHoppersControllerTests
     [Fact]
     public async Task ClearBeanHopper_ExistingOverride_ReturnsNoContentAndRemovesRow()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var (controller, snapshots) = await CreateAsync(db);
         await controller.SetBeanHopper(
             snapshots[1].Id,
@@ -97,7 +97,7 @@ public class BeanHoppersControllerTests
     [Fact]
     public async Task ClearBeanHopper_WithoutStoredOverride_ReturnsNotFound()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var (controller, snapshots) = await CreateAsync(db);
 
         var result = await controller.ClearBeanHopper(snapshots[1].Id, BeanCounters.Coffee);
@@ -108,7 +108,7 @@ public class BeanHoppersControllerTests
     [Fact]
     public async Task ClearBeanHopper_UnknownCounter_ReturnsBadRequest()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var (controller, snapshots) = await CreateAsync(db);
 
         var result = await controller.ClearBeanHopper(snapshots[1].Id, "espresso");

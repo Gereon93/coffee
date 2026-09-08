@@ -9,10 +9,10 @@ namespace CoffeeApi.Domain;
 public class BeanHopperOverride
 {
     /// <summary>The snapshot the delta ends at. Part of the composite key.</summary>
-    public int SnapshotId { get; set; }
+    public int SnapshotId { get; init; }
 
     /// <summary>Counter column the delta belongs to. See <see cref="BeanCounters"/>.</summary>
-    public string Counter { get; set; } = string.Empty;
+    public string Counter { get; init; } = string.Empty;
 
     /// <summary>Hopper 1, hopper 2, or <c>null</c> for "no bean consumption".</summary>
     public int? BeanHopper { get; set; }
