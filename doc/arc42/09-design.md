@@ -394,3 +394,9 @@ counter and is not part of the idempotency or reset calculation.
   first snapshot after the reset becomes the baseline for the rest of the day.
 - Reversibility: if a future design wants to store explicit reset snapshots or
   flag them, the per-pair rule still works and the data shape is unchanged.
+- Residual (accepted with [ADR-009](#adr-009-server-side-ingest-timestamp)): the
+  Home Connect status items carry no ordering token the API trusts, and ingest
+  stamps receive time. A delayed or reordered n8n poll can therefore look like a
+  reset (`100 → 105 → delayed 2`). Distinguishing that from a real service reset
+  needs a trusted source timestamp or sequence from upstream — out of scope for
+  #31 and deliberately not inferred by heuristics that would hide real resets.
