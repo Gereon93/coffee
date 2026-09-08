@@ -8,6 +8,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -65,6 +66,7 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
             Assert.Equal(HealthResponseDto.Connected, baseline.RootElement.GetProperty("database").GetString());
         }
 
+        SqliteConnection.ClearAllPools();
         SqliteOutageHelper.DenyAccess(factory.DbPath);
 
         var response = await client.GetAsync("/api/health");
