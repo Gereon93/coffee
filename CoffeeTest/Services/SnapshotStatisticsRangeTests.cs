@@ -158,4 +158,26 @@ public class SnapshotStatisticsRangeTests
         Assert.Equal(2, result[0].MilkCount);
         Assert.Equal(5, result[0].Total);
     }
+
+    [Fact]
+    public async Task GetRangeAggregate_HotWaterOnlyIncrease_CountsInTotal()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = SnapshotServices.Statistics(db);
+
+        db.MachineSnapshots.AddRange(
+            new SnapshotBuilder().At(new DateTime(2026, 2, 5, 23, 0, 0, DateTimeKind.Utc))
+                .WithHotWaterCups(10).Build(),
+            new SnapshotBuilder().At(new DateTime(2026, 2, 6, 10, 0, 0, DateTimeKind.Utc))
+                .WithHotWaterCups(13).Build()
+        );
+        await db.SaveChangesAsync();
+
+        var result = await service.GetRangeAggregateAsync(new DateOnly(2026, 2, 6), new DateOnly(2026, 2, 6));
+
+        Assert.Single(result);
+        Assert.Equal(0, result[0].CoffeeCount);
+        Assert.Equal(0, result[0].MilkCount);
+        Assert.Equal(3, result[0].Total);
+    }
 }

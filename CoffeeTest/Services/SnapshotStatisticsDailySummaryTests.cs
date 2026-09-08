@@ -202,4 +202,45 @@ public class SnapshotStatisticsDailySummaryTests
         Assert.Equal(2, result.MilkDrinksToday);
         Assert.Equal(5, result.TotalToday);
     }
+
+    [Fact]
+    public async Task GetDailySummary_HotWaterOnlyIncrease_ExcludesFromTotalToday()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = SnapshotServices.Statistics(db);
+
+        db.MachineSnapshots.AddRange(
+            new SnapshotBuilder().At(new DateTime(2026, 2, 6, 23, 0, 0, DateTimeKind.Utc)).WithHotWaterCups(10).Build(),
+            new SnapshotBuilder().At(new DateTime(2026, 2, 7, 10, 0, 0, DateTimeKind.Utc)).WithHotWaterCups(13).Build()
+        );
+        await db.SaveChangesAsync();
+
+        var result = await service.GetDailySummaryAsync(new DateOnly(2026, 2, 7));
+
+        Assert.Equal(0, result.CoffeeToday);
+        Assert.Equal(0, result.MilkDrinksToday);
+        Assert.Equal(0, result.TotalToday);
+    }
+
+    [Fact]
+    public async Task GetDailySummary_PartialCounterReset_UsesResetAwarePeakHour()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = SnapshotServices.Statistics(db);
+
+        db.MachineSnapshots.AddRange(
+            new SnapshotBuilder().At(new DateTime(2026, 2, 6, 23, 0, 0, DateTimeKind.Utc))
+                .WithCoffee(100).WithMilk(50).Build(),
+            new SnapshotBuilder().At(new DateTime(2026, 2, 7, 14, 0, 0, DateTimeKind.Utc))
+                .WithCoffee(0).WithMilk(52).Build()
+        );
+        await db.SaveChangesAsync();
+
+        var result = await service.GetDailySummaryAsync(new DateOnly(2026, 2, 7));
+
+        Assert.Equal(0, result.CoffeeToday);
+        Assert.Equal(2, result.MilkDrinksToday);
+        Assert.Equal(2, result.TotalToday);
+        Assert.Equal(14, result.PeakHour);
+    }
 }

@@ -52,9 +52,34 @@ public class IngestPayloadValidatorTests
     [InlineData(1L)]
     [InlineData(1.0)]
     [InlineData("42")]
+    [InlineData(0)]
     public void IsValidNumericValue_AcceptsSupportedShapes(object value)
     {
         Assert.True(IngestPayloadValidator.IsValidNumericValue(value));
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(-1L)]
+    [InlineData(1.5)]
+    [InlineData((long)int.MaxValue + 1)]
+    public void IsValidNumericValue_RejectsOutOfRangeCounterValues(object value)
+    {
+        Assert.False(IngestPayloadValidator.IsValidNumericValue(value));
+    }
+
+    [Fact]
+    public void IsValidNumericValue_RejectsNegativeJsonElementNumber()
+    {
+        using var document = JsonDocument.Parse("-1");
+        Assert.False(IngestPayloadValidator.IsValidNumericValue(document.RootElement));
+    }
+
+    [Fact]
+    public void IsValidNumericValue_RejectsFractionalJsonElementNumber()
+    {
+        using var document = JsonDocument.Parse("1.5");
+        Assert.False(IngestPayloadValidator.IsValidNumericValue(document.RootElement));
     }
 
     [Fact]
