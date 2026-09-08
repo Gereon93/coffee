@@ -178,9 +178,10 @@ path to configure. A failing snapshot read logs a warning instead and does not
 alarm: a broken database is not an ingest outage.
 
 **`ApiKeyMiddleware`** — Path-prefix allowlist, method-aware: `/api/ingest` (all methods), `POST /coffee/power`, `POST` and `DELETE` on `/api/stats/marked-days` and `/api/stats/snapshots`. Reads on those paths are deliberately left open. With no
-configured key it logs a warning and lets the request through — deliberate
-development affordance, and a production risk if the key is ever unset.
-Comparison uses `CryptographicOperations.FixedTimeEquals`.
+configured key the behaviour depends on the environment: in `Development` it
+logs a warning and lets the request through; in `Production` it answers `503
+Service Unavailable` and logs an error instead of silently disabling
+authentication. Comparison uses `CryptographicOperations.FixedTimeEquals`.
 
 **`AppDbContext`** — Model configuration, four indexes (timestamp, machine id,
 a composite idempotency index, plus the primary keys), `DateOnly ↔ string`

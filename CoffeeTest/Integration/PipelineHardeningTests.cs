@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -39,6 +40,8 @@ public class PipelineHardeningTests
             _settings = settings ?? [];
         }
 
+        public bool ConfigureApiKey { get; init; } = true;
+
         /// <summary>Warnings and errors logged by the booted app.</summary>
         public List<string> LogMessages { get; } = [];
 
@@ -52,7 +55,11 @@ public class PipelineHardeningTests
         {
             builder.UseEnvironment(_environment);
             builder.UseSetting("ConnectionStrings:Default", $"Data Source={_dbPath}");
-            builder.UseSetting("ApiKey", ApiKey);
+            if (ConfigureApiKey)
+            {
+                builder.UseSetting("ApiKey", ApiKey);
+            }
+
             foreach (var (key, value) in _settings)
             {
                 builder.UseSetting(key, value);
@@ -228,5 +235,41 @@ public class PipelineHardeningTests
 
         Assert.Contains("IX_MachineSnapshots_Timestamp", indexes);
         Assert.DoesNotContain("IX_MachineSnapshots_Idempotency", indexes);
+    }
+
+    [Fact]
+    public async Task ProtectedEndpoint_InProduction_WithNoApiKeyConfigured_Returns503()
+    {
+        using var factory = new Factory("Production") { ConfigureApiKey = false };
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsync(
+            "/api/ingest",
+            new StringContent("""{"data":{"status":[]}}""", Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        using var document = JsonDocument.Parse(body);
+        var root = document.RootElement;
+        Assert.Equal("ServiceUnavailable", root.GetProperty("error").GetString());
+        Assert.Equal("Service unavailable.", root.GetProperty("message").GetString());
+        Assert.DoesNotContain("ApiKey", body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("not configured", body, StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(factory.LogMessages, m => m.Contains("ApiKey is not configured", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task ProtectedEndpoint_InDevelopment_WithNoApiKeyConfigured_PassesThrough()
+    {
+        using var factory = new Factory("Development") { ConfigureApiKey = false };
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsync(
+            "/api/ingest",
+            new StringContent("""{}""", Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }

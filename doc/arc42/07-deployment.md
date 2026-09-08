@@ -60,7 +60,7 @@ underscore maps to the configuration separator: `ConnectionStrings__Default`.
 | Key / variable | Purpose | Behaviour when unset |
 |----------------|---------|----------------------|
 | `ConnectionStrings__Default` | SQLite path | Falls back to `Data Source=coffee.db` in the working directory. The Dockerfile sets `/app/data/coffee.db`. |
-| `ApiKey` | Shared secret for the protected endpoints: `POST /api/ingest`, `POST /coffee/power`, `POST` and `DELETE /api/stats/marked-days` | **Those endpoints become unauthenticated**; a warning is logged per request |
+| `ApiKey` | Shared secret for the protected endpoints: `POST /api/ingest`, `POST /coffee/power`, `POST` and `DELETE /api/stats/marked-days` | In `Production`, protected endpoints answer `503 Service Unavailable` and log an error; in `Development` they stay unauthenticated with a warning logged |
 | `ForwardedHeaders__KnownNetworks__0` | CIDR (or plain IP) of the reverse proxy, e.g. `172.16.0.0/12` for the Docker bridge. Enables `X-Forwarded-For`, so a rejected request logs the caller's address instead of the proxy's | The forwarded-headers middleware is not registered; logs show the proxy address |
 | `N8n__PowerWebhookUrl` | Power/status webhook | `HomeConnectService` throws on construction → 500 on the first `/coffee/*` request |
 | `N8n__BasicAuthUser` / `N8n__BasicAuthPassword` | Webhook credentials | No `Authorization` header is sent |

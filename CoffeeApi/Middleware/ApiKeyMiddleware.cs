@@ -46,7 +46,7 @@ public class ApiKeyMiddleware
         // Get configured API key
         var configuredApiKey = configuration["ApiKey"];
 
-        if (string.IsNullOrEmpty(configuredApiKey))
+        if (string.IsNullOrWhiteSpace(configuredApiKey))
         {
             var environment = context.RequestServices.GetRequiredService<IWebHostEnvironment>();
             if (environment.IsDevelopment())
@@ -57,11 +57,11 @@ public class ApiKeyMiddleware
             }
 
             _logger.LogError("Protected API request rejected because ApiKey is not configured");
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
             await context.Response.WriteAsJsonAsync(new
             {
-                error = "Unauthorized",
-                message = "API key authentication is not configured."
+                error = "ServiceUnavailable",
+                message = "Service unavailable."
             });
             return;
         }
