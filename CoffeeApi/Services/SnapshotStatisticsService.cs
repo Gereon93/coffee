@@ -146,12 +146,6 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
             : snapshots;
     }
 
-    /// <summary>
-    /// Coffee and milk-drink deltas across a sequence of cumulative readings.
-    /// A decrease in any counter is treated as a reset; only positive per-pair
-    /// increments are summed, so the first snapshot after a reset becomes the new
-    /// baseline for subsequent drinks (ADR-015).
-    /// </summary>
     private static (int Coffee, int MilkDrinks) BeverageDeltas(IReadOnlyList<MachineSnapshot> sequence)
     {
         var coffee = 0;
@@ -160,13 +154,16 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
 
         for (int i = 1; i < sequence.Count; i++)
         {
-            coffee += Math.Max(0, sequence[i].BeverageCounterCoffee - sequence[i - 1].BeverageCounterCoffee);
-            coffeeAndMilk += Math.Max(0, sequence[i].BeverageCounterCoffeeAndMilk - sequence[i - 1].BeverageCounterCoffeeAndMilk);
-            milk += Math.Max(0, sequence[i].BeverageCounterMilk - sequence[i - 1].BeverageCounterMilk);
+            coffee += PositiveCupCounterDelta(sequence[i].BeverageCounterCoffee, sequence[i - 1].BeverageCounterCoffee);
+            coffeeAndMilk += PositiveCupCounterDelta(sequence[i].BeverageCounterCoffeeAndMilk, sequence[i - 1].BeverageCounterCoffeeAndMilk);
+            milk += PositiveCupCounterDelta(sequence[i].BeverageCounterMilk, sequence[i - 1].BeverageCounterMilk);
         }
 
         return (coffee, coffeeAndMilk + milk);
     }
+
+    private static int PositiveCupCounterDelta(int current, int previous) =>
+        Math.Max(0, current - previous);
 
     /// <summary>
     /// The local hour carrying the largest single delta, or <c>null</c> if nothing was brewed.

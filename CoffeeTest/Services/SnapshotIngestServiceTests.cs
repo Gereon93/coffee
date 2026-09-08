@@ -1,11 +1,12 @@
 using CoffeeApi.DTOs;
+using CoffeeApi.Services;
 using CoffeeTest.Helpers;
 
 namespace CoffeeTest.Services;
 
 public class SnapshotIngestServiceTests
 {
-    private static IngestPayloadDto MakePayload(int coffee, int coffeeAndMilk = 0, int milk = 0)
+    private static IngestPayloadDto MakePayload(int coffee, int coffeeAndMilk = 0, int milk = 0, int hotWaterCups = 0)
     {
         return new IngestPayloadDto
         {
@@ -16,6 +17,7 @@ public class SnapshotIngestServiceTests
                     new() { Key = "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee", Value = coffee },
                     new() { Key = "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffeeAndMilk", Value = coffeeAndMilk },
                     new() { Key = "ConsumerProducts.CoffeeMaker.Status.BeverageCounterMilk", Value = milk },
+                    new() { Key = "ConsumerProducts.CoffeeMaker.Status.BeverageCounterHotWaterCups", Value = hotWaterCups },
                     new() { Key = "BSH.Common.Status.OperationState", Value = "BSH.Common.EnumType.OperationState.Ready" },
                 }
             }
@@ -124,4 +126,27 @@ public class SnapshotIngestServiceTests
         Assert.Equal(5, snapshot.BeverageCounterCoffee);
         Assert.Equal(3, db.MachineSnapshots.Count());
     }
+
+    [Fact]
+    public async Task ProcessIngest_IncompleteCupCounters_ThrowsInvalidIngestPayloadException()
+    {
+        using var db = TestDbContextFactory.Create();
+        var service = SnapshotServices.Ingest(db);
+        var payload = new IngestPayloadDto
+        {
+            Data = new IngestDataDto
+            {
+                Status = new List<StatusItemDto>
+                {
+                    new() { Key = "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee", Value = 1 },
+                    new() { Key = "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffeeAndMilk", Value = 0 },
+                    new() { Key = "ConsumerProducts.CoffeeMaker.Status.BeverageCounterMilk", Value = 0 },
+                    new() { Key = "BSH.Common.Status.OperationState", Value = "BSH.Common.EnumType.OperationState.Ready" },
+                }
+            }
+        };
+
+        await Assert.ThrowsAsync<InvalidIngestPayloadException>(() => service.ProcessIngestAsync(payload));
+    }
+
 }

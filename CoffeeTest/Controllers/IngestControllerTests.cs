@@ -14,6 +14,21 @@ public class IngestControllerTests
         return new IngestController(service, NullLogger<IngestController>.Instance);
     }
 
+
+    private static IngestPayloadDto FullCupCounterPayload(int coffee = 100) => new()
+    {
+        Data = new IngestDataDto
+        {
+            Status = new List<StatusItemDto>
+            {
+                new() { Key = "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee", Value = coffee },
+                new() { Key = "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffeeAndMilk", Value = 0 },
+                new() { Key = "ConsumerProducts.CoffeeMaker.Status.BeverageCounterMilk", Value = 0 },
+                new() { Key = "ConsumerProducts.CoffeeMaker.Status.BeverageCounterHotWaterCups", Value = 0 },
+            }
+        }
+    };
+
     private static SnapshotIngestService CreateService(string? dbName = null)
     {
         return SnapshotServices.Ingest(TestDbContextFactory.Create(dbName));
@@ -47,18 +62,7 @@ public class IngestControllerTests
     public async Task Ingest_ValidPayload_Returns201Created()
     {
         var controller = CreateController(CreateService());
-        var payload = new IngestPayloadDto
-        {
-            Data = new IngestDataDto
-            {
-                Status = new List<StatusItemDto>
-                {
-                    new() { Key = "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee", Value = 100 },
-                }
-            }
-        };
-
-        var result = await controller.Ingest(payload);
+        var result = await controller.Ingest(FullCupCounterPayload());
 
         var created = Assert.IsType<CreatedResult>(result);
         var response = Assert.IsType<IngestResponseDto>(created.Value);
@@ -73,16 +77,7 @@ public class IngestControllerTests
         var service = CreateService(dbName);
         var controller = CreateController(service);
 
-        var payload = new IngestPayloadDto
-        {
-            Data = new IngestDataDto
-            {
-                Status = new List<StatusItemDto>
-                {
-                    new() { Key = "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee", Value = 100 },
-                }
-            }
-        };
+        var payload = FullCupCounterPayload();
 
         await controller.Ingest(payload);
 
@@ -94,4 +89,30 @@ public class IngestControllerTests
         var response = Assert.IsType<IngestResponseDto>(ok.Value);
         Assert.False(response.Created);
     }
+
+    [Fact]
+    public async Task Ingest_MissingCupCounter_ReturnsBadRequest()
+    {
+        var controller = CreateController(CreateService());
+        var payload = FullCupCounterPayload();
+        payload.Data.Status.RemoveAt(payload.Data.Status.Count - 1);
+
+        var result = await controller.Ingest(payload);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.NotNull(badRequest.Value);
+    }
+
+    [Fact]
+    public async Task Ingest_InvalidCupCounterValue_ReturnsBadRequest()
+    {
+        var controller = CreateController(CreateService());
+        var payload = FullCupCounterPayload();
+        payload.Data.Status[0].Value = "invalid";
+
+        var result = await controller.Ingest(payload);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
 }

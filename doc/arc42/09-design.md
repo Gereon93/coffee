@@ -361,9 +361,14 @@ factory reset the machine reports lower values, so the previous idempotency rule
 was exceeded. Deltas would clamp to 0 and produce plausible but wrong numbers.
 
 **Decision.** Treat any decrease in one of the four cup counters as a counter
-reset and persist the snapshot. Statistics compute deltas by summing only
-positive per-pair increments; a drop resets the implicit baseline for that
-counter, so the next higher reading starts a new epoch.
+reset and persist the snapshot. All four cup counters must be present and
+numeric in every accepted payload so a missing key cannot be mistaken for a
+reset. Statistics compute beverage totals from the three drink counters
+(`Coffee`, `CoffeeAndMilk`, `Milk`) by summing only positive per-pair
+increments; a drop resets the implicit baseline for that counter, so the next
+higher reading starts a new epoch. `HotWaterCups` participates in idempotency
+and reset detection but not in `CoffeeToday` / `MilkDrinksToday` /
+`TotalToday`.
 
 **Assumption.** A single counter going backwards is enough to declare a reset.
 This covers both full resets and partial resets, and is the only legitimate way
