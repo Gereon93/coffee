@@ -137,12 +137,8 @@ cd CoffeeApi && dotnet run           # API + Scalar UI at /scalar/v1
 cd coffee-dashboard && npm run dev    # dashboard on :5173
 ```
 
-The Vite dev server proxies `/api` to `http://localhost:8089`, overridable via
-`VITE_API_PROXY_TARGET`.
-
-> The dev proxy covers **only** `/api`. `/coffee/status` and `/coffee/power`
-> are not proxied, so the power button and live status do not work under
-> `npm run dev` without extra configuration. Recorded in [11](11-risks.md).
+The Vite dev server proxies `/api` and `/coffee` to `http://localhost:8089`,
+overridable via `VITE_API_PROXY_TARGET`.
 
 ## 7.5 CI/CD
 

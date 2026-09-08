@@ -22,7 +22,7 @@ sequenceDiagram
     S->>S: SnapshotPayloadMapper.Map — Home Connect keys → entity<br/>Timestamp = UtcNow
     S->>DB: SELECT latest WHERE MachineId ORDER BY Timestamp DESC
     DB-->>S: lastSnapshot
-    S->>S: HasCounterIncreased(last, new) → true
+    S->>S: ShouldPersistReading(last, new) → true
     S->>DB: INSERT MachineSnapshots
     S-->>C: (Created: true, snapshot)
     C-->>N: 201 Created<br/>Location: /api/stats/{id}
@@ -45,10 +45,10 @@ sequenceDiagram
     C->>S: ProcessIngestAsync(payload)
     S->>DB: SELECT latest
     DB-->>S: lastSnapshot
-    S->>S: HasCounterIncreased → false
+    S->>S: ShouldPersistReading → false
     Note over S,DB: no INSERT — the new entity is discarded
     S-->>C: (Created: false, lastSnapshot)
-    C-->>N: 200 OK<br/>"No counter increase detected, snapshot skipped"
+    C-->>N: 200 OK<br/>"No counter change detected, snapshot skipped"
 ```
 
 The response carries the **existing** snapshot's id and timestamp, not the

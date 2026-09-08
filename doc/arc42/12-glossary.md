@@ -15,7 +15,7 @@
 | **Event** | A `MarkedDay` kind: real data with a known explanation (`birthday`, `visitors`, `party`, `sick`, `vacation`, `other`). Stays in consumption totals and the heatmap, but is excluded from anomaly detection. |
 | **Heatmap** | Consumption aggregated into a weekday (1 = Monday … 7 = Sunday) × hour matrix over a rolling window of *n* weeks. |
 | **Idempotency** | Here: processing the same ingest payload any number of times produces exactly one stored row and the same response. |
-| **Ingest** | Receiving a Home Connect payload from n8n and, if the counters increased, persisting it as a snapshot. |
+| **Ingest** | Receiving a Home Connect payload from n8n and, when the cup counters changed (increase or reset), persisting it as a snapshot. |
 | **Mass-import** | A `MarkedDay` kind for bulk-backfilled data whose timestamps do not reflect when coffee was actually brewed. Excluded from the heatmap and from anomaly detection. |
 | **Hopper override** | A stored correction of the derived hopper, keyed by `(snapshot, counter)`. Its absence is what makes a draw `auto`; its presence makes it `manual`. |
 | **MarkedDay** | A manual annotation on a single local date. Exactly one per date; the `Kind` field decides its semantics. |

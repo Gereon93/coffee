@@ -50,23 +50,14 @@ export function fetchMarkedDays(kind?: MarkedDayKind) {
   return fetchJson<MarkedDay[]>(`/api/stats/marked-days${qs}`);
 }
 
-export async function addMarkedDay(payload: CreateMarkedDayPayload): Promise<MarkedDay> {
-  const res = await fetch('/api/stats/marked-days', {
+export function addMarkedDay(payload: CreateMarkedDayPayload): Promise<MarkedDay> {
+  return fetchJson<MarkedDay>('/api/stats/marked-days', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(body.error ?? `HTTP ${res.status}`);
-  }
-  return res.json();
 }
 
 export async function removeMarkedDay(date: string): Promise<void> {
-  const res = await fetch(`/api/stats/marked-days/${date}`, { method: 'DELETE' });
-  if (!res.ok && res.status !== 204) {
-    const body = await res.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(body.error ?? `HTTP ${res.status}`);
-  }
+  await fetchJson(`/api/stats/marked-days/${date}`, { method: 'DELETE' });
 }
