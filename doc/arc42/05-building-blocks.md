@@ -291,10 +291,6 @@ page). Hooks own server state. `lib/` holds pure, framework-free functions —
 which also makes them the natural first candidates for unit tests the project
 does not yet have.
 
-> Note: `addMarkedDay`, `removeMarkedDay`, and `setCoffeePower` call `fetch`
-> directly with hardcoded relative paths instead of going through
-> `fetchJson`/`BASE_URL`. Recorded in [11](11-risks.md).
-
 ## 5.4 Level 2 — CoffeeTest
 
 | Directory | Scope |

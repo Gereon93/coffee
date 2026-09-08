@@ -41,4 +41,26 @@ describe('fetchJson', () => {
     await expect(fetchJson('/api/stats')).rejects.toBeInstanceOf(ApiError);
     await expect(fetchJson('/api/stats')).rejects.toMatchObject({ status: 404 });
   });
+
+  it('prefers the server-provided error message over the status line', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ error: 'Day already marked' }, { status: 409, statusText: 'Conflict' }),
+    );
+
+    await expect(fetchJson('/api/stats')).rejects.toThrow('Day already marked');
+  });
+
+  it('falls back to a message field when no error field is present', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ message: 'Webhook nicht erreichbar' }, { status: 500 }),
+    );
+
+    await expect(fetchJson('/coffee/power')).rejects.toThrow('Webhook nicht erreichbar');
+  });
+
+  it('resolves to null when the response has no body', async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 204 }));
+
+    await expect(fetchJson('/api/stats/marked-days/2026-08-15')).resolves.toBeNull();
+  });
 });

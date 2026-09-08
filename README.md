@@ -129,14 +129,9 @@ cd coffee-dashboard
 npm install
 npm run dev
 # Laeuft auf http://localhost:5173
-# Proxy leitet /api/* an http://localhost:8089 weiter
+# Proxy leitet /api/* und /coffee/* an http://localhost:8089 weiter
 # (ueberschreibbar via VITE_API_PROXY_TARGET, konfiguriert in vite.config.ts)
 ```
-
-> **Bekannte Einschraenkung:** Der Dev-Proxy deckt nur `/api` ab. `/coffee/status`
-> und `/coffee/power` laufen unter `npm run dev` ins Leere — Power-Button und
-> Live-Status funktionieren lokal daher nicht ohne Zusatzkonfiguration.
-> Siehe [TD-10](doc/arc42/11-risks.md#correctness).
 
 **Tests:**
 

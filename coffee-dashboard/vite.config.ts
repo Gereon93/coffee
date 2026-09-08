@@ -49,6 +49,8 @@ function readCommitFromGitDir(): string | null {
 
 const commit = process.env.BUILD_COMMIT ?? readCommitFromGitDir() ?? 'dev'
 
+const apiProxyTarget = process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:8089'
+
 const buildTime = new Date().toLocaleString('de-DE', {
   timeZone: 'Europe/Berlin',
   day: '2-digit',
@@ -80,8 +82,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        // Backend-Adresse fuer den Dev-Proxy; ueber VITE_API_PROXY_TARGET ueberschreibbar.
-        target: process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:8089',
+        target: apiProxyTarget,
+        changeOrigin: true,
+      },
+      '/coffee': {
+        target: apiProxyTarget,
         changeOrigin: true,
       },
     },

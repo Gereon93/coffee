@@ -11,6 +11,7 @@ import {
   removeMarkedDay,
 } from './stats';
 import { fetchCoffeeStatus, setCoffeePower } from './coffee';
+import { ApiError } from './client';
 import type { SnapshotResponse } from './types';
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
@@ -101,6 +102,17 @@ describe('stats api', () => {
     await expect(
       addMarkedDay({ date: '2026-08-15', kind: 'mass-import', reason: 'x' }),
     ).rejects.toThrow('Day already marked');
+  });
+
+  it('throws an ApiError carrying the HTTP status when marking fails', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ error: 'Day already marked' }, { status: 409 }),
+    );
+
+    const request = addMarkedDay({ date: '2026-08-15', kind: 'event', reason: 'x' });
+
+    await expect(request).rejects.toMatchObject({ name: 'ApiError', status: 409 });
+    await expect(request).rejects.toBeInstanceOf(ApiError);
   });
 
   it('deletes a marked day and tolerates 204', async () => {

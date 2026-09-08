@@ -13,7 +13,7 @@ npm run test     # Vitest
 npm run test:coverage  # Vitest + lcov-Report nach coverage/
 ```
 
-Der Vite Dev-Server proxied `/api/*` Requests an `http://localhost:8089` (konfiguriert in `vite.config.ts`, ueberschreibbar via `VITE_API_PROXY_TARGET`).
+Der Vite Dev-Server proxied `/api/*` und `/coffee/*` Requests an `http://localhost:8089` (konfiguriert in `vite.config.ts`, ueberschreibbar via `VITE_API_PROXY_TARGET`).
 
 ## Docker
 
