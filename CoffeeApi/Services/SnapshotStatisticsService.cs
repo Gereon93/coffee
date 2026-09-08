@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CoffeeApi.Services;
 
-/// <inheritdoc cref="ISnapshotStatisticsService"/>
 public class SnapshotStatisticsService : ISnapshotStatisticsService
 {
     private const string MassImportKind = "mass-import";
@@ -38,12 +37,9 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
         var (startOfDay, _) = LocalDay.BoundsUtc(date, tzOffsetMinutes);
         var previousSnapshot = await _snapshots.GetLastSnapshotBeforeAsync(startOfDay, machineId);
 
-        var baseline = previousSnapshot ?? snapshots[0];
-        var last = snapshots[^1];
-
-        var (coffeeToday, milkDrinksToday) = BeverageDeltas(baseline, last);
-
         var sequence = PrecededBy(previousSnapshot, snapshots);
+
+        var (coffeeToday, milkDrinksToday, _) = BeverageDeltas(sequence);
 
         return new DailySummaryDto
         {
@@ -74,10 +70,10 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
 
         foreach (var (localDate, daySnapshots) in days)
         {
-            var dayBaseline = baseline ?? daySnapshots[0];
+            var daySequence = PrecededBy(baseline, daySnapshots);
             var last = daySnapshots[^1];
 
-            var (coffee, milk) = BeverageDeltas(dayBaseline, last);
+            var (coffee, milk, hotWaterCups) = BeverageDeltas(daySequence);
 
             var dayUsages = daySnapshots
                 .Where(s => usageBySnapshot.ContainsKey(s.Id))
@@ -88,7 +84,7 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
                 Date = localDate.ToString("yyyy-MM-dd"),
                 CoffeeCount = Math.Max(0, coffee),
                 MilkCount = Math.Max(0, milk),
-                Total = Math.Max(0, last.TotalBeverages - dayBaseline.TotalBeverages),
+                Total = Math.Max(0, coffee + milk + hotWaterCups),
                 BeanHoppers = _beanHoppers.SumUsage(dayUsages)
             });
 
@@ -114,7 +110,7 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
                 continue;
             }
 
-            var delta = snapshots[i].TotalBeverages - snapshots[i - 1].TotalBeverages;
+            var delta = PositiveTotalBeverageDelta(snapshots[i], snapshots[i - 1]);
             if (delta <= 0)
             {
                 continue;
@@ -149,20 +145,33 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
             : snapshots;
     }
 
-    /// <summary>
-    /// Coffee and milk-drink deltas between two cumulative readings.
-    /// </summary>
-    private static (int Coffee, int MilkDrinks) BeverageDeltas(MachineSnapshot baseline, MachineSnapshot last)
+    private static (int Coffee, int MilkDrinks, int HotWaterCups) BeverageDeltas(IReadOnlyList<MachineSnapshot> sequence)
     {
-        var coffee = last.BeverageCounterCoffee - baseline.BeverageCounterCoffee;
-        var milkDrinks = (last.BeverageCounterCoffeeAndMilk - baseline.BeverageCounterCoffeeAndMilk) +
-                         (last.BeverageCounterMilk - baseline.BeverageCounterMilk);
-        return (coffee, milkDrinks);
+        var coffee = 0;
+        var coffeeAndMilk = 0;
+        var milk = 0;
+        var hotWaterCups = 0;
+
+        for (int i = 1; i < sequence.Count; i++)
+        {
+            coffee += PositiveCupCounterDelta(sequence[i].BeverageCounterCoffee, sequence[i - 1].BeverageCounterCoffee);
+            coffeeAndMilk += PositiveCupCounterDelta(sequence[i].BeverageCounterCoffeeAndMilk, sequence[i - 1].BeverageCounterCoffeeAndMilk);
+            milk += PositiveCupCounterDelta(sequence[i].BeverageCounterMilk, sequence[i - 1].BeverageCounterMilk);
+            hotWaterCups += PositiveCupCounterDelta(sequence[i].BeverageCounterHotWaterCups, sequence[i - 1].BeverageCounterHotWaterCups);
+        }
+
+        return (coffee, coffeeAndMilk + milk, hotWaterCups);
     }
 
-    /// <summary>
-    /// The local hour carrying the largest single delta, or <c>null</c> if nothing was brewed.
-    /// </summary>
+    private static int PositiveCupCounterDelta(int current, int previous) =>
+        Math.Max(0, current - previous);
+
+    private static int PositiveTotalBeverageDelta(MachineSnapshot current, MachineSnapshot previous) =>
+        PositiveCupCounterDelta(current.BeverageCounterCoffee, previous.BeverageCounterCoffee)
+        + PositiveCupCounterDelta(current.BeverageCounterCoffeeAndMilk, previous.BeverageCounterCoffeeAndMilk)
+        + PositiveCupCounterDelta(current.BeverageCounterMilk, previous.BeverageCounterMilk)
+        + PositiveCupCounterDelta(current.BeverageCounterHotWaterCups, previous.BeverageCounterHotWaterCups);
+
     private static int? FindPeakHour(List<MachineSnapshot> sequence, int tzOffsetMinutes)
     {
         int? peakHour = null;
@@ -175,7 +184,7 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
                 continue;
             }
 
-            var delta = sequence[i].TotalBeverages - sequence[i - 1].TotalBeverages;
+            var delta = PositiveTotalBeverageDelta(sequence[i], sequence[i - 1]);
 
             if (delta > maxDelta)
             {
@@ -187,7 +196,6 @@ public class SnapshotStatisticsService : ISnapshotStatisticsService
         return peakHour;
     }
 
-    /// <summary>ISO-8601 weekday numbering: Monday = 1 … Sunday = 7.</summary>
     private static int IsoDayOfWeek(DateTime localTime)
     {
         var dayOfWeek = (int)localTime.DayOfWeek;

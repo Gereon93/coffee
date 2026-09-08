@@ -5,7 +5,7 @@ namespace CoffeeApi.Services;
 
 /// <summary>
 /// Accepts Home Connect payloads and persists them, applying the counter-based
-/// idempotency rule from ADR-005.
+/// idempotency rule from ADR-005 and counter-reset detection from ADR-015.
 /// </summary>
 public interface ISnapshotIngestService
 {
