@@ -2,6 +2,6 @@
   <PropertyGroup>
     <NuGetAudit>true</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>
-    <WarningsAsErrors>NU1903</WarningsAsErrors>
+    <WarningsAsErrors>NU1903;NU1904</WarningsAsErrors>
   </PropertyGroup>
 </Project>
