@@ -3,26 +3,39 @@ using CoffeeApi.Services;
 
 namespace CoffeeTest.Helpers;
 
-/// <summary>
-/// Simulates a database in various broken states: probe returns dead/throws,
-/// or the probe succeeds and the subsequent query fails.
-/// </summary>
-public sealed class UnreachableSnapshotQueryService(
-    bool reachable = false,
-    bool queryThrows = true,
-    bool probeThrows = false) : ISnapshotQueryService
+public sealed class UnreachableSnapshotQueryService : ISnapshotQueryService
 {
+    private readonly bool _reachable;
+    private readonly bool _queryThrows;
+    private readonly bool _probeThrows;
+
+    private UnreachableSnapshotQueryService(bool reachable, bool queryThrows, bool probeThrows)
+    {
+        _reachable = reachable;
+        _queryThrows = queryThrows;
+        _probeThrows = probeThrows;
+    }
+
+    public static UnreachableSnapshotQueryService ProbeReportsDisconnected() =>
+        new(reachable: false, queryThrows: true, probeThrows: false);
+
+    public static UnreachableSnapshotQueryService ProbeThrows() =>
+        new(reachable: false, queryThrows: true, probeThrows: true);
+
+    public static UnreachableSnapshotQueryService QueryFailsAfterReachableProbe() =>
+        new(reachable: true, queryThrows: true, probeThrows: false);
+
     public bool LatestRequested { get; private set; }
 
     public Task<bool> IsDatabaseReachableAsync() =>
-        probeThrows
+        _probeThrows
             ? Task.FromException<bool>(new InvalidOperationException("database unreachable"))
-            : Task.FromResult(reachable);
+            : Task.FromResult(_reachable);
 
     public Task<MachineSnapshot?> GetLatestAsync(string machineId = ISnapshotQueryService.DefaultMachineId)
     {
         LatestRequested = true;
-        return queryThrows
+        return _queryThrows
             ? Task.FromException<MachineSnapshot?>(new InvalidOperationException("database unreachable"))
             : Task.FromResult<MachineSnapshot?>(null);
     }

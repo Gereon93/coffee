@@ -78,7 +78,7 @@ public class ApiIntegrationTests : IClassFixture<ApiIntegrationTests.CoffeeApiFa
         _factory.WithWebHostBuilder(builder =>
             builder.ConfigureTestServices(services =>
                 services.AddScoped<ISnapshotQueryService>(
-                    _ => new UnreachableSnapshotQueryService(probeThrows: true))));
+                    _ => UnreachableSnapshotQueryService.ProbeThrows())));
 
     [Fact]
     public async Task GetStats_OnFreshDatabase_ReturnsOk()
