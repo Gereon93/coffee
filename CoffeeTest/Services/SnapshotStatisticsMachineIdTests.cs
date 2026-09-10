@@ -4,12 +4,10 @@ namespace CoffeeTest.Services;
 
 public class SnapshotStatisticsMachineIdTests
 {
-    private const int HeatmapWindowWeeks = 4;
-
     [Fact]
     public async Task GetDailySummary_ScopesResultsToRequestedMachine()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var service = SnapshotServices.Statistics(db);
 
         var baseTime = new DateTime(2026, 2, 7, 8, 0, 0, DateTimeKind.Utc);
@@ -30,7 +28,7 @@ public class SnapshotStatisticsMachineIdTests
     [Fact]
     public async Task GetRangeAggregate_ScopesResultsToRequestedMachine()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var service = SnapshotServices.Statistics(db);
 
         var machineBBaseline = new SnapshotBuilder().At(new DateTime(2026, 2, 5, 23, 0, 0, DateTimeKind.Utc))
@@ -62,7 +60,7 @@ public class SnapshotStatisticsMachineIdTests
     [Fact]
     public async Task GetHeatmapData_ScopesResultsToRequestedMachine()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var service = SnapshotServices.Statistics(db);
 
         var monday = DateTime.UtcNow.Date;
@@ -80,7 +78,7 @@ public class SnapshotStatisticsMachineIdTests
         db.MachineSnapshots.AddRange(machineAMondayMorning, machineAMondayLater, machineBMondayMorning, machineBMondayLater);
         await db.SaveChangesAsync();
 
-        var result = await service.GetHeatmapDataAsync(HeatmapWindowWeeks, machineId: "EQ900-B");
+        var result = await service.GetHeatmapDataAsync(machineId: "EQ900-B");
 
         Assert.Single(result);
         Assert.Equal(1, result[0].DayOfWeek);

@@ -93,7 +93,7 @@ public class StatsControllerTests
     [Fact]
     public async Task Health_UnreachableDatabase_ReportsDisconnectedWithoutQuerying()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var logMessages = new List<string>();
         var snapshots = UnreachableSnapshotQueryService.ProbeReportsDisconnected();
         var controller = new StatsController(
@@ -117,7 +117,7 @@ public class StatsControllerTests
     [Fact]
     public async Task Health_DatabaseProbeThrows_StillReportsDisconnected()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var controller = new StatsController(
             UnreachableSnapshotQueryService.ProbeThrows(),
             SnapshotServices.Statistics(db),
@@ -134,7 +134,7 @@ public class StatsControllerTests
     [Fact]
     public async Task Health_ReachableButQueryThrows_ReportsDisconnected()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var controller = new StatsController(
             UnreachableSnapshotQueryService.QueryFailsAfterReachableProbe(),
             SnapshotServices.Statistics(db),

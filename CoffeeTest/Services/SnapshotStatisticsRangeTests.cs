@@ -118,7 +118,7 @@ public class SnapshotStatisticsRangeTests
     [Fact]
     public async Task GetRangeAggregate_CounterDrop_ResetsBaselineAndCountsLaterIncrease()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var service = SnapshotServices.Statistics(db);
 
         db.MachineSnapshots.AddRange(
@@ -138,7 +138,7 @@ public class SnapshotStatisticsRangeTests
     [Fact]
     public async Task GetRangeAggregate_PartialCounterDrop_ResetsOnlyThatCounter()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var service = SnapshotServices.Statistics(db);
 
         db.MachineSnapshots.AddRange(
@@ -162,7 +162,7 @@ public class SnapshotStatisticsRangeTests
     [Fact]
     public async Task GetRangeAggregate_HotWaterOnlyIncrease_CountsInTotal()
     {
-        using var db = TestDbContextFactory.Create();
+        await using var db = TestDbContextFactory.Create();
         var service = SnapshotServices.Statistics(db);
 
         db.MachineSnapshots.AddRange(

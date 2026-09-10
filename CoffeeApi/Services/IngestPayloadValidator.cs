@@ -5,7 +5,7 @@ namespace CoffeeApi.Services;
 
 public static class IngestPayloadValidator
 {
-    public static readonly IReadOnlyList<string> RequiredCupCounterKeys =
+    private static readonly IReadOnlyList<string> RequiredCupCounterKeys =
     [
         "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee",
         "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffeeAndMilk",
@@ -49,41 +49,14 @@ public static class IngestPayloadValidator
     }
 
     public static bool IsValidNumericValue(object? value) =>
-        TryDecodeNonNegativeInt32(value, out _);
-
-    public static bool TryDecodeNonNegativeInt32(object? value, out int decoded)
-    {
-        decoded = 0;
-
-        switch (value)
+        value switch
         {
-            case int i when i >= 0:
-                decoded = i;
-                return true;
-            case long l when l is >= 0 and <= int.MaxValue:
-                decoded = (int)l;
-                return true;
-            case double d when d >= 0 && d <= int.MaxValue && d == Math.Truncate(d):
-                decoded = (int)d;
-                return true;
-            case JsonElement json when json.ValueKind == JsonValueKind.Number:
-                if (!json.TryGetInt64(out var raw) || raw is < 0 or > int.MaxValue)
-                {
-                    return false;
-                }
-
-                if (json.TryGetDouble(out var asDouble) && asDouble != Math.Truncate(asDouble))
-                {
-                    return false;
-                }
-
-                decoded = (int)raw;
-                return true;
-            case string text when int.TryParse(text, out var parsed) && parsed >= 0:
-                decoded = parsed;
-                return true;
-            default:
-                return false;
-        }
-    }
+            int i => i >= 0,
+            long l => l is >= 0 and <= int.MaxValue,
+            double d => d is >= 0 and <= int.MaxValue && double.IsInteger(d),
+            JsonElement { ValueKind: JsonValueKind.Number } json
+                => json.TryGetInt32(out var int32Value) && int32Value >= 0,
+            string text => int.TryParse(text, out var parsed) && parsed >= 0,
+            _ => false,
+        };
 }

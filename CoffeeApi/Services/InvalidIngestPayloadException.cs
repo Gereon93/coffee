@@ -1,12 +1,7 @@
 namespace CoffeeApi.Services;
 
-public sealed class InvalidIngestPayloadException : Exception
+public sealed class InvalidIngestPayloadException(IReadOnlyList<string> details)
+    : Exception("Invalid ingest payload")
 {
-    public InvalidIngestPayloadException(IReadOnlyList<string> details)
-        : base("Invalid ingest payload")
-    {
-        Details = details;
-    }
-
-    public IReadOnlyList<string> Details { get; }
+    public IReadOnlyList<string> Details { get; } = details;
 }
