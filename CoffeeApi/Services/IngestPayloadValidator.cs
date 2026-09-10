@@ -49,32 +49,14 @@ public static class IngestPayloadValidator
     }
 
     public static bool IsValidNumericValue(object? value) =>
-        TryDecodeNonNegativeInt32(value, out _);
-
-    private static bool TryDecodeNonNegativeInt32(object? value, out int decoded)
-    {
-        decoded = 0;
-
-        switch (value)
+        value switch
         {
-            case int i when i >= 0:
-                decoded = i;
-                return true;
-            case long l when l is >= 0 and <= int.MaxValue:
-                decoded = (int)l;
-                return true;
-            case double d when d is >= 0 and <= int.MaxValue && double.IsInteger(d):
-                decoded = (int)d;
-                return true;
-            case JsonElement { ValueKind: JsonValueKind.Number } json
-                when json.TryGetInt32(out var int32Value) && int32Value >= 0:
-                decoded = int32Value;
-                return true;
-            case string text when int.TryParse(text, out var parsed) && parsed >= 0:
-                decoded = parsed;
-                return true;
-            default:
-                return false;
-        }
-    }
+            int i => i >= 0,
+            long l => l is >= 0 and <= int.MaxValue,
+            double d => d is >= 0 and <= int.MaxValue && double.IsInteger(d),
+            JsonElement { ValueKind: JsonValueKind.Number } json
+                => json.TryGetInt32(out var int32Value) && int32Value >= 0,
+            string text => int.TryParse(text, out var parsed) && parsed >= 0,
+            _ => false,
+        };
 }
