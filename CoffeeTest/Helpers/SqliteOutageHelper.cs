@@ -2,7 +2,7 @@ namespace CoffeeTest.Helpers;
 
 internal static class SqliteOutageHelper
 {
-    internal static IEnumerable<string> SidecarPaths(string dbPath)
+    private static IEnumerable<string> SidecarPaths(string dbPath)
     {
         yield return dbPath;
         yield return dbPath + "-wal";
@@ -29,7 +29,7 @@ internal static class SqliteOutageHelper
         }
     }
 
-    internal static void RestoreAccess(string dbPath)
+    private static void RestoreAccess(string dbPath)
     {
         foreach (var path in SidecarPaths(dbPath))
         {

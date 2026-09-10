@@ -5,7 +5,7 @@ namespace CoffeeApi.Services;
 
 public static class IngestPayloadValidator
 {
-    public static readonly IReadOnlyList<string> RequiredCupCounterKeys =
+    private static readonly IReadOnlyList<string> RequiredCupCounterKeys =
     [
         "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffee",
         "ConsumerProducts.CoffeeMaker.Status.BeverageCounterCoffeeAndMilk",
@@ -51,7 +51,7 @@ public static class IngestPayloadValidator
     public static bool IsValidNumericValue(object? value) =>
         TryDecodeNonNegativeInt32(value, out _);
 
-    public static bool TryDecodeNonNegativeInt32(object? value, out int decoded)
+    private static bool TryDecodeNonNegativeInt32(object? value, out int decoded)
     {
         decoded = 0;
 
@@ -63,21 +63,12 @@ public static class IngestPayloadValidator
             case long l when l is >= 0 and <= int.MaxValue:
                 decoded = (int)l;
                 return true;
-            case double d when d >= 0 && d <= int.MaxValue && d == Math.Truncate(d):
+            case double d when d is >= 0 and <= int.MaxValue && double.IsInteger(d):
                 decoded = (int)d;
                 return true;
-            case JsonElement json when json.ValueKind == JsonValueKind.Number:
-                if (!json.TryGetInt64(out var raw) || raw is < 0 or > int.MaxValue)
-                {
-                    return false;
-                }
-
-                if (json.TryGetDouble(out var asDouble) && asDouble != Math.Truncate(asDouble))
-                {
-                    return false;
-                }
-
-                decoded = (int)raw;
+            case JsonElement { ValueKind: JsonValueKind.Number } json
+                when json.TryGetInt32(out var int32Value) && int32Value >= 0:
+                decoded = int32Value;
                 return true;
             case string text when int.TryParse(text, out var parsed) && parsed >= 0:
                 decoded = parsed;
