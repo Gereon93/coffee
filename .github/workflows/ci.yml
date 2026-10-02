@@ -9,6 +9,7 @@ jobs:
   test:
     name: Build & Test (.NET 10)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,6 +32,7 @@ jobs:
   dashboard:
     name: Build & Test (Dashboard)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: coffee-dashboard
@@ -61,6 +63,7 @@ jobs:
   backup:
     name: Test (coffee-backup)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
