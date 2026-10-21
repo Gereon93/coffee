@@ -1,0 +1,21 @@
+# Workstation & tooling configs
+.mcp.json
+.repowise/
+.vscode/
+.specify/
+.claude/
+.DS_Store
+
+# graphify output (self-reference)
+graphify-out/
+
+# .NET build artifacts
+bin/
+obj/
+*.user
+*.suo
+
+# Node dependencies and build
+node_modules/
+dist/
+coverage/

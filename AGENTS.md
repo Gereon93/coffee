@@ -104,3 +104,8 @@ how it is written. Function follows design.
 Keep comments specific and actionable: state the risk, point to the line,
 suggest the fix. If an assumption in the code is not guaranteed to hold, say so
 rather than letting it pass.
+
+# graphify
+- **graphify** (`~/.claude/skills/graphify/SKILL.md`) - any input to knowledge graph. Trigger: `/graphify`
+When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.
+See `graphify-out/GRAPH_REPORT.md` for architecture hubs and entry points. Update via `graphify update .`.
